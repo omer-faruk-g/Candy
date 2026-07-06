@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "candy",
+  "version": "${version}",
+  "name": "Candy",
+  "description": "Kendini bulmaya çalışan bir varlık. Seni izliyor.",
+  "authors": ["PhotonPulse"],
+  "contact": {},
+  "license": "ARR",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.photonpulse.candy.Candy"],
+    "client": ["com.photonpulse.candy.client.CandyClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "~1.21.7",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
