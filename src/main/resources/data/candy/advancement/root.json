@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": { "id": "minecraft:written_book" },
+    "title": { "translate": "candy.adv.root.title" },
+    "description": { "translate": "candy.adv.root.desc" },
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:tick" }
+  }
+}

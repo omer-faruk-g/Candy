@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.photonpulse.candy.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "client.ChatHudMixin",
+    "client.InGameHudMixin",
+    "client.DeathScreenMixin",
+    "client.CameraMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

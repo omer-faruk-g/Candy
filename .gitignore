@@ -1,0 +1,19 @@
+# Gradle build
+build/
+.gradle/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+out/
+
+# Mac
+.DS_Store
+
+# Logs
+*.log
+run/
+
+# Env
+.env

@@ -1,0 +1,48 @@
+name: Build Candy
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # elle tetikleme butonu
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # release'e JAR yüklemek için
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 21 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Gradle wrapper cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: gradlew executable yap
+        run: chmod +x ./gradlew
+
+      - name: Build
+        run: ./gradlew build --stacktrace
+
+      - name: JAR'ı artifact olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: candy-jar
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Release'e JAR ekle
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/*.jar

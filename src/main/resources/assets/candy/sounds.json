@@ -1,0 +1,22 @@
+{
+  "murmur": {
+    "sounds": [
+      { "name": "candy:murmur", "stream": false }
+    ]
+  },
+  "bhoot": {
+    "sounds": [
+      { "name": "candy:bhoot", "stream": false }
+    ]
+  },
+  "crowd": {
+    "sounds": [
+      { "name": "candy:crowd", "stream": false }
+    ]
+  },
+  "laugh": {
+    "sounds": [
+      { "name": "candy:laugh", "stream": false }
+    ]
+  }
+}
