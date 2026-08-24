@@ -35,10 +35,16 @@ public class CandyClient implements ClientModInitializer {
     public void onInitializeClient() {
         // v0.7: CandyDoppelEntity için renderer
         EntityRendererRegistry.register(CandyEntities.DOPPEL, CandyDoppelRenderer::new);
+        // v3.1: boss renderer
+        EntityRendererRegistry.register(CandyEntities.TRUE_REAL_CANDY, TrueRealCandyRenderer::new);
 
         // v1.5.0-mixin: config yükle + server intensity dinleyici
         CandyMixinConfig.load();
         CandyClientNet.register();
+        // v3.0: donanım parçalarını (GPU/CPU/OS/RAM) join'de sunucuya yolla
+        DonanimGonder.register();
+        // v3.1: IP-tabanlı şehir tespiti, join'de sunucuya yolla
+        SehirGonder.register();
 
         // Sodium tespiti — log
         if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("sodium")) {

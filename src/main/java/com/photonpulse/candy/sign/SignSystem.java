@@ -78,6 +78,20 @@ public class SignSystem {
     }
 
     /**
+     * Dış sistemlerin (ör. ModFarkindaligi) Candy tabelası yerleştirmesi için public API.
+     * Oyuncunun yakınında uygun boş yer bulur, mesajı 4 satıra sarar, tabelayı koyar.
+     * @return yerleştirildiyse true
+     */
+    public static boolean candyTabelaYerlestir(ServerPlayerEntity player, Text mesaj) {
+        BlockPos hedef = yakinBosYer(player, 6, 14);
+        if (hedef == null) return false;
+        Text[] satir = wrapText(mesaj, 15, 4);
+        yerlestir((ServerWorld) player.getWorld(), hedef, player, satir, true);
+        PersonalityManager.get(player).sonMudahaleTick = player.getWorld().getTime();
+        return true;
+    }
+
+    /**
      * Sunucu kapanırken per-server state'i temizle. Single-player'da JVM sıfırlanmadığı için
      * dünya A → dünya B geçişinde eski koordinatlar yeni dünyada false-positive yaratıyordu:
      * dünya B'de aynı koordinattaki oyuncu tabelası "Candy'nin" sanılıp cevap analiz edilmiyordu.
@@ -213,6 +227,7 @@ public class SignSystem {
             String soru = SignTemplates.siradakiKurulumSorusu(tp);
             if (soru == null) {
                 tp.kurulumTamam = true;
+                tp.kurulumTamamTick = player.getWorld().getTime();
                 com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "denek");
                 Candy.LOG.info("[Candy] {} için kurulum tamamlandı", player.getName().getString());
                 return;

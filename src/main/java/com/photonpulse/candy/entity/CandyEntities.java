@@ -1,6 +1,7 @@
 package com.photonpulse.candy.entity;
 
 import com.photonpulse.candy.Candy;
+import com.photonpulse.candy.boss.TrueRealCandyEntity;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
@@ -28,9 +29,22 @@ public class CandyEntities {
             .trackingTickInterval(3)
             .build(DOPPEL_KEY));
 
+    public static final RegistryKey<EntityType<?>> TRUE_REAL_CANDY_KEY = RegistryKey.of(
+        RegistryKeys.ENTITY_TYPE, Identifier.of(Candy.MOD_ID, "true_real_candy"));
+
+    public static final EntityType<TrueRealCandyEntity> TRUE_REAL_CANDY = Registry.register(
+        Registries.ENTITY_TYPE, TRUE_REAL_CANDY_KEY,
+        EntityType.Builder.<TrueRealCandyEntity>create(TrueRealCandyEntity::new, SpawnGroup.MONSTER)
+            .dimensions(0.7f, 2.1f)
+            .eyeHeight(1.85f)
+            .maxTrackingRange(96)
+            .trackingTickInterval(2)
+            .build(TRUE_REAL_CANDY_KEY));
+
     public static void register() {
         // Static initializer yapar; attribute'ları explicit ekle
         FabricDefaultAttributeRegistry.register(DOPPEL, CandyDoppelEntity.createDoppelAttributes());
-        Candy.LOG.info("[Candy] Entity type registered: candy:doppel");
+        FabricDefaultAttributeRegistry.register(TRUE_REAL_CANDY, TrueRealCandyEntity.createBossAttributes());
+        Candy.LOG.info("[Candy] Entity type registered: candy:doppel, candy:true_real_candy");
     }
 }

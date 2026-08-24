@@ -1,0 +1,15 @@
+{
+  "parent": "candy:root",
+  "display": {
+    "icon": { "id": "minecraft:written_book" },
+    "title": { "translate": "candy.adv.karanlik_efendi.title" },
+    "description": { "translate": "candy.adv.karanlik_efendi.desc" },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

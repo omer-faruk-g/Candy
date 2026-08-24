@@ -1,0 +1,15 @@
+{
+  "parent": "candy:root",
+  "display": {
+    "icon": { "id": "minecraft:clock" },
+    "title": { "translate": "candy.adv.hala_burada.title" },
+    "description": { "translate": "candy.adv.hala_burada.desc" },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

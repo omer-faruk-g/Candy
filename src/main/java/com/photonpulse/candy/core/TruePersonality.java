@@ -54,6 +54,8 @@ public class TruePersonality {
 
     // ── Kurulum durumu ──
     public boolean kurulumTamam = false;
+    // Kurulumun bittiği tick — "kurulumdan sonra N dk oynadı" hesapları için (v3.0 BlackoutGlitch vb.)
+    public long kurulumTamamTick = 0L;
 
     // ── v1.8.0: Psikolojik hastalık sistemi ──
     // Boş string = sağlıklı. Aksi halde PsikolojikHastalik enum name (lowercase).
@@ -78,6 +80,137 @@ public class TruePersonality {
     // >4: klon blok kırıp koyabilir (adaptive)
     // >3 + %15: elite klon envanteri tarayıp kendine ekipman üretir
     public int karsilastigiKlonSayisi = 0;
+
+    // ── v3.0: Ölüm yerleri hafızası ──
+    // Player'ın son ölümlerinin konumları (max 20). Her element [x, y, z, dimensionHash].
+    // Player yakınına gelince Candy hatırlatır.
+    public java.util.List<int[]> olumYerleri = new java.util.ArrayList<>();
+    // Aynı ölüm noktası (BlockPos.asLong) → ziyaret sayısı. 3+ = travma döngüsü.
+    public java.util.Map<Long, Integer> olumYeriTekrar = new java.util.HashMap<>();
+    // Son hatırlatma tick'i — spam engelleme
+    public long sonOlumYeriHatirlatma = 0L;
+
+    // ── v3.0: Villager kill sayacı (Phase 3.8) ──
+    public int oldurulenKoyluSayisi = 0;
+
+    // ── v3.0: Base sabotajı (Phase 3.9) ──
+    // Bed konumu — player uyudukça günceller. null → world spawn kullan.
+    public int[] baseKonum = null;
+    public long sonBaseSabotaj = 0L;
+
+    // ── v3.0: Command lock (Phase 3.10) ──
+    public boolean komutEngellemesiGorulduMu = false;
+
+    // ── v3.0: Totem iptali (Phase 3.11) ──
+    // Kick sonrası rejoin flag — 1 HP + hunger 0 uygulanır
+    public boolean totemBekliyor = false;
+    public int iptalEdilenTotemSayisi = 0;
+
+    // ── v3.0: Yatak bekçisi (Phase 3.13) ──
+    public boolean yatakBekcisiGorulduMu = false;
+    public int uykusuzGunSayisi = 0;
+    public long sonUykuTick = 0L;
+
+    // ── v3.0: Anti-Mirror lottery (Phase 4) ──
+    public java.util.Set<Integer> kullanilanLotterySayilari = new java.util.HashSet<>();
+    // Overworld candy-kill sonrası dönülecek gerçek dünya koordinatı (asLong)
+    public long sonMirrorGiris = 0L;
+    public long antiMirrorGirisTick = 0L;
+    // Mirror'da öldü → respawn'da Anti-Mirror'a taşınacak
+    public boolean mirrordaOldu = false;
+    // Overworld'de candy-kill %25 → respawn'da Mirror'a taşınacak
+    public boolean mirrorGirisBekliyor = false;
+    // Anti-Mirror'da öldü → kick → rejoin/respawn'da gerçek dünyaya dönecek
+    public boolean gercekDunyaDonusBekliyor = false;
+
+    // ── v3.1: True RealCandy Boss ──
+    // Mirror'da kümülatif geçirilen süre (tick) — spawn şartı: 30 dk (36000 tick)
+    public long mirrorToplamSureTick = 0L;
+    // Aktif boss fight var mı — duplicate spawn engeli
+    public boolean bossSavastaMi = false;
+    // WIN sonrası bu tick'ten 30 dk (aynı world'de) çoğu mekanik sessizleşir
+    public long bossOldurulmeTick = 0L;
+    // Faz 8 countdown kaybedildi — kalıcı 2x hız cezası, boss tekrar yenilene dek sürer
+    public boolean badEndingAktif = false;
+    public long badEndingBaslangicTick = 0L;
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // ── v3.0: Analiz 2.0 — Candy seni gerçekten tanıyor (14 boyut) ──
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // 1) Öngörülebilirlik (0-100) — hep aynı davranış = yüksek. Yüksekse Candy hızlı domine eder.
+    public double ongorulebilirlik = 50.0;
+    // Son davranış imzaları (rota+aktivite hash'i) — tekrar tespiti için
+    public java.util.List<Integer> davranisImzalari = new java.util.ArrayList<>();
+
+    // 2) Tetikleyici Profili — korkuSkoru sıçradığında o an ne vardı? (sebep → şiddet)
+    // Anahtarlar: "karanlik", "klon", "ses", "yeralti", "dusuk_can", "gece", "yalniz"
+    public java.util.Map<String, Double> korkuTetikleyicileri = new java.util.HashMap<>();
+
+    // 3) Bağlanma Haritası — neyin yanında vakit geçiriyor? (hedef → ağırlık)
+    // Anahtarlar: pet UUID'leri, "base", item id'leri
+    public java.util.Map<String, Double> baglanmalar = new java.util.HashMap<>();
+
+    // 4) Candy'ye karşı tepki profili — Candy bir şey yaptığında ne yapıyorsun?
+    public double candyyeSaldiri = 0.0;   // klonlara saldırıyor
+    public double candydenKacma = 0.0;    // Candy olayında kaçıyor
+    public double candydeDonma = 0.0;     // donup kalıyor
+    public double candyGormezden = 0.0;   // umursamıyor, devam ediyor
+
+    // 5) Rutin Haritası — günün dilimi (0-5, 4000 tick'lik) → baskın aktivite
+    public java.util.Map<Integer, String> saatlikRutin = new java.util.HashMap<>();
+
+    // 6) Yetenek Değerlendirmesi (0-100) — isabet, hayatta kalma, verimlilik
+    public double yetenekSkoru = 50.0;
+    public int toplamVurus = 0;
+    public int alinanHasarOlayi = 0;
+    public int toplamOlum = 0;
+
+    // 7) Soğukkanlılık / çözülme (0-100) — oturum boyunca stresle bozulma
+    public double cozulme = 0.0;
+    public long oturumBaslangicTick = 0L;
+
+    // 8) Risk İştahı (0-100) — düşük canla mağara, gereksiz savaş
+    public double riskIstahi = 50.0;
+
+    // 9) Hayalet Güveni (0-100) — Steve/Alex'e ne kadar inanıyor
+    public double hayaletGuveni = 50.0;
+
+    // 10) Öğrenme Hızı (0-100) — Candy'nin numaralarına adapte oluyor mu
+    public double ogrenmeHizi = 50.0;
+
+    // 11) Tilt / öfke seviyesi (0-100) — düzensiz davranış, küfür
+    public double tiltSeviyesi = 0.0;
+
+    // 12) Konfor Alanı — en rahat hissettiği konum + rahatlık skoru
+    public int[] konforAlani = null;
+    public double konforSkoru = 0.0;
+
+    // 13) Ölüm sonrası tepki — "intikamci" (aynı yere döner), "kacinan", "birakan"
+    public String olumSonrasiTepki = "bilinmiyor";
+    public int[] sonOlumKonumu = null;
+    public long sonOlumTick = 0L;
+
+    // 14) Gerçek zaman farkındalığı — son oynadığı gerçek dünya saati (0-23)
+    public int sonGercekSaat = -1;
+    public boolean gecSaatUyarisiVerildi = false;
+
+    // ── v3.0: Yüz Haritası — oyuncunun kendi yüzü + "I SEE YOU" ──
+    public long sonYuzHaritasiTick = 0L;
+
+    // ── v3.0: Mod Farkındalığı — Candy kurulu modları biliyor ──
+    public long sonModSorusuTick = 0L;
+
+    // ── v3.1: İç Düşünce — Candy'nin niyet çıkarımı + felsefi sorgulama ──
+    // Şu an ne yaptığını düşünüyor: kaziyor / insa_ediyor / kesfediyor / bekliyor /
+    // donuyor / savasiyor / kaciyor / bilinmiyor
+    public String aktifNiyet = "bilinmiyor";
+    // Niyet kanıt birikimi (hangi niyeti daha çok gösteriyor)
+    public java.util.Map<String, Double> niyetAgirliklari = new java.util.HashMap<>();
+    // Candy'nin oyuncu hakkındaki güncel KANAATİ (sonuç): gozluyor / korkuyor /
+    // meydan_okuyor / kayip / saklaniyor / takintili
+    public String candyKanaati = "gozluyor";
+    public long sonIcSesTick = 0L;
 
     // ── Ayrılma / dönme takibi (RealCandy için) ──
     public long sonAyrilmaTick = 0;
@@ -110,6 +243,73 @@ public class TruePersonality {
     // İlk join'de oyuncuya kitap ver, sonraki join'lerde tekrarlama.
     public boolean denek239Verildi = false;
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // ── v3.2: Bilişsel Motor v4 — Candy artık reaktif değil, ÖNGÖRÜCÜ ──
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // (1) Kehanet Defteri — Candy birazdan ne yapacağını önceden YAZAR, tutunca ifşa eder
+    public String kehanetNiyet = "";           // öngörülen sonraki niyet
+    public double kehanetOlasilik = 0.0;       // o öngörüye güven (0-1)
+    public long kehanetTick = 0L;              // öngörünün yazıldığı tick
+    public int kehanetIsabet = 0;              // doğru çıkan öngörü sayısı
+    public int kehanetToplam = 0;              // toplam öngörü sayısı
+    public double kehanetGuveni = 0.0;         // isabet oranı (0-100)
+    public long sonKehanetIfsa = 0L;           // son ifşa tick'i (spam engel)
+    // Niyet geçiş tablosu (Markov): "kaziyor>kaciyor" -> ağırlık
+    public java.util.Map<String, Double> niyetGecisleri = new java.util.HashMap<>();
+    public String oncekiNiyetKehanet = "";     // geçiş öğrenmek için
+
+    // (2) Bayesçi Kanaat — tek sonuç yerine ağırlıklı rakip hipotezler
+    // "korkak" / "cesur" / "merakli" / "kayitsiz" -> ağırlık (normalize)
+    public java.util.Map<String, Double> hipotezAgirliklari = new java.util.HashMap<>();
+
+    // (4) Şaşırma — öngörü hatası büyükse dikkat sıçrar, zamanla söner
+    public double sasirmaSeviyesi = 0.0;       // 0-100
+
+    // (5) Paranoya — arkana bakma sıklığı + tereddüt
+    public double paranoyaSkoru = 0.0;         // 0-100
+
+    // (6) Meta-farkındalık — oyuncu Candy'yi test ediyor mu (tekrar/izleme/bilerek ölme)
+    public double metaFarkindalik = 0.0;       // 0-100
+    public long sonMetaYorum = 0L;
+
+    // (7) Teşhis Raporu — klinik profil kitabı
+    public boolean teshisVerildi = false;
+    public long sonTeshisTick = 0L;
+
+    // (8) Kendini Modelleme — Candy seni modelledikçe kendi doğasını sorgular
+    public double candyOzFarkindalik = 0.0;    // 0-100
+    public long sonOzDusunce = 0L;
+
+    // (9) Dil Modeli — oyuncunun kendi kelimeleri + verdiği isimler
+    public java.util.Map<String, Integer> ogrenilenKelimeler = new java.util.HashMap<>();
+    public java.util.List<String> verilenIsimler = new java.util.ArrayList<>();
+    public long sonDilKullanimi = 0L;
+
+    // (10) Yalan — Candy kasten yanlış teşhis söyler (manipülasyon/tuzak)
+    public long sonYalanTick = 0L;
+
+    // (11) Duygu Aynası — affect vektörü; Candy senin duygunu yansıtır (büyüterek)
+    // baskın: "korku" / "hayalkirikligi" / "merak" / "guven" / "sikinti"
+    public String duyguDurumu = "guven";
+    public double duyguKorku = 0.0;
+    public double duyguHayalKirikligi = 0.0;
+    public double duyguMerak = 0.0;
+    public double duyguSikinti = 0.0;
+
+    // (12) Silahlanma Yarışı — oyuncu bir mekaniği yendikçe o mekanik emekliye ayrılır
+    public java.util.Map<String, Double> mekanikAdaptasyon = new java.util.HashMap<>();
+    public java.util.Set<String> emekliMekanikler = new java.util.HashSet<>();
+
+    // (13) Ayna boyutu — birebir overworld kılığı; kopya + düzenek + takas
+    public boolean aynada = false;             // şu an Ayna'da mı
+    public long aynaGirisTick = 0L;
+    public long aynaToplamSure = 0L;           // Ayna'da kümülatif süre
+    public boolean aynaKopyaMi = false;        // ifşa bayrağı: "sen kopyasın"
+    public long sonAynaTakas = 0L;
+    public long aynaDonusPoz = 0L;             // gerçek dünyaya dönüş koordinatı (asLong)
+    public boolean aynaIfsaEdildi = false;     // takas ifşası bir kez gösterildi mi
+
     public TruePersonality() {}
 
     public TruePersonality(UUID oyuncuId) {
@@ -123,6 +323,109 @@ public class TruePersonality {
      */
     public static double kayma(double mevcut, double hedef, double hiz) {
         return mevcut + (hedef - mevcut) * hiz;
+    }
+
+    /**
+     * Diskten yüklenen JSON'da OLMAYAN alanları güvenli varsayılanlara çeker.
+     * Gson eksik alanları null bırakır — eski dünyalarda yeni sürüm NPE atmasın diye
+     * her yükleme sonrası çağrılır. Yeni koleksiyon alanı eklendiğinde BURAYA da ekle.
+     */
+    public void koleksiyonlariOnar() {
+        // Eski alanlar
+        if (ekipmanKullanim == null) ekipmanKullanim = new HashMap<>();
+        if (sicakNoktalar == null) sicakNoktalar = new ArrayList<>();
+        if (tabelaCevaplari == null) tabelaCevaplari = new ArrayList<>();
+        if (kaptigiHastaliklar == null) kaptigiHastaliklar = new java.util.HashSet<>();
+        if (aktifHastalik == null) aktifHastalik = "";
+        if (ilkTepki == null) ilkTepki = "bilinmiyor";
+        // v3.0 travma / dimension
+        if (olumYerleri == null) olumYerleri = new ArrayList<>();
+        if (olumYeriTekrar == null) olumYeriTekrar = new HashMap<>();
+        if (kullanilanLotterySayilari == null) kullanilanLotterySayilari = new java.util.HashSet<>();
+        // v3.0 Analiz 2.0
+        if (davranisImzalari == null) davranisImzalari = new ArrayList<>();
+        if (korkuTetikleyicileri == null) korkuTetikleyicileri = new HashMap<>();
+        if (baglanmalar == null) baglanmalar = new HashMap<>();
+        if (saatlikRutin == null) saatlikRutin = new HashMap<>();
+        if (olumSonrasiTepki == null) olumSonrasiTepki = "bilinmiyor";
+        // v3.1 İç Düşünce
+        if (niyetAgirliklari == null) niyetAgirliklari = new HashMap<>();
+        if (aktifNiyet == null) aktifNiyet = "bilinmiyor";
+        if (candyKanaati == null) candyKanaati = "gozluyor";
+        // v3.2 Bilişsel Motor v4
+        if (niyetGecisleri == null) niyetGecisleri = new HashMap<>();
+        if (kehanetNiyet == null) kehanetNiyet = "";
+        if (oncekiNiyetKehanet == null) oncekiNiyetKehanet = "";
+        if (hipotezAgirliklari == null) hipotezAgirliklari = new HashMap<>();
+        if (ogrenilenKelimeler == null) ogrenilenKelimeler = new HashMap<>();
+        if (verilenIsimler == null) verilenIsimler = new ArrayList<>();
+        if (mekanikAdaptasyon == null) mekanikAdaptasyon = new HashMap<>();
+        if (emekliMekanikler == null) emekliMekanikler = new java.util.HashSet<>();
+        if (duyguDurumu == null) duyguDurumu = "guven";
+    }
+
+    // ── Bilişsel Motor v4 yardımcıları ──
+
+    /** En yüksek ağırlıklı hipotez (Bayesçi kanaat). Boşsa "bilinmiyor". */
+    public String baskinHipotez() {
+        String enSik = "bilinmiyor"; double max = 0;
+        for (var e : hipotezAgirliklari.entrySet()) {
+            if (e.getValue() > max) { max = e.getValue(); enSik = e.getKey(); }
+        }
+        return enSik;
+    }
+
+    /** Hipotez belirsizliği (entropi benzeri, 0=kesin, 1=tam kararsız). Test seçimi için. */
+    public double hipotezBelirsizligi() {
+        if (hipotezAgirliklari.size() < 2) return 0.0;
+        double toplam = 0;
+        for (double v : hipotezAgirliklari.values()) toplam += v;
+        if (toplam < 1e-6) return 0.0;
+        double max = 0;
+        for (double v : hipotezAgirliklari.values()) max = Math.max(max, v / toplam);
+        // max olasılık 1'e yakınsa kesin (belirsizlik düşük); eşit dağılımda belirsizlik yüksek
+        return 1.0 - max;
+    }
+
+    /** 4 affect değerinden baskın duyguyu hesapla + duyguDurumu'na yaz. */
+    public String duyguGuncelle() {
+        double max = duyguKorku; String d = "korku";
+        if (duyguHayalKirikligi > max) { max = duyguHayalKirikligi; d = "hayalkirikligi"; }
+        if (duyguMerak > max) { max = duyguMerak; d = "merak"; }
+        if (duyguSikinti > max) { max = duyguSikinti; d = "sikinti"; }
+        // Hiçbiri belirgin değilse güven (sakin)
+        if (max < 20) d = "guven";
+        duyguDurumu = d;
+        return d;
+    }
+
+    // ── Analiz 2.0 yardımcıları ──
+
+    /** En büyük korku tetikleyicisinin anahtarını döner (yoksa null). */
+    public String enBuyukKorku() {
+        String enSik = null; double max = 0;
+        for (var e : korkuTetikleyicileri.entrySet()) {
+            if (e.getValue() > max) { max = e.getValue(); enSik = e.getKey(); }
+        }
+        return enSik;
+    }
+
+    /** En çok bağlanılan hedefin anahtarını döner (pet UUID / "base" / item id). */
+    public String enCokBaglanilan() {
+        String enSik = null; double max = 0;
+        for (var e : baglanmalar.entrySet()) {
+            if (e.getValue() > max) { max = e.getValue(); enSik = e.getKey(); }
+        }
+        return enSik;
+    }
+
+    /** Candy'ye karşı baskın tepki: "saldiri" / "kacma" / "donma" / "gormezden". */
+    public String baskinTepki() {
+        double max = candyyeSaldiri; String tur = "saldiri";
+        if (candydenKacma > max) { max = candydenKacma; tur = "kacma"; }
+        if (candydeDonma > max) { max = candydeDonma; tur = "donma"; }
+        if (candyGormezden > max) { max = candyGormezden; tur = "gormezden"; }
+        return tur;
     }
 
     /**

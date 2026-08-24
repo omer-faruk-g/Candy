@@ -1,0 +1,15 @@
+{
+  "parent": "candy:root",
+  "display": {
+    "icon": { "id": "minecraft:glass_pane" },
+    "title": { "translate": "candy.adv.aynada_gordum.title" },
+    "description": { "translate": "candy.adv.aynada_gordum.desc" },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

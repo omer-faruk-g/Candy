@@ -1,0 +1,15 @@
+{
+  "parent": "candy:root",
+  "display": {
+    "icon": { "id": "minecraft:soul_lantern" },
+    "title": { "translate": "candy.adv.daha_hizli.title" },
+    "description": { "translate": "candy.adv.daha_hizli.desc" },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

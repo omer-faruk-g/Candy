@@ -1,0 +1,15 @@
+{
+  "parent": "candy:root",
+  "display": {
+    "icon": { "id": "minecraft:spider_eye" },
+    "title": { "translate": "candy.adv.her_seyi_gordum.title" },
+    "description": { "translate": "candy.adv.her_seyi_gordum.desc" },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

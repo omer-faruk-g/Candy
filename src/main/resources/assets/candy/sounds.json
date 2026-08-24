@@ -18,5 +18,10 @@
     "sounds": [
       { "name": "candy:laugh", "stream": false }
     ]
+  },
+  "panic_fear": {
+    "sounds": [
+      { "name": "candy:panic_fear", "stream": false }
+    ]
   }
 }

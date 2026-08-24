@@ -33,6 +33,10 @@ public class CamscreenTetikleyici {
     private static final int TEXT_VARYANT_SAYI = 4;
     private static final int IDX_SMILEY = 4;
     private static final int IDX_NEVERDIE = 5;
+    // v3.2: 2 yeni image varyantı (6=ending, 7=blackout rezerve — bu yüzden 8,9)
+    private static final int IDX_MASK = 8;
+    private static final int IDX_SSSSS = 9;
+    private static final int[] IMAGE_IDX = {IDX_SMILEY, IDX_NEVERDIE, IDX_MASK, IDX_SSSSS};
     private static final int KONTROL_ARALIGI = 1200; // 1 dk
     private static final Random RNG = new Random();
     private static final Map<UUID, Long> sonTetik = new HashMap<>();
@@ -82,15 +86,16 @@ public class CamscreenTetikleyici {
 
                 sonTetik.put(player.getUuid(), simdi);
 
-                // 3 kategori uniform: text (0-3) / smiley (4) / neverdie (5)
-                int kategori = RNG.nextInt(3);
-                int idx;
-                if (kategori == 0) idx = RNG.nextInt(TEXT_VARYANT_SAYI);
-                else if (kategori == 1) idx = IDX_SMILEY;
-                else idx = IDX_NEVERDIE;
+                // Text (1/3) vs image (2/3). Image ise 4 varyanttan uniform:
+                // smiley / neverdie / mask / sssss (denge korunur, çeşit artar)
+                int kategori = RNG.nextInt(3);   // 0 = text, 1-2 = image
+                boolean image = kategori != 0;
+                int idx = image
+                    ? IMAGE_IDX[RNG.nextInt(IMAGE_IDX.length)]
+                    : RNG.nextInt(TEXT_VARYANT_SAYI);
 
                 // Image varyantları biraz daha uzun (400-700ms), text kısa (350-550ms)
-                int sure = (kategori == 0) ? (350 + RNG.nextInt(200)) : (400 + RNG.nextInt(300));
+                int sure = image ? (400 + RNG.nextInt(300)) : (350 + RNG.nextInt(200));
 
                 try {
                     ServerPlayNetworking.send(player, new CamscreenPayload(idx, sure));
@@ -113,6 +118,16 @@ public class CamscreenTetikleyici {
         });
 
         Candy.LOG.info("[Candy] CamscreenTetikleyici aktif — kotuluk-driven jump scare");
+    }
+
+    /**
+     * Son camscreen bu oyuncuya {@code pencere} tick içinde mi gönderildi?
+     * BlackoutGlitch aynı client overlay'ini paylaştığı için, devam eden bir
+     * jumpscare'i ortasından kesmesin diye kontrol eder.
+     */
+    public static boolean yakindaTetiklendi(UUID uuid, long simdi, long pencere) {
+        Long son = sonTetik.get(uuid);
+        return son != null && simdi - son < pencere;
     }
 
     public static void oyuncuAyrildi(UUID uuid) {

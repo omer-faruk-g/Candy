@@ -219,8 +219,17 @@ public class HayaletOyuncular {
         if (joinBekleyenTick == -2L && simdi >= chatSonrakiTick) {
             String isim = secilebilirHayalet(simdi);
             if (isim != null) {
-                // %20 ihtimalle koordinat mesajı
-                if (RNG.nextDouble() < 0.20) {
+                double rol = RNG.nextDouble();
+                // %5 ihtimalle (sadece Alex) ŞEHİR mesajı — "Steve, ben X şehrinden oynuyorum..."
+                // Private mesaj (broadcast DEĞİL) — konum bilgisi diğer oyunculara sızmasın.
+                if (isim.equals("Alex") && rol < 0.05 && sehirMesaji(server)) {
+                    // gönderildi
+                }
+                // %10 ihtimalle DONANIM mesajı — "Ben PC'de <senin parçan> var."
+                else if (rol < 0.10 && donanimMesaji(server, isim)) {
+                    // gönderildi
+                } else if (rol < 0.30) {
+                    // %20 koordinat mesajı
                     koordinatBirakVeSoyle(server, isim);
                 } else {
                     int idx = isim.equals("Steve")
@@ -363,6 +372,42 @@ public class HayaletOyuncular {
         fakeChat(server, isim, mesaj);
         long sessizlik = 6000L + RNG.nextInt(6001); // 5-10 dk
         hayaletSessiz.put(isim, simdi + sessizlik);
+    }
+
+    /**
+     * Donanım mesajı — rastgele bir online oyuncunun GERÇEK PC parçasını seç,
+     * hayalet "Ben PC'de %s var." diyerek aslında o oyuncunun donanımını söyler.
+     * @return gönderildiyse true (parça yoksa false → normal mesaja düş).
+     */
+    private static boolean donanimMesaji(MinecraftServer server, String isim) {
+        var players = server.getPlayerManager().getPlayerList();
+        if (players.isEmpty()) return false;
+        ServerPlayerEntity hedef = players.get(RNG.nextInt(players.size()));
+        String parca = com.photonpulse.candy.meta.DonanimBilgisi.rastgeleParca(hedef);
+        if (parca == null || parca.isBlank()) return false;
+        fakeChatArg(server, isim, "candy.hayalet.donanim", parca);
+        Candy.LOG.info("[Candy] Hayalet[{}] donanim: {}", isim, parca);
+        return true;
+    }
+
+    /**
+     * Şehir mesajı — Alex "Steve, ben X şehrinden oynuyorum, peki ya sen?" der.
+     * X = rastgele bir online oyuncunun GERÇEK şehri (IP-tabanlı geolocation, client-side).
+     * PRIVATE — sadece o oyuncuya gönderilir (broadcast değil, konum sızmasın).
+     * @return gönderildiyse true (şehir yoksa false → normal mesaja düş).
+     */
+    private static boolean sehirMesaji(MinecraftServer server) {
+        var players = server.getPlayerManager().getPlayerList();
+        if (players.isEmpty()) return false;
+        ServerPlayerEntity hedef = players.get(RNG.nextInt(players.size()));
+        String sehir = com.photonpulse.candy.meta.SehirBilgisi.sehir(hedef);
+        if (sehir == null || sehir.isBlank()) return false;
+        hedef.sendMessage(
+            net.minecraft.text.Text.literal("<Alex> ")
+                .append(net.minecraft.text.Text.translatable("candy.hayalet.sehir", sehir))
+                .formatted(net.minecraft.util.Formatting.YELLOW), false);
+        Candy.LOG.info("[Candy] Hayalet[Alex] sehir (private): {}", hedef.getName().getString());
+        return true;
     }
 
     /**
@@ -606,11 +651,38 @@ public class HayaletOyuncular {
         var koyluler = world.getEntitiesByClass(
             net.minecraft.entity.passive.VillagerEntity.class,
             new net.minecraft.util.math.Box(player.getBlockPos()).expand(80),
-            v -> true);
+            v -> v.isAlive());
         if (koyluler.isEmpty()) return;
         var kurban = koyluler.get(RNG.nextInt(koyluler.size()));
-        kurban.damage(world, world.getDamageSources().generic(), 4.0f);
-        Candy.LOG.info("[Candy] Hayalet[{}] köylü @ {}", isim, kurban.getBlockPos());
+
+        // v3.0 Phase 3.8: %50 gerçek kill (was: sadece 4 damage)
+        if (RNG.nextDouble() < 0.5) {
+            String koyluAdi = kurban.hasCustomName()
+                ? kurban.getCustomName().getString()
+                : "Villager";
+            // Instant kill — damage yeterli, ölüm event'i düzgün tetiklensin
+            kurban.damage(world, world.getDamageSources().generic(), 1000.0f);
+            // Fake zombie death message
+            Text fakeMsg = Text.translatable("death.attack.mob", koyluAdi,
+                Text.translatable("entity.minecraft.zombie"));
+            world.getServer().getPlayerManager().broadcast(fakeMsg, false);
+
+            // Tüm player'lara villager kill sayacı artır (kim'in yakınındaysa)
+            for (ServerPlayerEntity p : world.getServer().getPlayerManager().getPlayerList()) {
+                if (p.getWorld() != world) continue;
+                if (p.squaredDistanceTo(kurban) > 128 * 128) continue;
+                TruePersonality tp = PersonalityManager.get(p);
+                tp.oldurulenKoyluSayisi++;
+                if (tp.oldurulenKoyluSayisi >= 5) {
+                    com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(p, "koy_katliami");
+                }
+            }
+            Candy.LOG.info("[Candy] Hayalet[{}] köylü ÖLDÜRDÜ @ {} (fake zombie)",
+                isim, kurban.getBlockPos());
+        } else {
+            kurban.damage(world, world.getDamageSources().generic(), 4.0f);
+            Candy.LOG.info("[Candy] Hayalet[{}] köylü hasar @ {}", isim, kurban.getBlockPos());
+        }
     }
 
     /**

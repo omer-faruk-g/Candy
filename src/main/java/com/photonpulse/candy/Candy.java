@@ -1,6 +1,7 @@
 package com.photonpulse.candy;
 
 import com.photonpulse.candy.clone.CloneManager;
+import com.photonpulse.candy.core.DerinAnaliz;
 import com.photonpulse.candy.core.FearDetection;
 import com.photonpulse.candy.core.ObservationEngine;
 import com.photonpulse.candy.core.PersonalityManager;
@@ -41,8 +42,17 @@ import com.photonpulse.candy.simulation.Discontent;
 import com.photonpulse.candy.simulation.ShadowTreeManager;
 import com.photonpulse.candy.simulation.SimulationEngine;
 import com.photonpulse.candy.simulation.SimulationManager;
+import com.photonpulse.candy.dimension.AnomalyPatches;
+import com.photonpulse.candy.dimension.AntiMirrorLottery;
+import com.photonpulse.candy.dimension.GlitchFlicker;
+import com.photonpulse.candy.dimension.MirrorAtmosphere;
+import com.photonpulse.candy.dimension.MirrorGirisi;
 import com.photonpulse.candy.tempo.MobSpawnBooster;
 import com.photonpulse.candy.tempo.TickAccelerator;
+import com.photonpulse.candy.travma.BaseSabotaji;
+import com.photonpulse.candy.travma.OlumYerleri;
+import com.photonpulse.candy.travma.PetOlumu;
+import com.photonpulse.candy.travma.TotemIptali;
 import com.photonpulse.candy.tree.TreeGrowth;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -107,6 +117,14 @@ public class Candy implements ModInitializer {
             KanEvi.sunucuKapan();
             Dikit.sunucuKapan();
             Kan.sunucuKapan();
+            TotemIptali.sunucuKapan();
+            RuyaSistemi.sunucuKapan();
+            AnomalyPatches.sunucuKapan();
+            GlitchFlicker.sunucuKapan(server);   // bekleyen glitch bloklarını geri yükle
+            com.photonpulse.candy.net.BlackoutGlitch.sunucuKapan();
+            com.photonpulse.candy.meta.OrumcekYonlendirme.sunucuKapan();
+            com.photonpulse.candy.meta.DonanimBilgisi.sunucuKapan();
+            com.photonpulse.candy.meta.SehirBilgisi.sunucuKapan();
         });
 
         // Oyuncu bağlantı yaşam döngüsü
@@ -115,6 +133,15 @@ public class Candy implements ModInitializer {
             var tp = PersonalityManager.get(player);
             LOG.info("[Candy] oyuncu geldi: {} (kurulum: {})",
                 player.getName().getString(), tp.kurulumTamam);
+
+            // DEV TEST — -Dcandy.autosetup=true ise kurulumu (tabela cevaplama) atla.
+            // Sadece test botları içindir; üretimde flag kapalı → hiç etkisi yok.
+            if (Boolean.getBoolean("candy.autosetup") && !tp.kurulumTamam) {
+                tp.kurulumTamam = true;
+                tp.kurulumTamamTick = server.getOverworld().getTime();
+                LOG.info("[Candy] AUTOSETUP — kurulum otomatik tamamlandı: {}",
+                    player.getName().getString());
+            }
 
             // v1.3: İlk join'de Denek 239 kitapları (TR + EN) slot 0 ve 1'e
             if (!tp.denek239Verildi) {
@@ -130,6 +157,7 @@ public class Candy implements ModInitializer {
                     if (inv.getStack(1).isEmpty()) inv.setStack(1, enKitap);
                     else player.giveItemStack(enKitap);
                     tp.denek239Verildi = true;
+                    com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "denek_239");
                     LOG.info("[Candy] Denek 239 kitapları verildi: {}", player.getName().getString());
                 });
             }
@@ -144,6 +172,15 @@ public class Candy implements ModInitializer {
             TreeGrowth.oyuncuAyrildi(uid);
             PersonalityManager.oyuncuAyrildi(uid);
             ObservationEngine.oyuncuAyrildi(uid);
+            DerinAnaliz.oyuncuAyrildi(uid);
+            com.photonpulse.candy.core.IcDusunce.oyuncuAyrildi(uid);
+            com.photonpulse.candy.travma.OlumYerleri.oyuncuAyrildi(uid);
+            com.photonpulse.candy.core.ZihinselProva.oyuncuAyrildi(uid);
+            com.photonpulse.candy.dimension.AynaSistemi.oyuncuAyrildi(uid); // v3.2 Ayna
+            com.photonpulse.candy.net.BlackoutGlitch.oyuncuAyrildi(uid);
+            com.photonpulse.candy.meta.OrumcekYonlendirme.oyuncuAyrildi(uid);
+            com.photonpulse.candy.meta.DonanimBilgisi.oyuncuAyrildi(uid);
+            com.photonpulse.candy.meta.SehirBilgisi.oyuncuAyrildi(uid);
             FearDetection.oyuncuAyrildi(uid);
             SignSystem.oyuncuAyrildi(uid);
             CloneManager.oyuncuAyrildi(uid);
@@ -169,6 +206,10 @@ public class Candy implements ModInitializer {
 
         // Sistem kayıtları — sıra önemli
         ObservationEngine.register();
+        DerinAnaliz.register();             // v3.0 Analiz 2.0 — 14 boyutlu derin zekâ
+        com.photonpulse.candy.core.IcDusunce.register(); // v3.1 niyet çıkarımı + iç ses
+        com.photonpulse.candy.core.ZihinselProva.register(); // v3.1 hayali test + karar motoru
+        com.photonpulse.candy.lore.TeshisRaporu.register(); // v3.2 klinik teşhis raporu (idea 7)
         TreeGrowth.register();
         SignSystem.register();
         DisguiseSystem.register();
@@ -222,6 +263,45 @@ public class Candy implements ModInitializer {
         Dikit.register();                   // v1.9.8: deepslate dikit + Blood tabanı
         Kan.register();                     // v1.9.9: kan izi (redstone_wire + "Kan" item)
 
-        LOG.info("[Candy] tüm aşamalar aktif — v0.7 (Doppelganger)");
+        // ─── v3.0 Faz 1: Boss'suz mega update ───
+        OlumYerleri.register();             // Phase 3.6: ölüm yerleri travma hafızası
+        PetOlumu.register();                // Phase 3.7: her 4 dk %7 pet ölümü
+        // Phase 3.8: villager kill — mevcut HayaletOyuncular.koyYagmala içine gömüldü
+        BaseSabotaji.register();            // Phase 3.9: uzaktayken base'i sessizce boz
+        // Phase 3.10: Command Lock — CommandManagerMixin ile mixin
+        TotemIptali.register();             // Phase 3.11: totem iptal + kick + rejoin (LivingEntityMixin)
+        // Phase 3.13: Yatak bekçisi — RuyaSistemi v2.0 içinde upgrade edildi
+
+        // ─── v3.0 Faz 1: Dimension katmanı ───
+        MirrorGirisi.register();            // Phase 2: Mirror/Anti-Mirror teleport akışı
+        com.photonpulse.candy.dimension.AynaSistemi.register(); // v3.2 Ayna: kopya + düzenek + takas
+        AntiMirrorLottery.register();       // Phase 4: 5 sn lottery + mercy reset
+        AnomalyPatches.register();          // Phase 3.5: %10 overworld chunk anomaly
+
+        // ─── v3.0 Faz 1.1: Rendering polish ───
+        MirrorAtmosphere.register();        // DARKNESS + ash + smoke Mirror/Anti-Mirror
+        GlitchFlicker.register();           // Mirror'da blok flicker (glitch texture yerine)
+
+        // ─── v3.0: Yüz Haritası — kimlik korkusu ───
+        com.photonpulse.candy.yuz.YuzHaritasi.register();
+
+        // ─── v3.0: Mod Farkındalığı — Candy kurulu modları biliyor ───
+        com.photonpulse.candy.meta.ModFarkindaligi.register();
+
+        // ─── v3.0: Blackout Glitch — 0.1-0.3sn ekran karartma ───
+        com.photonpulse.candy.net.BlackoutGlitch.register();
+
+        // ─── v3.0: Örümcek Yönlendirme — Spider-Man göndermesi ───
+        com.photonpulse.candy.meta.OrumcekYonlendirme.register();
+
+        // ─── v3.0: Donanım Farkındalığı — hayaletler senin PC parçanı söyler ───
+        com.photonpulse.candy.meta.DonanimBilgisi.register();
+        com.photonpulse.candy.meta.SehirBilgisi.register();
+
+        // ─── v3.1: True RealCandy Boss ───
+        com.photonpulse.candy.boss.GizemliKitapRecipe.register();
+        com.photonpulse.candy.boss.BossManager.register();
+
+        LOG.info("[Candy] tüm aşamalar aktif — v3.5.0 (Bilişsel Motor v4 + Ayna)");
     }
 }

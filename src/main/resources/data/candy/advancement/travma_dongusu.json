@@ -1,0 +1,15 @@
+{
+  "parent": "candy:root",
+  "display": {
+    "icon": { "id": "minecraft:soul_soil" },
+    "title": { "translate": "candy.adv.travma_dongusu.title" },
+    "description": { "translate": "candy.adv.travma_dongusu.desc" },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

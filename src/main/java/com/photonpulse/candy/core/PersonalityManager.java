@@ -68,14 +68,11 @@ public class PersonalityManager {
             try {
                 String json = Files.readString(dosya);
                 tp = GSON.fromJson(json, TruePersonality.class);
+                if (tp == null) throw new IllegalStateException("JSON boş/geçersiz");
                 if (tp.oyuncuId == null) tp.oyuncuId = uuid;
-                // JSON elle düzenlenmiş olabilir — koleksiyon alanlarını null'dan koru
-                if (tp.ekipmanKullanim == null) tp.ekipmanKullanim = new java.util.HashMap<>();
-                if (tp.sicakNoktalar == null) tp.sicakNoktalar = new java.util.ArrayList<>();
-                if (tp.tabelaCevaplari == null) tp.tabelaCevaplari = new java.util.ArrayList<>();
-                // v1.9.5: yeni Set field null olabilir (eski JSON'da yok)
-                if (tp.kaptigiHastaliklar == null) tp.kaptigiHastaliklar = new java.util.HashSet<>();
-                if (tp.aktifHastalik == null) tp.aktifHastalik = "";
+                // Eski dünyalarda yeni sürümün alanları JSON'da yok → Gson null bırakır.
+                // Tek noktadan onar (yeni alan eklenince TruePersonality.koleksiyonlariOnar'a ekle).
+                tp.koleksiyonlariOnar();
                 // v1.5.4: kurulum tabelası gate'i geri geldi — force upgrade kaldırıldı
                 cache.put(uuid, tp);
                 Candy.LOG.info("[Candy] hafıza yüklendi: {}", uuid);

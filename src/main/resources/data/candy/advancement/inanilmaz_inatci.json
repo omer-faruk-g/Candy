@@ -1,0 +1,15 @@
+{
+  "parent": "candy:root",
+  "display": {
+    "icon": { "id": "minecraft:totem_of_undying" },
+    "title": { "translate": "candy.adv.inanilmaz_inatci.title" },
+    "description": { "translate": "candy.adv.inanilmaz_inatci.desc" },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

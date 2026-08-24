@@ -57,6 +57,9 @@ public class CandyDoppelEntity extends HostileEntity {
     //   YANSIMA: her tick oyuncunun pozisyonunu ayna gibi kopyalar
     public static final String TAG_BEKCI = "candy_bekci";
     public static final String TAG_YANSIMA = "candy_yansima";
+    // v3.2 (idea 13) Ayna kopyası — AI yok; konum/rotasyon AynaSistemi tarafından
+    // her tick set edilir (oyuncunun kayıtlı hareketini tekrar oynatır). Vurulamaz.
+    public static final String TAG_AYNA = "candy_ayna";
     // v1.9.17: Evrim tag'leri
     public static final String TAG_EVRIMLI = "candy_evrimli"; // 4+ klon sonrası — blok kırıp koyabilir
     public static final String TAG_ELITE = "candy_elite";     // %15, envanter tarayıp ekipman üretir
@@ -134,6 +137,12 @@ public class CandyDoppelEntity extends HostileEntity {
 
     @Override
     protected void mobTick(ServerWorld world) {
+        // v3.2 Ayna kopyası — kendi AI'sı yok; AynaSistemi konumu sürer. Yerçekimsiz, sabit.
+        if (this.getCommandTags().contains(TAG_AYNA)) {
+            this.setVelocity(0, 0, 0);
+            this.setNoGravity(true);
+            return; // super.mobTick çağrılmaz — hareket dışarıdan kontrol edilir
+        }
         // Boss variantlar farklı davranır
         if (this.getCommandTags().contains(TAG_BEKCI)) {
             // Sabit dur, oyuncuya bak, 15 sn sonra sessizce kaybol.
@@ -257,6 +266,8 @@ public class CandyDoppelEntity extends HostileEntity {
     public boolean damage(ServerWorld world, net.minecraft.entity.damage.DamageSource source, float amount) {
         // BEKCI invulnerable — vurulamaz, atmosfer boss
         if (this.getCommandTags().contains(TAG_BEKCI)) return false;
+        // AYNA kopyası — vurulamaz (o sensin; ona vurmak seni vurmak gibi)
+        if (this.getCommandTags().contains(TAG_AYNA)) return false;
         // YANSIMA vurulunca hemen despawn eder (asıl varlığı yok gibi)
         if (this.getCommandTags().contains(TAG_YANSIMA)) {
             this.discard();

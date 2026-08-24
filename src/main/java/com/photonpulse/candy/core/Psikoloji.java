@@ -38,11 +38,19 @@ public class Psikoloji {
      * Cap: 5.0x — teorik max.
      */
     public static double agresivlikCarpani(TruePersonality tp) {
+        // v3.1 Boss WIN sessizliği — bossOldurulmeTick > 0 iken (BossManager 30 dk sonra
+        // sıfırlar) tüm agresivlik-tabanlı mekanikler neredeyse susar.
+        if (tp != null && tp.bossOldurulmeTick > 0) return 0.01;
+
         double k = kotulukSkoru(tp);
         double base = 1.0 + (k / 100.0) * 1.5;              // 1.0 → 2.5
         double ozguvenBonus = (tp == null ? 0.0
             : Math.max(0, Math.min(100, tp.candyOzguven)) / 100.0) * 2.0;   // +0 → +2
-        return Math.min(5.0, base + ozguvenBonus);
+        double sonuc = Math.min(5.0, base + ozguvenBonus);
+
+        // v3.1 Boss BAD ENDING — kalıcı 2x hız (boss tekrar yenilene dek)
+        if (tp != null && tp.badEndingAktif) sonuc = Math.min(10.0, sonuc * 2.0);
+        return sonuc;
     }
 
     /**
@@ -53,6 +61,8 @@ public class Psikoloji {
      */
     public static double grupAgresivlikCarpani(ServerPlayerEntity player) {
         TruePersonality tpMain = PersonalityManager.get(player);
+        // v3.1 Boss WIN sessizliği — klon spawn dahil susar
+        if (tpMain.bossOldurulmeTick > 0) return 0.01;
         double toplam = kotulukSkoru(tpMain);
         double ozguvenToplam = tpMain.candyOzguven;
         int sayi = 1;
@@ -76,6 +86,9 @@ public class Psikoloji {
 
         // Grup bonusu: 2+ oyuncu → ekstra %10 (birlikte hareket = daha çok görünme)
         if (sayi > 1) result = Math.min(5.0, result * 1.1);
+
+        // v3.1 Boss BAD ENDING — kalıcı 2x hız (klon spawn dahil)
+        if (tpMain.badEndingAktif) result = Math.min(10.0, result * 2.0);
         return result;
     }
 }

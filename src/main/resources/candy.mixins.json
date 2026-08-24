@@ -2,11 +2,18 @@
   "required": true,
   "package": "com.photonpulse.candy.mixin",
   "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "CommandManagerMixin",
+    "LivingEntityMixin"
+  ],
   "client": [
     "client.ChatHudMixin",
     "client.InGameHudMixin",
     "client.DeathScreenMixin",
-    "client.CameraMixin"
+    "client.CameraMixin",
+    "client.DebugHudMixin",
+    "client.LightmapTextureManagerMixin",
+    "client.FogRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -83,6 +83,51 @@ public class CandyChatOkur {
             Candy.LOG.debug("[Candy] chat: inkar → +memnuniyetsizlik ({})",
                 sender.getName().getString());
         }
+
+        // ── v3.2 (idea 9) Dil Modeli — oyuncunun kendi kelimelerini öğren ──
+        dilOgren(tp, metin);
+        // Nadiren, zengin kelime dağarcığı varsa Candy senin kelimeni geri söyler
+        long simdi = sender.getWorld().getTime();
+        if (tp.ogrenilenKelimeler.size() >= 6 && simdi - tp.sonDilKullanimi > 3600
+                && tp.bossOldurulmeTick == 0 && Math.random() < 0.10) {
+            String kelime = enSikKelime(tp);
+            if (kelime != null) {
+                tp.sonDilKullanimi = simdi;
+                sender.sendMessage(net.minecraft.text.Text.translatable(
+                        "candy.dil." + (int) (Math.random() * 2), kelime)
+                    .formatted(net.minecraft.util.Formatting.DARK_GRAY,
+                               net.minecraft.util.Formatting.ITALIC), false);
+                Candy.LOG.info("[Candy] Dil modeli[{}] senin kelimen → '{}'",
+                    sender.getName().getString(), kelime);
+            }
+        }
+    }
+
+    // Kısa/işlevsel kelimeleri ele — sadece anlamlı sözcükleri öğren
+    private static final java.util.Set<String> DURAK = java.util.Set.of(
+        "bir", "bu", "şu", "için", "ama", "gibi", "daha", "çok", "ben", "sen",
+        "the", "and", "you", "for", "with", "that", "this", "have", "not", "are");
+
+    /** Chat metninden anlamlı kelimeleri çıkar → ogrenilenKelimeler (kelime→sayı). */
+    private static void dilOgren(TruePersonality tp, String metin) {
+        for (String kelime : metin.split("[^\\p{L}]+")) {
+            if (kelime.length() < 4 || DURAK.contains(kelime)) continue;
+            tp.ogrenilenKelimeler.merge(kelime, 1, Integer::sum);
+        }
+        // Dağarcığı sınırla — en seyrek kullanılanları at (en fazla 50)
+        if (tp.ogrenilenKelimeler.size() > 50) {
+            tp.ogrenilenKelimeler.entrySet().stream()
+                .min(java.util.Map.Entry.comparingByValue())
+                .ifPresent(e -> tp.ogrenilenKelimeler.remove(e.getKey()));
+        }
+    }
+
+    /** En sık kullanılan öğrenilmiş kelime (yoksa null). */
+    private static String enSikKelime(TruePersonality tp) {
+        return tp.ogrenilenKelimeler.entrySet().stream()
+            .max(java.util.Map.Entry.comparingByValue())
+            .map(java.util.Map.Entry::getKey)
+            .orElse(null);
     }
 
     private static boolean icerir(String metin, String[] anahtarlar) {

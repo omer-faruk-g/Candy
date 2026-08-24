@@ -1,0 +1,11 @@
+{
+  "type": "candy:mirror",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:overworld",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "minecraft:dark_forest"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.Candy;
+import com.photonpulse.candy.net.BossCountdownPayload;
 import com.photonpulse.candy.net.CamscreenPayload;
 import com.photonpulse.candy.net.CandyIntensityPayload;
 import com.photonpulse.candy.net.HastalikPayload;
@@ -54,6 +55,16 @@ public class CandyClientNet {
                 HastalikState.set(payload.hastalik());
             });
 
-        Candy.LOG.info("[Candy] CandyClientNet aktif — intensity + camscreen + hastalık dinleniyor");
+        // Boss countdown payload (Faz 8)
+        try {
+            PayloadTypeRegistry.playS2C().register(BossCountdownPayload.ID, BossCountdownPayload.CODEC);
+        } catch (Throwable t) {
+            Candy.LOG.debug("[Candy] BossCountdown payload zaten kayıtlı: {}", t.getMessage());
+        }
+        ClientPlayNetworking.registerGlobalReceiver(
+            BossCountdownPayload.ID,
+            (payload, context) -> BossCountdownState.set(payload.saniye()));
+
+        Candy.LOG.info("[Candy] CandyClientNet aktif — intensity + camscreen + hastalık + boss");
     }
 }
