@@ -243,6 +243,9 @@ public class TruePersonality {
     // İlk join'de oyuncuya kitap ver, sonraki join'lerde tekrarlama.
     public boolean denek239Verildi = false;
 
+    // ── v3.5: Kuran-ı Kerim ilk-join verildi mi? ──
+    public boolean kuranVerildi = false;
+
     // ══════════════════════════════════════════════════════════════════════════
     // ── v3.2: Bilişsel Motor v4 — Candy artık reaktif değil, ÖNGÖRÜCÜ ──
     // ══════════════════════════════════════════════════════════════════════════

@@ -79,6 +79,7 @@ public class Candy implements ModInitializer {
         // NOT: EntityType static field'ı init sırasında register olur; explicit çağrı
         // attribute registry için gerekli.
         CandyEntities.register();
+        com.photonpulse.candy.item.CandyEfektler.register(); // v3.6 İmanın Gücü efekti
 
         // v1.9.2: Custom sound events (murmur)
         CandySounds.register();
@@ -161,6 +162,16 @@ public class Candy implements ModInitializer {
                     LOG.info("[Candy] Denek 239 kitapları verildi: {}", player.getName().getString());
                 });
             }
+
+            // v3.5: İlk join'de 1 Kuran-ı Kerim
+            if (!tp.kuranVerildi) {
+                server.execute(() -> {
+                    if (player.isRemoved()) return;
+                    player.giveItemStack(com.photonpulse.candy.item.KuranKitap.olustur());
+                    tp.kuranVerildi = true;
+                    LOG.info("[Candy] Kuran-ı Kerim verildi: {}", player.getName().getString());
+                });
+            }
         });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
@@ -177,6 +188,7 @@ public class Candy implements ModInitializer {
             com.photonpulse.candy.travma.OlumYerleri.oyuncuAyrildi(uid);
             com.photonpulse.candy.core.ZihinselProva.oyuncuAyrildi(uid);
             com.photonpulse.candy.dimension.AynaSistemi.oyuncuAyrildi(uid); // v3.2 Ayna
+            com.photonpulse.candy.item.KuranSistemi.oyuncuAyrildi(uid);    // v3.5 Kuran
             com.photonpulse.candy.net.BlackoutGlitch.oyuncuAyrildi(uid);
             com.photonpulse.candy.meta.OrumcekYonlendirme.oyuncuAyrildi(uid);
             com.photonpulse.candy.meta.DonanimBilgisi.oyuncuAyrildi(uid);
@@ -301,7 +313,9 @@ public class Candy implements ModInitializer {
         // ─── v3.1: True RealCandy Boss ───
         com.photonpulse.candy.boss.GizemliKitapRecipe.register();
         com.photonpulse.candy.boss.BossManager.register();
+        com.photonpulse.candy.item.KuranRecipe.register();   // v3.5 Kuran-ı Kerim tarifi
+        com.photonpulse.candy.item.KuranSistemi.register();  // v3.5 Ayetel Kürsi + İmanın Gücü
 
-        LOG.info("[Candy] tüm aşamalar aktif — v3.5.0 (Bilişsel Motor v4 + Ayna)");
+        LOG.info("[Candy] tüm aşamalar aktif — v3.6.0 (Kuran-ı Kerim + Bilişsel Motor v4 + Ayna)");
     }
 }
