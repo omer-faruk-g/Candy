@@ -5,8 +5,12 @@
   "name": "Candy",
   "description": "An entity trying to find out what it is. It is watching you. Psychological horror: flashing, sudden loud sounds, chat and HUD interference, world damage. See README before installing. | Kendini bulmaya çalışan bir varlık. Seni izliyor.",
   "authors": ["PhotonPulse"],
-  "contact": {},
-  "license": "ARR",
+  "contact": {
+    "homepage": "https://github.com/omer-faruk-g/Candy",
+    "sources": "https://github.com/omer-faruk-g/Candy",
+    "issues": "https://github.com/omer-faruk-g/Candy/issues"
+  },
+  "license": "CC-BY-NC-SA-4.0",
   "environment": "*",
   "entrypoints": {
     "main": ["com.photonpulse.candy.Candy"],

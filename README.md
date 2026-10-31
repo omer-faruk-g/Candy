@@ -101,7 +101,17 @@ per-version API notes are in [BUILD.md](BUILD.md).
 
 ## Licence
 
-All rights reserved. See [LICENSE](LICENSE).
+[CC BY-NC-SA 4.0](LICENSE).
+
+**Modpacks: go ahead, no permission needed.** Credit "Candy by PhotonPulse" with a
+link, keep the pack free, and if you ship a *modified* Candy it carries the same
+licence. Streaming and monetised video are fine — "NonCommercial" is about selling
+the mod, not about your channel.
+
+Up to and including v8.4.0 this repo carried AGPL-3.0 text while the mod metadata
+declared `ARR`. Those contradicted each other and gave no clear answer to "can I
+put this in a pack?". CC BY-NC-SA 4.0 replaces both from the next release on, and
+an AGPL copy you already hold keeps its grant — see [LICENSE](LICENSE).
 
 ---
 
@@ -176,3 +186,17 @@ tavanı. Mekanikleri kapatmak yerine şiddetini düşürür. `0.5` = "aynı mod,
 Bir efekti kapatmak gerçek bir karardır ve Candy buna uyar — izin verilen tek şaka
 şu: *senin* kapattığın bir efekti bir kez geri açıp config'e bir satır bırakabilir.
 `uygulamaSezgisi` bu şakanın dışında, çünkü gizlilik anahtarı yalnızca senin.
+
+## Lisans
+
+[CC BY-NC-SA 4.0](LICENSE).
+
+**Modpack: serbest, izin istemeye gerek yok.** "Candy by PhotonPulse" künyesini
+bağlantıyla ver, paketi ücretli yapma, *değiştirdiğin* bir Candy'yi dağıtıyorsan
+aynı lisansla dağıt. Yayın ve gelir getiren video serbest — "NonCommercial" modun
+satılmasını kısıtlar, kanalını değil.
+
+v8.4.0'a kadar depoda AGPL-3.0 metni duruyordu, mod verisi ise `ARR` diyordu; ikisi
+çelişiyor ve "paketime koyabilir miyim?" sorusuna cevap vermiyordu. CC BY-NC-SA 4.0
+sonraki sürümden itibaren ikisinin yerine geçiyor; elinde AGPL'li bir kopya varsa o
+kopyanın hakkı duruyor — [LICENSE](LICENSE).
