@@ -354,3 +354,8 @@ atlasını bozacağı için özellik devre dışı bırakıldı, tahminle port e
 `GameProfile` (authlib 7: record → `name()`, `properties()`) ve diğer tüm kurallar
 `>=1.21.9` eşiğine bağlı, ama **yalnızca 1.21.11'de doğrulandı**. 1.21.8/1.21.9/1.21.10
 düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeniden kontrol et.
+
+## Loader desteği
+
+Şu an yalnızca **Fabric**. NeoForge ve Forge portunun mimari kararı ve ölçülmüş
+kapsamı [MULTILOADER.md](MULTILOADER.md) içinde — karar verildi, kod henüz taşınmadı.
