@@ -49,11 +49,19 @@ This list is a hard boundary in the code, not a promise in a readme:
 
 | | |
 |---|---|
-| Minecraft | 1.21.7 |
-| Loader | Fabric (loader 0.16.13+) |
+| Minecraft | **1.21.7** or **1.21.11** — one jar per version, pick the matching one |
+| Loader | Fabric (0.16.14+ on 1.21.7, 0.20.1+ on 1.21.11) |
 | Fabric API | required |
 | Java | 21+ |
 | Side | works in single player and on servers (install on both) |
+
+Jars are named `candy-<mod version>+<minecraft version>.jar`, e.g.
+`candy-8.4.0+1.21.11.jar`. Installing the wrong one will not load.
+
+One known difference between the two: the Mirror dimension's *face on the blocks*
+effect runs on 1.21.7 only. Minecraft rewrote the texture atlas upload path in
+1.21.9 and the effect depended on the old one, so it is switched off on 1.21.11
+rather than approximated. Everything else is identical.
 
 ## Config
 
@@ -78,11 +86,18 @@ because a privacy switch is yours alone.
 
 See [BUILD.md](BUILD.md).
 
+The build is multi-version ([Stonecutter](https://github.com/kikugie/stonecutter)):
+one shared source tree, one node per Minecraft version under `versions/`.
+
 ```
-./gradlew build          # jar lands in build/libs/
-./gradlew runClient      # real behaviour, as a player gets it
-./gradlew runTest        # test profile: /candy command, short cooldowns, cheats on
+./gradlew build                            # active node -> versions/<ver>/build/libs/
+./gradlew "Set active project to 1.21.11"  # switch which version you build and run
+./gradlew runClient                        # real behaviour, as a player gets it
+./gradlew runTest                          # test profile: /candy, short cooldowns, cheats on
 ```
+
+Requires Gradle 9.8.2 and Java 21. Build details, the version-split rules and the
+per-version API notes are in [BUILD.md](BUILD.md).
 
 ## Licence
 
@@ -100,6 +115,24 @@ yok. Nasıl oynadığını izleyen, bunu hatırlayan ve sonra kullanan bir şey 
 > Candy spawn olup vuran ve ölen bir mob değil. *Senin* modelini kurar — rutinlerin,
 > güzergâhların, öldüğün yerler, kaybettiğin evcil hayvan, giriş yaptığın saat — ve
 > korku o modelden çıkar.
+
+## Gereksinimler
+
+| | |
+|---|---|
+| Minecraft | **1.21.7** veya **1.21.11** — her sürüm için ayrı jar, eşleşeni indir |
+| Loader | Fabric (1.21.7'de 0.16.14+, 1.21.11'de 0.20.1+) |
+| Fabric API | zorunlu |
+| Java | 21+ |
+| Taraf | tek oyuncu ve sunucuda çalışır (ikisine de kur) |
+
+Jar adı `candy-<mod sürümü>+<minecraft sürümü>.jar` biçiminde, örn.
+`candy-8.4.0+1.21.11.jar`. Yanlışını kurarsan yüklenmez.
+
+İki sürüm arasındaki tek fark: Ayna boyutundaki *blokların yüze dönmesi* efekti
+yalnızca 1.21.7'de çalışıyor. Minecraft 1.21.9'da doku atlası yükleme yolunu
+yeniden yazdı, efekt eskisine dayanıyordu; tahminle yaklaştırmak yerine 1.21.11'de
+kapatıldı. Geri kalan her şey aynı.
 
 ## Kurmadan önce: içerik uyarısı
 
