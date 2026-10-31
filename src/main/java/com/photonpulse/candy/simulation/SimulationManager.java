@@ -3,6 +3,7 @@ package com.photonpulse.candy.simulation;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.photonpulse.candy.Candy;
+import com.photonpulse.candy.core.JsonDepo;
 import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
@@ -63,11 +64,7 @@ public class SimulationManager {
     public static void kaydet(SimulatedPersonality sp) {
         if (klasor == null || sp == null || sp.oyuncuId == null) return;
         Path dosya = klasor.resolve("simulation_" + sp.oyuncuId + ".json");
-        try {
-            Files.writeString(dosya, GSON.toJson(sp));
-        } catch (IOException e) {
-            Candy.LOG.error("[Candy] simulation yazılamadı: {}", sp.oyuncuId, e);
-        }
+        JsonDepo.yaz(dosya, GSON.toJson(sp));   // v8: atomik + arka plan
     }
 
     public static void hepsiniKaydet() {

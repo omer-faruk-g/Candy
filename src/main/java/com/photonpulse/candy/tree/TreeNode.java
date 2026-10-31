@@ -31,6 +31,10 @@ public class TreeNode {
 
     // ── Aktiflik ölçütleri (0..1) ──
     public double aktiflik = 0.0;
+
+    // v4.0: bu kokun son beyin cikisi (izleme/hata ayiklama; davranisi etkilemez).
+    // Karisim orani BeyinMotoru tarafindan uygulanir; burada ham beyin degeri durur.
+    public float beyinKatkisi = 0f;
     public double bilgi = 0.0;
 
     // ── Çatallanma sayacı ──

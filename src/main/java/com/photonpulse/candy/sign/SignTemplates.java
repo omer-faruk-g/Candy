@@ -76,6 +76,11 @@ public class SignTemplates {
     public static Text kisiselAtif(TruePersonality tp, TreeNode baskin) {
         Text temel;
         double r = RNG.nextDouble();
+        // v8.2: RUTİN ATFI önce denenir — en spesifik atıf bu.
+        // Archivist'in bulunan kitapları sabit metin; buradaki metin oyuncunun
+        // kendi en sık tekrarladığı (saat dilimi + aktivite) alışkanlığından türer.
+        Text rutin = rutinAtif(tp);
+        if (rutin != null && r < 0.40) return traitTabanliStil(rutin, baskin);
         if (tp.geceKonumu != null && r < 0.35) {
             temel = Text.translatable("candy.attribution.night_location");
         } else if (tp.enSikEkipman() != null && r < 0.6) {
@@ -88,6 +93,31 @@ public class SignTemplates {
             temel = Text.translatable("candy.attribution.watching");
         }
         return traitTabanliStil(temel, baskin);
+    }
+
+    /**
+     * v8.2 — RUTİN ATFI: oyuncunun en sık tekrarladığı alışkanlığı ona söyler.
+     *
+     * <p>Metin iki argümanla kurulur: <b>saat dilimi</b> ("gece", "şafak"...) ve
+     * <b>aktivite</b> ("kazıyorsun", "kaçıyorsun"...). İkisi de lang'de ayrı anahtar,
+     * yani tabelaya teknik hiçbir şey sızmıyor — ne chunk koordinatı, ne hash, ne sayı.
+     * Tabela Candy'nin sesiyle konuşur: <i>"gece ikide hep aynı yerde kazıyorsun."</i></p>
+     *
+     * <p>Koordinat KASITLI olarak yazılmıyor: tabela kalıcı bir nesne ve dünya kaydıyla
+     * taşınır. Oyuncunun üssünün yerini kalıcı bir yere yazmak, v8.1'de kurulan
+     * "kişisel veri hiçbir kalıcı yere yazılmaz" kuralını kırardı.</p>
+     *
+     * @return atıf metni, ya da yeterli tekrar kanıtı yoksa {@code null}
+     */
+    public static Text rutinAtif(TruePersonality tp) {
+        if (tp == null) return null;
+        long paket = com.photonpulse.candy.rutin.RutinKaydi.enSik(tp, 4);
+        if (!com.photonpulse.candy.rutin.RutinKaydi.dolu(paket)) return null;
+        int dilim = com.photonpulse.candy.rutin.RutinKaydi.saatDilimi(paket);
+        String aktivite = com.photonpulse.candy.rutin.RutinKaydi.aktivite(paket);
+        return Text.translatable("candy.rutin.atif",
+            Text.translatable("candy.rutin.dilim." + dilim),
+            Text.translatable("candy.rutin.aktivite." + aktivite));
     }
 
     /**

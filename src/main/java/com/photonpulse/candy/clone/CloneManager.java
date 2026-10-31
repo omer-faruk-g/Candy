@@ -13,11 +13,9 @@ import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -140,8 +138,24 @@ public class CloneManager {
      * @return true: spawn başarılı; false: uygun konum bulunamadı.
      */
     public static boolean zorlaKlonSpawn(ServerPlayerEntity player, TruePersonality tp) {
+        return zorlaKlonSpawn(player, tp, null);
+    }
+
+    /**
+     * v8.2 — hedef konumu ÇAĞIRAN belirleyebilir.
+     *
+     * <p>Rutin geri oynatması ({@code rutin.RutinTekrari}) klonu oyuncunun arkasına değil,
+     * oyuncunun aylardır tekrarladığı <b>hatırlanan chunk'a</b> koymak zorunda; "arka"
+     * burada yanlış yer. {@code istenen} null ise eski davranış birebir korunur.</p>
+     *
+     * @param istenen hedef chunk içindeki bir nokta, ya da null (= oyuncunun arkası)
+     */
+    public static boolean zorlaKlonSpawn(ServerPlayerEntity player, TruePersonality tp,
+                                         BlockPos istenen) {
         ServerWorld world = (ServerWorld) player.getWorld();
-        BlockPos hedef = arkaYakinKonum(player);
+        BlockPos hedef = (istenen == null)
+            ? arkaYakinKonum(player)
+            : ariyorumUygunKonum(world, istenen.getX(), istenen.getZ(), istenen.getY());
         if (hedef == null) return false;
 
         List<UUID> mevcut = aktifKlonlar.computeIfAbsent(player.getUuid(), k -> new java.util.ArrayList<>());

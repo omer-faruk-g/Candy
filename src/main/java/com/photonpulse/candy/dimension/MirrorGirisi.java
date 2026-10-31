@@ -45,7 +45,7 @@ public class MirrorGirisi {
             // 1) Anti-Mirror'da ölüm → gerçek dünyaya dönüş bekle + kick (deferred)
             if (world.getRegistryKey().equals(CandyDimensions.ANTI_MIRROR)) {
                 tp.gercekDunyaDonusBekliyor = true;
-                MinecraftServer srv = player.getServer();
+                MinecraftServer srv = player.getWorld().getServer();
                 if (srv != null) {
                     // AFTER_DEATH event içinde anında disconnect riskli — bir sonraki tick'e ertele
                     srv.execute(() -> {
@@ -86,7 +86,7 @@ public class MirrorGirisi {
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
             if (alive) return;
             TruePersonality tp = PersonalityManager.get(newPlayer);
-            MinecraftServer server = newPlayer.getServer();
+            MinecraftServer server = newPlayer.getWorld().getServer();
             if (server == null) return;
 
             // A) Gerçek dünyaya dönüş (Anti-Mirror ölümü sonrası)

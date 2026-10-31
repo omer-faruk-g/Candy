@@ -47,7 +47,10 @@ public class SimulationEngine {
                 simuleEt(tp, sp);
             }
         }
-        if (tickSayaci % AUTOSAVE_ARALIGI == 0) {
+        // v4.0 FAZ KAYDIRMA: 4 autosave sistemi de %6000==0 idi -> ayni tick'te
+        // 4 senkron disk yazimi (10 oyuncuda ~380KB tek tick = gorunur stutter).
+        // Bu sistem simulation_*.json icin 3000 fazina kaydirildi.
+        if (tickSayaci % AUTOSAVE_ARALIGI == 3000) {
             SimulationManager.hepsiniKaydet();
         }
     }

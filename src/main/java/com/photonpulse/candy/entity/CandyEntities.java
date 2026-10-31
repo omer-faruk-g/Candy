@@ -41,10 +41,30 @@ public class CandyEntities {
             .trackingTickInterval(2)
             .build(TRUE_REAL_CANDY_KEY));
 
+    // ── v8.3: Arkadaş ──
+    // Oyuncu boyutlarında: silueti bir oyuncudan ayırt edilmesin. Teni siyah
+    // (textures/entity/arkadas.png), adı başının üstünde.
+    public static final RegistryKey<EntityType<?>> ARKADAS_KEY = RegistryKey.of(
+        RegistryKeys.ENTITY_TYPE, Identifier.of(Candy.MOD_ID, "arkadas"));
+
+    public static final EntityType<com.photonpulse.candy.arkadas.ArkadasEntity> ARKADAS =
+        Registry.register(
+            Registries.ENTITY_TYPE, ARKADAS_KEY,
+            EntityType.Builder.<com.photonpulse.candy.arkadas.ArkadasEntity>create(
+                    com.photonpulse.candy.arkadas.ArkadasEntity::new, SpawnGroup.MONSTER)
+                .dimensions(0.6f, 1.95f)
+                .eyeHeight(1.62f)
+                .maxTrackingRange(96)
+                .trackingTickInterval(2)
+                .build(ARKADAS_KEY));
+
     public static void register() {
         // Static initializer yapar; attribute'ları explicit ekle
         FabricDefaultAttributeRegistry.register(DOPPEL, CandyDoppelEntity.createDoppelAttributes());
         FabricDefaultAttributeRegistry.register(TRUE_REAL_CANDY, TrueRealCandyEntity.createBossAttributes());
-        Candy.LOG.info("[Candy] Entity type registered: candy:doppel, candy:true_real_candy");
+        FabricDefaultAttributeRegistry.register(ARKADAS,
+            com.photonpulse.candy.arkadas.ArkadasEntity.createArkadasAttributes());
+        Candy.LOG.info(
+            "[Candy] Entity type registered: candy:doppel, candy:true_real_candy, candy:arkadas");
     }
 }

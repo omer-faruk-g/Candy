@@ -17,3 +17,6 @@ run/
 
 # Env
 .env
+versions/*/build/
+versions/*/src/
+.stonecutter/

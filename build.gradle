@@ -1,11 +1,15 @@
+// Stonecutter MERKEZ BETİĞİ — her düğüm (versions/<sürüm>) için bir kez çalışır.
+// Sürüme bağlı değerler versions/<sürüm>/gradle.properties'ten gelir.
 plugins {
-    id 'fabric-loom' version '1.10-SNAPSHOT'
+    id 'fabric-loom'
     id 'java'
 }
 
-version = project.mod_version
-group = project.maven_group
-base { archivesName = project.archives_base_name }
+def mc = stonecutter.current.version
+
+version = "${property('mod_version')}+${mc}"
+group = property('maven_group')
+base { archivesName = property('archives_base_name') }
 
 repositories {
     mavenCentral()
@@ -13,17 +17,41 @@ repositories {
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    minecraft "com.mojang:minecraft:${property('minecraft_version')}"
+    // Yarn 1.21.11'de duruyor; 26.x eklendiğinde Mojang mapping'e düşer.
+    if (stonecutter.current.parsed >= '26') {
+        mappings loom.officialMojangMappings()
+    } else {
+        mappings "net.fabricmc:yarn:${property('yarn_mappings')}:v2"
+    }
+    modImplementation "net.fabricmc:fabric-loader:${property('loader_version')}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
     // Gson zaten Minecraft ile geliyor, ayrıca eklemiyoruz
 }
 
+// Test profili: ./gradlew runTest
+// runClient GERCEK davranisi korur (45 sn cooldown, komut kilidi acik, dev komutu yok).
+// runTest ise kapiyi acar: /candy komutu + kisa cooldown + vanilla cheat komutlari.
+// Yalnizca dev run'i etkiler; jar'a hicbir sey sizmaz.
+loom {
+    runs {
+        test {
+            client()
+            name = "Candy Test Client"
+            vmArg "-Dcandy.debug=true"   // /candy komutu + kisa cooldown
+            vmArg "-Dcandy.nolock=true"  // /gamemode /tp /time gibi vanilla komutlar
+        }
+    }
+}
+
+// Kapanis icinde property() task'a delege olur, projeye degil — disarida yakala.
+def modSurum = version
+def mcDep = property('minecraft_dep')
 processResources {
-    inputs.property "version", project.version
+    inputs.property "version", modSurum
+    inputs.property "minecraft_dep", mcDep
     filesMatching("fabric.mod.json") {
-        expand "version": project.version
+        expand "version": modSurum, "minecraft_dep": mcDep
     }
 }
 
@@ -38,5 +66,56 @@ java {
 }
 
 jar {
-    from("LICENSE") { rename { "${it}_${project.archivesBaseName}" } }
+    from("LICENSE") { rename { "${it}_${base.archivesName.get()}" } }
+}
+
+// Her düğümün jar'ı kök build/libs altında toplanır — dağıtımı tek yerden yapmak için.
+tasks.register('tumunuTopla', Copy) {
+    dependsOn tasks.named('remapJar')
+    from tasks.named('remapJar')
+    into rootProject.layout.buildDirectory.dir('libs')
+}
+
+// Dogrulama yardimcisi: derlenmis siniflari headless kosturmak icin classpath yaz.
+tasks.register('yazCp') {
+    doLast {
+        def f = layout.buildDirectory.file('cp.txt').get().asFile
+        f.parentFile.mkdirs()
+        f.text = sourceSets.main.runtimeClasspath.asPath
+        println "cp -> ${f}"
+    }
+}
+
+// Surumler arasi mapping yeniden adlandirmalari.
+// UYARI: Stonecutter bu degisimleri PAYLASILAN src/ agacina YERINDE uygular. Aktif surum
+// degistiginde src/ o surumun adlarina donusur. Bu yuzden bir kural eklendikten sonra
+// SILINMEMELI: silinen kuralin tersi calismaz ve src/ yarim cevrilmis halde kalir.
+// Adlar javap ile 1.21.7 ve 1.21.11 yarn jar'larindan dogrulandi.
+//
+// KURAL SECIMI: duz metin degisimi alici tipini bilmez. Ad iki tarafta da gecerliyse
+// (Chunk.getPos ile Entity.getPos gibi) ciplak desen yanlis siniflari da vurur.
+// Yonu ters cevirmek cozum DEGIL: aktif dugum src/'yi yerinde derler, replacement
+// orada hic kosmaz — yani src/ her zaman AKTIF surumun adlarini tasimak zorunda.
+// Dolayisiyla belirsiz adlar aliciya capalanir ("player.getPos()"), ciplak birakilmaz.
+// Yeni bir entity degiskeni eklenirse buraya kurali da eklemek gerekir; eksikse
+// 1.21.11 derlemesi o satirda yuksek sesle patlar, sessiz kalmaz.
+stonecutter {
+    replacements.string(current.parsed >= '1.21.9') {
+        replace '.getWorld()', '.getEntityWorld()'
+        replace 'net.minecraft.client.util.SkinTextures', 'net.minecraft.entity.player.SkinTextures'
+        // NOT: '.getSkinTextures()' icin kural YOK. Ad yalnizca
+        // AbstractClientPlayerEntity'de getSkin'e dondu; PlayerListEntry ve
+        // DefaultSkinHelper iki surumde de getSkinTextures tasiyor. Tek ayrilan cagri
+        // (MeYuz) //? if directive'i ile cozuldu — bkz. client/MeYuz.java.
+        // authlib 7: GameProfile record oldu. getGameProfile() ile capalandi ki ayni adi
+        // tasiyan baska siniflar (Entity.getName gibi) etkilenmesin.
+        replace '.getGameProfile().getName()', '.getGameProfile().name()'
+        replace '.getGameProfile().getProperties()', '.getGameProfile().properties()'
+        // Entity.getPos -> getEntityPos. Chunk.getPos iki surumde de ayni kaldigi icin
+        // ciplak '.getPos()' DEGIL, entity alicilarina capalanmis desenler:
+        replace 'player.getPos()', 'player.getEntityPos()'
+        replace 'oyuncu.getPos()', 'oyuncu.getEntityPos()'
+        replace 'mob.getPos()', 'mob.getEntityPos()'
+        replace 'this.getPos()', 'this.getEntityPos()'
+    }
 }

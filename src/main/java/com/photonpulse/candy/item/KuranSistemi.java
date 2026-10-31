@@ -56,10 +56,10 @@ public class KuranSistemi {
     public static void register() {
         // SAĞ TIK — Ayetel Kürsi (düz book zaten açılmaz)
         UseItemCallback.EVENT.register((player, world, hand) -> {
-            if (world.isClient) return ActionResult.PASS;
+            if (world.isClient()) return ActionResult.PASS;
             if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.PASS;
             if (!KuranKitap.esittir(player.getStackInHand(hand))) return ActionResult.PASS;
-            int now = sp.getServer().getTicks();
+            int now = sp.getWorld().getServer().getTicks();
             Integer son = sonOkuma.get(sp.getUuid());
             if (son != null && now - son < OKUMA_COOLDOWN) return ActionResult.SUCCESS;
             sonOkuma.put(sp.getUuid(), now);
@@ -69,7 +69,7 @@ public class KuranSistemi {
 
         // SOL TIK (bloğa) — tüket + çile + nimet
         AttackBlockCallback.EVENT.register((player, world, hand, pos, dir) -> {
-            if (world.isClient || hand != Hand.MAIN_HAND) return ActionResult.PASS;
+            if (world.isClient() || hand != Hand.MAIN_HAND) return ActionResult.PASS;
             if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.PASS;
             if (!KuranKitap.esittir(sp.getMainHandStack())) return ActionResult.PASS;
             solTik(sp);
@@ -78,7 +78,7 @@ public class KuranSistemi {
 
         // SOL TIK (varlığa)
         AttackEntityCallback.EVENT.register((player, world, hand, target, hit) -> {
-            if (world.isClient || hand != Hand.MAIN_HAND) return ActionResult.PASS;
+            if (world.isClient() || hand != Hand.MAIN_HAND) return ActionResult.PASS;
             if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.PASS;
             if (!KuranKitap.esittir(sp.getMainHandStack())) return ActionResult.PASS;
             solTik(sp);
@@ -105,7 +105,7 @@ public class KuranSistemi {
         ((ServerWorld) sp.getWorld()).playSound(null, sp.getBlockPos(),
             SoundEvents.AMBIENT_CAVE.value(), SoundCategory.PLAYERS, 1.0f, 0.5f);
         // Nimeti çile bitince uygula
-        bekleyenNimet.put(sp.getUuid(), sp.getServer().getTicks() + CILE_TICK);
+        bekleyenNimet.put(sp.getUuid(), sp.getWorld().getServer().getTicks() + CILE_TICK);
         Candy.LOG.info("[Candy] Kuran sol-tık[{}] → çile başladı", sp.getName().getString());
     }
 

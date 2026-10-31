@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "CommandManagerMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "WorldSetBlockMixin"
   ],
   "client": [
     "client.ChatHudMixin",
@@ -13,9 +14,10 @@
     "client.CameraMixin",
     "client.DebugHudMixin",
     "client.LightmapTextureManagerMixin",
-    "client.FogRendererMixin"
+    "client.FogRendererMixin",
+    "client.SpriteContentsAccessor"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }

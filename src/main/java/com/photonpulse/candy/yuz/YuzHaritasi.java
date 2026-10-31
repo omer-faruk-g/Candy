@@ -83,7 +83,7 @@ public class YuzHaritasi {
 
     /** Oyuncunun yüzünden harita üret ve envanterine bırak (async skin çekimi). */
     public static void olustur(ServerPlayerEntity player) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.getWorld().getServer();
         if (server == null) return;
         String skinUrl = skinUrlBul(player);
 

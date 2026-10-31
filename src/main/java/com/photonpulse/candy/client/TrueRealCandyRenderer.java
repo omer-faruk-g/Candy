@@ -7,7 +7,14 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.item.ItemModelManager;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.PlayerListEntry;
+//? if >=1.21.9 {
+/*import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.state.CameraRenderState;
+*/
+//?}
+//? if <1.21.9 {
 import net.minecraft.client.render.VertexConsumerProvider;
+//?}
 import net.minecraft.client.render.entity.BipedEntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
@@ -69,15 +76,35 @@ public class TrueRealCandyRenderer extends MobEntityRenderer<
         state.baby = false;
     }
 
+    // 1.21.9: SkinTextures.texture() -> body().texturePath().
     @Override
     public Identifier getTexture(PlayerEntityRenderState state) {
-        return state.skinTextures != null ? state.skinTextures.texture() : DefaultSkinHelper.getTexture();
+        if (state.skinTextures == null) return DefaultSkinHelper.getTexture();
+        //? if >=1.21.9 {
+        /*return state.skinTextures.body().texturePath();
+        */
+        //?}
+        //? if <1.21.9 {
+        return state.skinTextures.texture();
+        //?}
     }
 
+    // Çok karanlık render — sadece siluet.
+    // 1.21.9'da light render imzasından çıkıp render state'e taşındı.
+    //? if >=1.21.9 {
+    /*@Override
+    public void render(PlayerEntityRenderState state, MatrixStack matrices,
+                       OrderedRenderCommandQueue queue, CameraRenderState camera) {
+        state.light = 0x00200020;
+        super.render(state, matrices, queue, camera);
+    }
+    */
+    //?}
+    //? if <1.21.9 {
     @Override
     public void render(PlayerEntityRenderState state, MatrixStack matrices,
                        VertexConsumerProvider provider, int light) {
-        // Çok karanlık render — sadece siluet
         super.render(state, matrices, provider, 0x00200020);
     }
+    //?}
 }

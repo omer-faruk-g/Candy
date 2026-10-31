@@ -3,7 +3,7 @@
   "id": "candy",
   "version": "${version}",
   "name": "Candy",
-  "description": "Kendini bulmaya çalışan bir varlık. Seni izliyor.",
+  "description": "An entity trying to find out what it is. It is watching you. Psychological horror: flashing, sudden loud sounds, chat and HUD interference, world damage. See README before installing. | Kendini bulmaya çalışan bir varlık. Seni izliyor.",
   "authors": ["PhotonPulse"],
   "contact": {},
   "license": "ARR",
@@ -17,7 +17,7 @@
   ],
   "depends": {
     "fabricloader": ">=0.16.13",
-    "minecraft": "~1.21.7",
+    "minecraft": "${minecraft_dep}",
     "java": ">=21",
     "fabric-api": "*"
   }

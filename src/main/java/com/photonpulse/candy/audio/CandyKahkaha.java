@@ -59,7 +59,7 @@ public class CandyKahkaha {
             sonKahkaha.put(player.getUuid(), simdi);
 
             try {
-                player.playSoundToPlayer(
+                SesGonder.tek(player,
                     CandySounds.LAUGH, SoundCategory.MASTER,
                     0.9f, 1.0f);
             } catch (Throwable ignored) {}

@@ -40,6 +40,6 @@ public class KuranKitap {
     public static boolean esittir(ItemStack stack) {
         if (stack == null || stack.isEmpty() || stack.getItem() != Items.BOOK) return false;
         NbtComponent data = stack.get(DataComponentTypes.CUSTOM_DATA);
-        return data != null && data.contains(MARKER);
+        return data != null && data.copyNbt().contains(MARKER);
     }
 }

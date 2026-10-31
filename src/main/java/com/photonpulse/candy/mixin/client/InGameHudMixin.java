@@ -65,6 +65,75 @@ public class InGameHudMixin {
                 ctx.drawText(mc.textRenderer, metin, w2 - tw - 6, 6, 0xFFFFFFFF, true);
             }
 
+            // v8.2: ALTYAZI KANALI — vanilla altyazı kutusunun yerinde, onun görünümüyle.
+            // Oyuncu chat'e güvenmeyi bırakmış olabilir; altyazıya yalnızca oyunun kendi
+            // sesleri düşer, oraya bakarken şüphe etmiyor.
+            if (com.photonpulse.candy.client.AltyaziState.aktif()) {
+                int w3 = ctx.getScaledWindowWidth();
+                int h3 = ctx.getScaledWindowHeight();
+                int idx3 = com.photonpulse.candy.client.AltyaziState.indeks();
+                float a3 = com.photonpulse.candy.client.AltyaziState.alfa();
+                int op = Math.max(0, Math.min(255, (int) (a3 * 255)));
+                Text alt = Text.translatable("candy.altyazi." + idx3);
+                int tw3 = mc.textRenderer.getWidth(alt);
+                // Vanilla altyazı kutusu: sağ kenardan 2px içeri, hotbar'ın üstünde.
+                int bx = w3 - tw3 - 6;
+                int by = h3 - 40;
+                ctx.fill(bx - 2, by - 2, bx + tw3 + 2, by + 10,
+                    ((op * 3 / 4) << 24));                       // yarı saydam siyah kutu
+                ctx.drawText(mc.textRenderer, alt, bx, by, (op << 24) | 0xFFFFFF, false);
+            }
+
+            // v8.3: İKİLİK FISILTI — siyah üzerine yalnızca 0 ve 1. Terminal AÇILMADI
+            // (kullanıcının kendi kuralı); aynı estetik pencere içinde veriliyor.
+            if (com.photonpulse.candy.client.IkilikEkranState.aktif()) {
+                int w4 = ctx.getScaledWindowWidth();
+                int h4 = ctx.getScaledWindowHeight();
+                float a4 = com.photonpulse.candy.client.IkilikEkranState.alfa();
+                int op4 = Math.max(0, Math.min(255, (int) (a4 * 255)));
+                String bit = com.photonpulse.candy.client.IkilikEkranState.metin();
+                Text bitT = Text.literal(bit);
+
+                if (com.photonpulse.candy.client.IkilikEkranState.kanal() == 0) {
+                    // Tam ekran: siyah zemin + ortada tek satır. Dizi ekrana sığmazsa
+                    // 8'li gruplardan bölünür — rastgele bir yerden kesmek "kod" izlenimini
+                    // bozar, bayt sınırından kesmek korur.
+                    ctx.fill(0, 0, w4, h4, (op4 << 24));
+                    int renk4 = (op4 << 24) | 0xC0C0C0;
+                    int enGenis = w4 - 16;
+                    java.util.List<String> satirlar = new java.util.ArrayList<>();
+                    StringBuilder sb = new StringBuilder();
+                    for (String bayt : bit.split(" ")) {
+                        String deneme = sb.length() == 0 ? bayt : sb + " " + bayt;
+                        if (mc.textRenderer.getWidth(deneme) > enGenis && sb.length() > 0) {
+                            satirlar.add(sb.toString());
+                            sb.setLength(0);
+                            sb.append(bayt);
+                        } else {
+                            sb.setLength(0);
+                            sb.append(deneme);
+                        }
+                    }
+                    if (sb.length() > 0) satirlar.add(sb.toString());
+                    int bas = h4 / 2 - (satirlar.size() * 10) / 2;
+                    for (int i = 0; i < satirlar.size(); i++) {
+                        Text st = Text.literal(satirlar.get(i));
+                        int sw = mc.textRenderer.getWidth(st);
+                        ctx.drawText(mc.textRenderer, st, (w4 - sw) / 2, bas + i * 10,
+                            renk4, false);
+                    }
+                } else {
+                    // Köşe: altyazı kalıbı, kutulu.
+                    int tw4 = mc.textRenderer.getWidth(bitT);
+                    int bx4 = w4 - tw4 - 6;
+                    int by4 = h4 - 54;
+                    ctx.fill(bx4 - 2, by4 - 2, bx4 + tw4 + 2, by4 + 10,
+                        ((op4 * 3 / 4) << 24));
+                    ctx.drawText(mc.textRenderer, bitT, bx4, by4,
+                        (op4 << 24) | 0xC0C0C0, false);
+                }
+            }
+
             // v1.9.0: Hastalık HUD — sol-alt köşede küçük italik semptom (subtle)
             if (HastalikState.var()) {
                 int h0 = ctx.getScaledWindowHeight();

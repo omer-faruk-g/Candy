@@ -2,6 +2,7 @@ package com.photonpulse.candy.ruya;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.audio.CandySounds;
+import com.photonpulse.candy.audio.SesGonder;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
@@ -63,7 +64,7 @@ public class RuyaSistemi {
             ServerWorld dunya = (ServerWorld) player.getWorld();
 
             // 1) Panic fear ses — sadece bu oyuncuya
-            player.playSoundToPlayer(
+            SesGonder.tek(player,
                 CandySounds.PANIC_FEAR,
                 SoundCategory.AMBIENT,
                 1.0f, 1.0f

@@ -18,7 +18,7 @@ import java.util.UUID;
  * → seamless loop, ambient background music hissi.
  * MASTER kategori → sadece master volume slider'ı kontrol eder.
  *
- * playSoundToPlayer kullanılıyor — positional değil, player'la beraber gelir.
+ * Ses tek oyuncuya paketle gönderiliyor (SesGonder) — positional değil.
  * Sessizlik protokolü aktifken susulur (build-up bozulmasın).
  */
 public class BhootAmbient {
@@ -42,7 +42,7 @@ public class BhootAmbient {
             if (player.isSpectator()) continue;
 
             try {
-                player.playSoundToPlayer(
+                SesGonder.tek(player,
                     CandySounds.BHOOT, SoundCategory.MASTER,
                     VOLUME, 1.0f);
             } catch (Throwable ignored) {}

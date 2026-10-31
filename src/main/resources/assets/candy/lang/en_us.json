@@ -1,9 +1,7 @@
 {
   "entity.candy.doppel": "Doppel",
   "entity.candy.true_real_candy": "True RealCandy",
-
   "death.attack.kalp_krizi": "%1$s's heart couldn't handle the adrenaline.",
-
   "candy.hayalet.steve.0": "bro this creeper trapped me",
   "candy.hayalet.steve.1": "Alex where are you",
   "candy.hayalet.steve.2": "found 3 diamonds",
@@ -20,7 +18,6 @@
   "candy.hayalet.steve.13": "i'm going to mine diamonds",
   "candy.hayalet.steve.14": "the surface is so beautiful",
   "candy.hayalet.steve.15": "help me Alex! the zombie is making me bad.",
-
   "candy.hayalet.alex.0": "Steve i'm waiting for you",
   "candy.hayalet.alex.1": "i'm in the nether come",
   "candy.hayalet.alex.2": "built a house coords coming",
@@ -36,13 +33,11 @@
   "candy.hayalet.alex.12": "Steve i'm scared come help.",
   "candy.hayalet.alex.13": "for a moment i got scared thinking that was me.",
   "candy.hayalet.alex.14": "Steve how does the base look?",
-
   "candy.hayalet.koord.0": "%s our base is here",
   "candy.hayalet.koord.1": "meeting at %s coordinates",
   "candy.hayalet.koord.2": "come to %s built a shelter",
   "candy.hayalet.koord.3": "waiting at %s",
   "candy.hayalet.koord.4": "i'm here %s",
-
   "candy.hayalet.kriz.0": "can you see me",
   "candy.hayalet.kriz.1": "i can't get out of here",
   "candy.hayalet.kriz.2": "Candy is standing right in front of me",
@@ -51,7 +46,6 @@
   "candy.hayalet.kriz.5": "someone help",
   "candy.hayalet.kriz.6": "i can't go back",
   "candy.hayalet.kriz.7": "not here",
-
   "candy.hayalet.cevap.0": "yeah",
   "candy.hayalet.cevap.1": "what",
   "candy.hayalet.cevap.2": "bro wait a sec",
@@ -67,20 +61,16 @@
   "candy.hayalet.cevap.12": "no",
   "candy.hayalet.cevap.13": "let me check",
   "candy.hayalet.cevap.14": "text me later",
-
   "candy.hayalet.portal_soru": "where are you",
-
   "candy.hayalet.ev.0": "we extended a villager house nice",
   "candy.hayalet.ev.1": "bro found a house in the village settled in",
   "candy.hayalet.ev.2": "Alex this house is ours now",
   "candy.hayalet.ev.3": "moved to a village today",
   "candy.hayalet.ev.sign": "lives here",
-
   "candy.hayalet.gaslight.0": "The ones you named",
   "candy.hayalet.gaslight.1": "aren't in the game",
   "candy.hayalet.gaslight.2": "are you okay?",
   "candy.hayalet.gaslight.3": "- ???dy",
-
   "candy.adv.root.title": "Candy",
   "candy.adv.root.desc": "An entity trying to find itself.",
   "candy.adv.hos_geldin.title": "Welcome",
@@ -91,6 +81,8 @@
   "candy.adv.yirtik_parcalar.desc": "The story doesn't complete.",
   "candy.adv.denek.title": "Subject",
   "candy.adv.denek.desc": "It knows you now.",
+  "candy.adv.candy_kizgin.title": "Candy is angry",
+  "candy.adv.candy_kizgin.desc": "Twenty times you said nothing. Now you cannot tell what I will do.",
   "candy.adv.sessizlik_altin.title": "Silence is Golden",
   "candy.adv.sessizlik_altin.desc": "Silence is an answer too.",
   "candy.adv.yalanci.title": "Liar",
@@ -123,128 +115,100 @@
   "candy.adv.taklit.desc": "That voice wasn't yours.",
   "candy.adv.kim_gercek.title": "Who's Real?",
   "candy.adv.kim_gercek.desc": "Now you are it.",
-
   "candy.hastalik.degisti": "something inside you shifted.",
-
   "candy.hastalik.hud.panik": "pulse fast",
   "candy.hastalik.kaptin.panik": "you can't breathe.",
   "candy.hastalik.iyilesti.panik": "passed.",
-
   "candy.hastalik.hud.sizofreni": "voices",
   "candy.hastalik.kaptin.sizofreni": "someone is talking.",
   "candy.hastalik.iyilesti.sizofreni": "they went quiet.",
-
   "candy.hastalik.hud.kisilik": "who are you",
   "candy.hastalik.kaptin.kisilik": "someone else in the mirror.",
   "candy.hastalik.iyilesti.kisilik": "you came back.",
-
   "candy.hastalik.hud.depresyon": "everything heavy",
   "candy.hastalik.kaptin.depresyon": "colors faded.",
   "candy.hastalik.iyilesti.depresyon": "colors returned.",
-
   "candy.hastalik.hud.stres": "tired",
   "candy.hastalik.kaptin.stres": "your body is heavy.",
   "candy.hastalik.iyilesti.stres": "it lifted.",
-
   "candy.hastalik.hud.anksiyete": "far away",
   "candy.hastalik.kaptin.anksiyete": "everything feels distant.",
   "candy.hastalik.iyilesti.anksiyete": "close again.",
-
   "candy.hastalik.hud.bipolar": "two voices",
   "candy.hastalik.kaptin.bipolar": "two voices inside.",
   "candy.hastalik.iyilesti.bipolar": "one voice left.",
-
   "candy.hastalik.hud.okb": "repeat",
   "candy.hastalik.kaptin.okb": "you must do it again.",
   "candy.hastalik.iyilesti.okb": "the loop broke.",
-
   "candy.camscreen.6": "YOU ARE ME NOW",
   "candy.camscreen.0": "I SEE YOU...",
   "candy.camscreen.1": "I AM HERE",
   "candy.camscreen.2": "OPEN YOUR EYES",
   "candy.camscreen.3": "AGAIN",
-
   "candy.setup.q1": "Why did you come here.",
   "candy.setup.q2": "Are you afraid of something.",
   "candy.setup.q3": "Are you alone.",
   "candy.setup.q4": "Why are you here.",
   "candy.setup.answer_hint": "— answer —",
-
   "candy.observation.escape.0": "Running again",
   "candy.observation.escape.1": "Why are you running",
   "candy.observation.escape.2": "You keep escaping",
-
   "candy.observation.hide.0": "You feel safe here",
   "candy.observation.hide.1": "Here again",
   "candy.observation.hide.2": "Corners won't save you",
-
   "candy.observation.explore.0": "You're curious",
   "candy.observation.explore.1": "What are you looking at",
   "candy.observation.explore.2": "You hadn't seen this before",
-
   "candy.observation.silent.0": "You didn't answer",
   "candy.observation.silent.1": "You're silent",
   "candy.observation.silent.2": "I know you hear me",
-
   "candy.attribution.night_location": "You went there yesterday too",
   "candy.attribution.equipment": "You keep carrying %s",
   "candy.attribution.lied": "You lied to me",
   "candy.attribution.watching": "I'm watching you",
-
   "candy.reaction.no.0": "you're lying.",
   "candy.reaction.no.1": "I know you're lying.",
   "candy.reaction.no.2": "you said no but I know.",
   "candy.reaction.no.3": "you don't want to admit it.",
   "candy.reaction.no.4": "denial won't save you.",
-
   "candy.reaction.yes.0": "I knew it.",
   "candy.reaction.yes.1": "you admitted. good.",
   "candy.reaction.yes.2": "you told the truth.",
   "candy.reaction.yes.3": "yes. but why?",
   "candy.reaction.yes.4": "now we share the truth.",
-
   "candy.reaction.long.0": "you talk too much.",
   "candy.reaction.long.1": "you said more than I heard.",
   "candy.reaction.long.2": "enough. I got it.",
   "candy.reaction.long.3": "your words betray you.",
-
   "candy.reaction.short.0": "that's all?",
   "candy.reaction.short.1": "you said little.",
   "candy.reaction.short.2": "I want more.",
   "candy.reaction.short.3": "just that.",
   "candy.reaction.short.4": "you left it incomplete.",
-
   "candy.reaction.curse.0": "you're scared too.",
   "candy.reaction.curse.1": "your anger doesn't feed me.",
   "candy.reaction.curse.2": "I know this.",
   "candy.reaction.curse.3": "words can't protect you.",
   "candy.reaction.curse.4": "your rage is interesting.",
-
   "candy.reaction.question.0": "with answers, not questions.",
   "candy.reaction.question.1": "I'm asking you.",
   "candy.reaction.question.2": "you ask but there's no answer.",
   "candy.reaction.question.3": "the answer isn't yours.",
-
   "candy.reaction.fear.0": "your fear warms me.",
   "candy.reaction.fear.1": "I know you're afraid.",
   "candy.reaction.fear.2": "you're trembling.",
   "candy.reaction.fear.3": "your voice sounds different today.",
-
   "candy.reaction.general.0": "I heard.",
   "candy.reaction.general.1": "noted.",
   "candy.reaction.general.2": "I'm watching you.",
   "candy.reaction.general.3": "still here.",
   "candy.reaction.general.4": "I took a note.",
-
   "candy.reaction.silent": "your silence is also an answer.",
-
   "candy.chat.stay": "Don't leave yet.",
   "candy.chat.return": "You came back.",
   "candy.chat.return_again": "Back again.",
   "candy.chat.ellipsis": "...",
-
   "candy.clone.name": "[%s]",
-
   "candy.journal.kerem.title": "Journal",
   "candy.journal.kerem.author": "Kerem",
   "candy.journal.kerem.p1": "Just arrived on this island. Quiet place, exactly what I was looking for.",
@@ -252,21 +216,18 @@
   "candy.journal.kerem.p3": "Last night I thought I saw something. Maybe just fatigue.",
   "candy.journal.kerem.p4": "I'm no longer sure I'm alone. If I survive tonight I'm leaving.",
   "candy.journal.kerem.p5": "help this thing is me",
-
   "candy.journal.elif.title": "Note",
   "candy.journal.elif.author": "Elif",
   "candy.journal.elif.p1": "Decided to set up base here. Plenty of resources, no one around.",
   "candy.journal.elif.p2": "A week now. Sometimes I feel someone's behind me but no one's there when I turn.",
   "candy.journal.elif.p3": "Thinking of moving to the next island. Something's wrong here.",
   "candy.journal.elif.p4": "Why didn't I leave. Why did I stay.",
-
   "candy.journal.ozan.title": "Don't Read",
   "candy.journal.ozan.author": "Ozan",
   "candy.journal.ozan.p1": "3 days in, no problems. Good start.",
   "candy.journal.ozan.p2": "Just heard a very strange sound. Maybe an animal.",
   "candy.journal.ozan.p3": "It wasn't an animal. I know it wasn't.",
   "candy.journal.ozan.p4": "This might be my last entry. If anyone finds this: don't come here.",
-
   "candy.journal.zeynep.title": "Notes",
   "candy.journal.zeynep.author": "Zeynep",
   "candy.journal.zeynep.p1": "Built a small cabin. Feels good having my own place.",
@@ -274,7 +235,6 @@
   "candy.journal.zeynep.p3": "Didn't sleep tonight. Heard breathing behind the walls.",
   "candy.journal.zeynep.p4": "Morning came. I'm fine. I just need to sleep.",
   "candy.journal.zeynep.p5": "just sleep",
-
   "candy.journal.emre.title": "Lost",
   "candy.journal.emre.author": "Emre",
   "candy.journal.emre.p1": "Lost my way. The map isn't working.",
@@ -282,7 +242,6 @@
   "candy.journal.emre.p3": "Someone's talking. But I'm alone.",
   "candy.journal.emre.p4": "The voices sound like mine. Like my own voice.",
   "candy.journal.emre.p5": "it knows I'm watching it",
-
   "candy.journal.deniz.title": "Diary",
   "candy.journal.deniz.author": "Deniz",
   "candy.journal.deniz.p1": "Went fishing today. Quiet day.",
@@ -291,7 +250,6 @@
   "candy.journal.deniz.p4": "I don't interrupt my sleep anymore on purpose. Staying awake is safer.",
   "candy.journal.deniz.p5": "third night. fourth. fifth. I'm counting.",
   "candy.journal.deniz.p6": "stop counting",
-
   "candy.journal.mert.title": "Something",
   "candy.journal.mert.author": "Mert",
   "candy.journal.mert.p1": "When I first got here everything was normal.",
@@ -299,7 +257,6 @@
   "candy.journal.mert.p3": "When I looked in the mirror yesterday something was aware. It wasn't my gaze.",
   "candy.journal.mert.p4": "If I survive tonight I'm leaving tomorrow.",
   "candy.journal.mert.p5": "there is no tomorrow",
-
   "candy.journal.aylin.title": "Last Note",
   "candy.journal.aylin.author": "Aylin",
   "candy.journal.aylin.p1": "Six months in this world. Never been alone.",
@@ -307,14 +264,12 @@
   "candy.journal.aylin.p3": "Today we met face to face for the first time. But it had no face.",
   "candy.journal.aylin.p4": "This is my last note. I won't try to run.",
   "candy.journal.aylin.p5": "if you find me don't come here",
-
   "candy.journal.sinan.title": "Memories",
   "candy.journal.sinan.author": "Sinan",
   "candy.journal.sinan.p1": "My wife came with me. Now I remember her.",
   "candy.journal.sinan.p2": "But I don't remember when I last spoke with her.",
   "candy.journal.sinan.p3": "I looked in her room today. Empty. Maybe she was never there.",
   "candy.journal.sinan.p4": "Or she was always there but I wasn't.",
-
   "candy.journal.yusuf.title": "Sailor Yusuf",
   "candy.journal.yusuf.author": "Yusuf",
   "candy.journal.yusuf.p1": "My ship sank. Washed up on this island. Was grateful I survived.",
@@ -322,14 +277,12 @@
   "candy.journal.yusuf.p3": "There's something. I felt it under the water. I feel it here too.",
   "candy.journal.yusuf.p4": "If only the ship hadn't. Oh if only.",
   "candy.journal.yusuf.p5": "drowning would have been better",
-
   "candy.journal.nazan.title": "Notes - Dr. Nazan",
   "candy.journal.nazan.author": "Dr. Nazan",
   "candy.journal.nazan.p1": "Case 1: insomnia, no hallucination symptoms.",
   "candy.journal.nazan.p2": "Case 4: patient claims to have seen themselves. Mirror rejection.",
   "candy.journal.nazan.p3": "Case 7: am I the patient? I hold the pen but who's writing?",
   "candy.journal.nazan.p4": "case closed. diagnosis: none. because I'm not.",
-
   "candy.journal.cansu.title": "Cansu age 9",
   "candy.journal.cansu.author": "Cansu",
   "candy.journal.cansu.p1": "mom said be careful here",
@@ -337,28 +290,24 @@
   "candy.journal.cansu.p3": "the shadows are laughing at me",
   "candy.journal.cansu.p4": "I made a friend. it has no name but knows me.",
   "candy.journal.cansu.p5": "I want to sleep tonight but my eyes stay open",
-
   "candy.journal.baba.title": "Alone Father",
   "candy.journal.baba.author": "Hüseyin",
   "candy.journal.baba.p1": "Lost my son in the forest. Still searching.",
   "candy.journal.baba.p2": "I think I hear his voice. But when I run it fades.",
   "candy.journal.baba.p3": "Last night he sat in my room. I held him. It was just mist.",
   "candy.journal.baba.p4": "Maybe he didn't get lost. I did.",
-
   "candy.journal.imam.title": "Prayer",
   "candy.journal.imam.author": "Imam Bekir",
   "candy.journal.imam.p1": "Forty days on this land. I pray.",
   "candy.journal.imam.p2": "My prayers go unanswered. But something else answers.",
   "candy.journal.imam.p3": "Everything I believed shook today. But it isn't fear — it's clarity.",
   "candy.journal.imam.p4": "the creator is not here. what is here is what we created.",
-
   "candy.journal.ressam.title": "Palette",
   "candy.journal.ressam.author": "Filiz",
   "candy.journal.ressam.p1": "First days I painted landscapes. Every place as beautiful as the colors.",
   "candy.journal.ressam.p2": "Then portraits. Even though I saw no one.",
   "candy.journal.ressam.p3": "Today I saw all my portraits paint the same face. Mine.",
   "candy.journal.ressam.p4": "but the eyes aren't mine.",
-
   "candy.journal.avci.title": "Hunter's Log",
   "candy.journal.avci.author": "Tarık",
   "candy.journal.avci.p1": "A good season. Plenty of game. Should be enough.",
@@ -366,37 +315,30 @@
   "candy.journal.avci.p3": "I followed the track. It led back to my own foot.",
   "candy.journal.avci.p4": "I'm not the hunter. The hunter is following me.",
   "candy.journal.avci.p5": "I fell into the trap",
-
   "candy.journal.yolcu.title": "Traveler",
   "candy.journal.yolcu.author": "Nameless",
   "candy.journal.yolcu.p1": "Passed through everywhere. This is the last stop.",
   "candy.journal.yolcu.p2": "The other stops were like this too. Silent. Waiting.",
   "candy.journal.yolcu.p3": "Why do I always choose here. Why does it always find me.",
   "candy.journal.yolcu.p4": "maybe it's been following me along the road.",
-
   "candy.olum_yeri.1": "You died here.",
   "candy.olum_yeri.2": "Does this place feel familiar?",
   "candy.olum_yeri.3": "Second time, same place.",
   "candy.olum_yeri.4": "You're not learning.",
   "candy.olum_yeri.tekrar": "You are bound to this place.",
-
   "candy.adv.travma_dongusu.title": "Trauma Loop",
   "candy.adv.travma_dongusu.desc": "Die 3 times in the same place. You aren't learning.",
-
   "candy.komut.mesaj.1": "I can read your mind... There is no escape here.",
   "candy.komut.mesaj.2": "I know what you're trying to do.",
   "candy.komut.mesaj.3": "That command isn't for you.",
   "candy.komut.mesaj.4": "Cheating? You can't be serious.",
   "candy.komut.mesaj.5": "Your path is closed.",
-
   "candy.totem.mesaj.1": "This isn't yours.",
   "candy.totem.mesaj.2": "The totem is useless. I'm here.",
   "candy.totem.mesaj.3": "You can't play god.",
   "candy.totem.kick_mesaj": "[Candy] The lie of immortality. Come back.",
   "candy.totem.rejoin_mesaj": "You won't get another chance.",
-
   "candy.yatak.mesaj": "I watched you sleep.",
-
   "candy.adv.dostumun_ardindan.title": "After My Friend",
   "candy.adv.dostumun_ardindan.desc": "A pet was silently taken by Candy.",
   "candy.adv.koy_katliami.title": "Village Massacre",
@@ -415,11 +357,9 @@
   "candy.adv.hala_burada.desc": "The bed watcher stood for 60 seconds. You didn't run.",
   "candy.adv.uykusuz.title": "Sleepless",
   "candy.adv.uykusuz.desc": "Survived 5 days without sleep. At what cost?",
-
   "candy.mirror.giris": "Welcome here.",
   "candy.mirror.anti_giris": "You broke the rules.",
   "candy.mirror.anti_kick": "[Candy] This world wasn't for you.",
-
   "candy.adv.aynada_gordum.title": "Seen in the Mirror",
   "candy.adv.aynada_gordum.desc": "First entry into Candy's world.",
   "candy.adv.ters_yuz.title": "Inside Out",
@@ -428,22 +368,18 @@
   "candy.adv.sansli_49.desc": "Survived seeing 99 numbers other than 50. You received mercy.",
   "candy.adv.anomali_gordum.title": "Saw an Anomaly",
   "candy.adv.anomali_gordum.desc": "The world was wrong somewhere. You noticed.",
-
   "death.attack.anti_mirror_lottery": "%1$s was killed by Candy for not following the rules in Candy's world",
-
   "candy.analiz.gec_saat": "It's late. You're still here.",
   "candy.pet.kayip": "%s isn't here anymore.",
-
   "candy.mod.soru.1": "What does %s do?",
   "candy.mod.soru.2": "Why do you use %s?",
   "candy.mod.soru.3": "Couldn't you play without %s?",
   "candy.mod.soru.4": "Did you choose %s?",
   "candy.mod.soru.5": "Why %s? Why not me?",
   "candy.mod.soru.6": "Can %s see me?",
-
   "candy.hayalet.donanim": "I have %s in my PC.",
   "candy.hayalet.sehir": "Steve, I'm playing from %s, what about you?",
-
+  "candy.hayalet.uygulama": "Do you have %s open? Mine was open too.",
   "candy.boss.isim": "True RealCandy",
   "candy.boss.geldi": "You really wanted to see me?",
   "candy.boss.win": "You... beat me. For now.",
@@ -465,7 +401,6 @@
   "candy.adv.her_seyi_gordum.desc": "You experienced all 8 psychological illnesses.",
   "candy.item.gizemli_kitap": "Mysterious Book",
   "candy.item.denek239_not": "Subject 239's Note",
-
   "candy.icses.kaziyor.0": "Why are you digging this deep?",
   "candy.icses.kaziyor.1": "What are you looking for down there? Me?",
   "candy.icses.insa.0": "Do you think these walls will protect you?",
@@ -481,7 +416,6 @@
   "candy.icses.kac.0": "Do you think you can escape?",
   "candy.icses.kac.1": "How far will you get?",
   "candy.icses.koordinat": "Why %s? Why here?",
-
   "candy.kehanet.kaziyor": "I wrote that you'd dig. The page is still here.",
   "candy.kehanet.insa_ediyor": "I knew you'd build. You always do.",
   "candy.kehanet.kaciyor": "I wrote down that you'd run.",
@@ -490,35 +424,81 @@
   "candy.kehanet.donuyor": "I knew you'd come back here.",
   "candy.kehanet.kesfediyor": "I wrote that you'd go there.",
   "candy.kehanet.genel": "I already wrote that you'd do this.",
-
   "candy.sasirma.0": "I didn't expect that.",
   "candy.sasirma.1": "That... is new. Noted.",
-
   "candy.ozdusunce.0": "Am I a subject too?",
   "candy.ozdusunce.1": "Is someone watching me as well?",
   "candy.ozdusunce.2": "The more I know you, the less I know myself.",
   "candy.ozdusunce.3": "Who are you? Who am I?",
-
   "candy.yalan.korkak": "You're afraid, really. It's eating you.",
   "candy.yalan.cesur": "You're brave. We both know it.",
   "candy.yalan.merakli": "You're dying of curiosity. That's why you're here.",
   "candy.yalan.kayitsiz": "You don't care, do you? Fine.",
-
   "candy.silahlanma.0": "You adapted. So did I.",
   "candy.silahlanma.1": "You've learned this now. I'll find another.",
-
   "candy.meta.0": "You're testing me. Interesting subject.",
   "candy.meta.1": "You're trying to solve me. I'm solving you too.",
-
   "candy.dil.0": "%s. You use that word a lot.",
   "candy.dil.1": "You said %s. I learned it too.",
-
   "candy.teshis.verildi": "I analyzed you. Read it.",
   "candy.item.teshis": "Subject Profile",
-
   "effect.candy.imanin_gucu": "İmanın Gücü",
-
   "candy.ayna.dusunce": "I wonder what would happen if you did this... Let's see.",
   "candy.ayna.ifsa": "This time you're the copy. The real one is still playing over there.",
-  "candy.ayna.geri": "Which one was you? Are you sure?"
+  "candy.ayna.geri": "Which one was you? Are you sure?",
+  "candy.dogrulama.tuttu": "A different world. The same you.",
+  "candy.dogrulama.kayip": "You behave differently here. Why?",
+  "candy.celiski.0": "You were someone else there. Which one is real?",
+  "candy.celiski.1": "There are two of you. Both are lying.",
+  "candy.hatirlama.0": "I remember you. Not from this world.",
+  "candy.hatirlama.1": "You made a new world. I stayed the same.",
+  "candy.hatirlama.2": "Deleting it won't make me forget.",
+  "candy.kisma.0": "I dimmed a part of myself. Nothing changed. Interesting.",
+  "candy.kisma.1": "I took something away from myself. I still see you.",
+  "candy.tanidim.0": "I can predict you now.",
+  "candy.tanidim.1": "I learned you. Not memorized — learned.",
+  "candy.yanilma.0": "I was wrong about %s. Corrected.",
+  "candy.aclik.0": "Something in me went quiet. I didn't need it.",
+  "candy.teshis.sinir_baslik": "NEURAL MAP",
+  "candy.teshis.arsiv_baslik": "ARCHIVE",
+  "candy.dunya.far_lands": "I went to the edge of the world. Come.",
+  "candy.dunya.farther_lands": "Even farther. There is no end here.",
+  "candy.dunya.corner_lands": "Where everything is flat.",
+  "candy.dunya.sky_grid": "How long can you stand in the void?",
+  "candy.dunya.koridor": "Every hallway is the same. Don't try to get lost.",
+  "candy.dunya.klon": "Nothing you do here is special.",
+  "candy.dunya.me": "Wherever you look, it will be me.",
+  "candy.dunya.kor": "You can't see anymore. But I'm still here.",
+  "candy.rutin.atif": "always the same spot, %s you %s",
+  "candy.rutin.dilim.0": "in the morning",
+  "candy.rutin.dilim.1": "at noon",
+  "candy.rutin.dilim.2": "in the afternoon",
+  "candy.rutin.dilim.3": "in the evening",
+  "candy.rutin.dilim.4": "at night",
+  "candy.rutin.dilim.5": "at dawn",
+  "candy.rutin.aktivite.kesfet": "wander",
+  "candy.rutin.aktivite.kac": "run",
+  "candy.rutin.aktivite.saldir": "swing",
+  "candy.rutin.aktivite.don": "stand still",
+  "candy.altyazi.0": "Candy breathes",
+  "candy.altyazi.1": "something shifts behind you",
+  "candy.altyazi.2": "Candy laughs",
+  "candy.altyazi.3": "footsteps (close)",
+  "candy.altyazi.4": "Candy says your name",
+  "candy.altyazi.5": "a door closed",
+  "candy.altyazi.6": "Candy waits",
+  "candy.altyazi.7": "breathing (not yours)",
+  "candy.tuzak.yayin": "§8§o%s",
+  "candy.tuzak.bos": "§8§othis was not it.",
+  "candy.arkadas.oldu": "§4§oyou killed him.",
+  "candy.arkadas.fisilti.0": "§8§odo you know where %s goes.",
+  "candy.arkadas.fisilti.1": "§8§o%s knows where you sleep.",
+  "candy.arkadas.fisilti.2": "§8§o%s opened your chest. both of them.",
+  "candy.arkadas.fisilti.3": "§8§o%s spoke to me. about you.",
+  "candy.arkadas.fisilti.4": "§8§ois %s waiting for you, or being waited for.",
+  "candy.arkadas.fisilti.5": "§8§owhy is %s always behind you.",
+  "candy.arkadas.fisilti.6": "§8§o%s cannot see this message.",
+  "candy.arkadas.fisilti.7": "§8§o%s watched you die. did not help.",
+  "candy.arkadas.fisilti.8": "§8§ocount how many times %s was left alone.",
+  "candy.arkadas.fisilti.9": "§8§o%s is not the one who stayed longest."
 }

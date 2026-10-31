@@ -5,7 +5,6 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.dimension.CandyDimensions;
 import com.photonpulse.candy.entity.CandyEntities;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.entity.SpawnReason;
@@ -114,7 +113,7 @@ public class BossManager {
     /** WIN — kitap drop, dünyalardan çıkar, 30 dk sessizlik. */
     public static void win(ServerPlayerEntity player) {
         TruePersonality tp = PersonalityManager.get(player);
-        MinecraftServer srv = player.getServer();
+        MinecraftServer srv = player.getWorld().getServer();
         long simdi = (srv != null) ? srv.getOverworld().getTime() : player.getWorld().getTime();
         tp.bossSavastaMi = false;
         tp.badEndingAktif = false;
@@ -126,7 +125,7 @@ public class BossManager {
             com.photonpulse.candy.lore.Denek239Book.olusturTam(true));
 
         // Gerçek dünyaya çıkar
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.getWorld().getServer();
         if (server != null) {
             ServerWorld overworld = server.getOverworld();
             BlockPos donus = BlockPos.fromLong(tp.sonMirrorGiris);

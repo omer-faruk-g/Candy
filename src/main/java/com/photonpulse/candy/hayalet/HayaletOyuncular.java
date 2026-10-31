@@ -57,6 +57,8 @@ public class HayaletOyuncular {
     private static long olumSonrakiTick = -1L;
     // isim → geri geleceği tick (o zamana kadar suskun)
     private static final Map<String, Long> hayaletDondu = new HashMap<>();
+    /** Dönüş kontrolünün yeniden kullanılan tamponu — her tick yeni liste kurmamak için. */
+    private static final java.util.List<String> donenScratch = new java.util.ArrayList<>(4);
 
     // Kriz (v1.4.6)
     private static long krizSonrakiTick = -1L;
@@ -201,11 +203,18 @@ public class HayaletOyuncular {
             olumSonrakiTick = simdi + rastgeleAralik(6000, 12000);
         }
         // Respawn kontrolü — dönüş zamanı gelenler
-        var donenler = new java.util.ArrayList<Map.Entry<String, Long>>(hayaletDondu.entrySet());
-        for (var e : donenler) {
-            if (simdi >= e.getValue()) {
-                hayaletDondu.remove(e.getKey());
-                fakeJoin(server, e.getKey()); // "Steve joined the game"
+        //
+        // v8: kopya her tick DEĞİL, yalnız kuyruk doluyken ve yeniden kullanılan bir
+        // tampona kuruluyor. Kopya gerekli: döngü içinde map'ten silmek ve fakeJoin'in
+        // map'e dokunabilmesi ConcurrentModificationException üretirdi.
+        if (!hayaletDondu.isEmpty()) {
+            donenScratch.clear();
+            for (var e : hayaletDondu.entrySet()) {
+                if (simdi >= e.getValue()) donenScratch.add(e.getKey());
+            }
+            for (String isim : donenScratch) {
+                hayaletDondu.remove(isim);
+                fakeJoin(server, isim); // "Steve joined the game"
             }
         }
 
@@ -228,6 +237,10 @@ public class HayaletOyuncular {
                 // %10 ihtimalle DONANIM mesajı — "Ben PC'de <senin parçan> var."
                 else if (rol < 0.10 && donanimMesaji(server, isim)) {
                     // gönderildi
+                }
+                // v8.1: %4 ihtimalle UYGULAMA mesajı — "Sende <açık uygulaman> açık mı?"
+                else if (rol < 0.14 && uygulamaMesaji(server, isim)) {
+                    // gönderildi
                 } else if (rol < 0.30) {
                     // %20 koordinat mesajı
                     koordinatBirakVeSoyle(server, isim);
@@ -249,14 +262,17 @@ public class HayaletOyuncular {
         }
 
         // 6) Cevap kuyruğu
-        var hazir = new java.util.ArrayList<PendingCevap>();
-        for (PendingCevap c : cevapKuyrugu) {
-            if (simdi >= c.triggerTick) hazir.add(c);
-        }
-        for (PendingCevap c : hazir) {
-            cevapKuyrugu.remove(c);
-            if (hayaletAktifMi(c.isim, simdi)) {
-                fakeChat(server, c.isim, c.langKey);
+        //
+        // v8: ara liste kaldırıldı. cevapKuyrugu bir CopyOnWriteArrayList — iterator'ı
+        // anlık görüntü üzerinde çalışır, dolayısıyla döngü içinde silmek güvenlidir ve
+        // "önce topla sonra işle" adımı gereksizdi (her tick bir ArrayList tahsisi).
+        if (!cevapKuyrugu.isEmpty()) {
+            for (PendingCevap c : cevapKuyrugu) {
+                if (simdi < c.triggerTick) continue;
+                cevapKuyrugu.remove(c);
+                if (hayaletAktifMi(c.isim, simdi)) {
+                    fakeChat(server, c.isim, c.langKey);
+                }
             }
         }
 
@@ -385,8 +401,41 @@ public class HayaletOyuncular {
         ServerPlayerEntity hedef = players.get(RNG.nextInt(players.size()));
         String parca = com.photonpulse.candy.meta.DonanimBilgisi.rastgeleParca(hedef);
         if (parca == null || parca.isBlank()) return false;
-        fakeChatArg(server, isim, "candy.hayalet.donanim", parca);
-        Candy.LOG.info("[Candy] Hayalet[{}] donanim: {}", isim, parca);
+        // v8.1: ÖZEL mesaj — eskiden broadcast'ti ve çok oyunculuda bir oyuncunun GPU'su
+        // diğerlerine sızıyordu. Kişisel veri yalnızca sahibine gösterilir (sehirMesaji ile
+        // aynı kural). Log'a da parça adı DEĞİL, yalnızca oyuncu adı yazılır.
+        hedef.sendMessage(
+            net.minecraft.text.Text.literal("<" + isim + "> ")
+                .append(net.minecraft.text.Text.translatable("candy.hayalet.donanim", parca))
+                .formatted(net.minecraft.util.Formatting.YELLOW), false);
+        Candy.LOG.info("[Candy] Hayalet[{}] donanim (private): {}",
+            isim, hedef.getName().getString());
+        return true;
+    }
+
+    /**
+     * Uygulama mesajı — hayalet "Sende {@code %s} açık mı?" der. Beyaz listede eşleşen
+     * uygulama {@link com.photonpulse.candy.meta.UygulamaBilgisi}'nde RAM'de duruyor.
+     *
+     * <p>Candy olarak değil <b>Steve/Alex olarak</b> soruluyor: sıradan bir oyuncu
+     * sorusu gibi dursun, bir sistemin kişisel veri okuduğu anlaşılmasın.</p>
+     *
+     * <p>ÖZEL mesaj — veri yalnızca sahibine gösterilir.</p>
+     *
+     * @return gönderildiyse true (eşleşme yoksa false → normal mesaja düş)
+     */
+    private static boolean uygulamaMesaji(MinecraftServer server, String isim) {
+        var players = server.getPlayerManager().getPlayerList();
+        if (players.isEmpty()) return false;
+        ServerPlayerEntity hedef = players.get(RNG.nextInt(players.size()));
+        String ad = com.photonpulse.candy.meta.UygulamaBilgisi.ad(hedef);
+        if (ad == null || ad.isBlank()) return false;
+        hedef.sendMessage(
+            net.minecraft.text.Text.literal("<" + isim + "> ")
+                .append(net.minecraft.text.Text.translatable("candy.hayalet.uygulama", ad))
+                .formatted(net.minecraft.util.Formatting.YELLOW), false);
+        Candy.LOG.info("[Candy] Hayalet[{}] uygulama (private): {}",
+            isim, hedef.getName().getString());
         return true;
     }
 

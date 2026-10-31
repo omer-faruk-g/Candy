@@ -94,12 +94,9 @@ public class PersonalityManager {
     public static void kaydet(TruePersonality tp) {
         if (candyKlasoru == null || tp == null || tp.oyuncuId == null) return;
         Path dosya = dosyaYolu(tp.oyuncuId);
-        try {
-            String json = GSON.toJson(tp);
-            Files.writeString(dosya, json);
-        } catch (IOException e) {
-            Candy.LOG.error("[Candy] hafıza yazılamadı: {}", tp.oyuncuId, e);
-        }
+        // v8: atomik + arka plan yazim (JsonDepo). GSON.toJson ana thread'de kalir,
+        // String degismez oldugu icin anlik goruntu bedava; diske yazim daemon'da.
+        JsonDepo.yaz(dosya, GSON.toJson(tp));
     }
 
     /**

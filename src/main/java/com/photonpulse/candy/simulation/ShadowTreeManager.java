@@ -3,6 +3,7 @@ package com.photonpulse.candy.simulation;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.photonpulse.candy.Candy;
+import com.photonpulse.candy.core.JsonDepo;
 import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
@@ -122,11 +123,7 @@ public class ShadowTreeManager {
     public static void kaydet(ShadowTree st) {
         if (klasor == null || st == null || st.oyuncuId == null) return;
         Path dosya = klasor.resolve("shadowtree_" + st.oyuncuId + ".json");
-        try {
-            Files.writeString(dosya, GSON.toJson(st));
-        } catch (IOException e) {
-            Candy.LOG.error("[Candy] shadowtree yazılamadı: {}", st.oyuncuId, e);
-        }
+        JsonDepo.yaz(dosya, GSON.toJson(st));   // v8: atomik + arka plan
     }
 
     public static void hepsiniKaydet() {
@@ -150,13 +147,26 @@ public class ShadowTreeManager {
                 TreeGrowth.guncelleAgac(st.tree, alanlar, simdi);
             }
         }
-        if (tickSayaci % AUTOSAVE_ARALIGI == 0) {
+        // v4.0 FAZ KAYDIRMA: 4 autosave sistemi de %6000==0 idi -> ayni tick'te
+        // 4 senkron disk yazimi (10 oyuncuda ~380KB tek tick = gorunur stutter).
+        // Bu sistem shadowtree_*.json icin 4500 fazina kaydirildi.
+        if (tickSayaci % AUTOSAVE_ARALIGI == 4500) {
             hepsiniKaydet();
         }
     }
 
+    /**
+     * Golge agacin girdi haritasi.
+     *
+     * v4.0: ana agac artik 48 alan okuyor ({@link TreeGrowth#alanMapi}). SimulatedPersonality
+     * ise yalnizca 8 davranis alani tasiyor. Sema SIMETRIK olmali; aksi halde golge agacin
+     * node'lari bilmedikleri 40 alandan 0.0 okur ve aktiflikleri yapay olarak coker.
+     * Cozum: golgenin gercekten bildigi 8 alan kendi degerini, kalan alanlar NOTR 0.5 alir
+     * ("golge o boyutu bilmiyor" = ne lehte ne aleyhte kanit).
+     */
     private static Map<String, Double> alanMapi(SimulatedPersonality sp) {
-        Map<String, Double> m = new HashMap<>();
+        Map<String, Double> m = new HashMap<>(64);
+        // Golgenin gercekten bildigi 8 boyut (zit ikiz)
         m.put("kacOrani", sp.kacOrani);
         m.put("saldirOrani", sp.saldirOrani);
         m.put("donOrani", sp.donOrani);
@@ -165,6 +175,10 @@ public class ShadowTreeManager {
         m.put("inkarEgilimi", sp.inkarEgilimi);
         m.put("kesfetmeIstegi", sp.kesfetmeIstegi);
         m.put("panikEsigi", sp.panikEsigi);
+        // Kalan alanlar: notr (sema simetrisi + aktiflik cokusu korumasi)
+        for (String alan : PersonalityTree.ALANLAR) {
+            m.putIfAbsent(alan, 0.5);
+        }
         return m;
     }
 }

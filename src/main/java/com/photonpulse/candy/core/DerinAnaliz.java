@@ -17,7 +17,6 @@ import net.minecraft.util.math.Vec3d;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -146,11 +145,18 @@ public class DerinAnaliz {
                 tp.saatlikRutin.put(saatDilimi, aktivite);
 
                 // ── (1) Öngörülebilirlik ──
-                int imza = Objects.hash(pos.getX() >> 4, pos.getZ() >> 4, aktivite, saatDilimi);
-                tp.davranisImzalari.add(imza);
-                if (tp.davranisImzalari.size() > 30) tp.davranisImzalari.remove(0);
-                long tekrar = tp.davranisImzalari.stream().filter(x -> x == imza).count();
-                double ongoruHedef = Math.min(100, (tekrar / (double) tp.davranisImzalari.size()) * 100);
+                // v8: Objects.hash yerine aynı formül elde (new Object[4] + 2 boxing gitti).
+                // Arrays.hashCode ile BİREBİR aynı değer — eski diskteki imzalar hâlâ eşleşir.
+                int imza = 1;
+                imza = 31 * imza + (pos.getX() >> 4);
+                imza = 31 * imza + (pos.getZ() >> 4);
+                imza = 31 * imza + (aktivite == null ? 0 : aktivite.hashCode());
+                imza = 31 * imza + saatDilimi;
+                // v8.2: hash'in yanına ÇÖZÜLEBİLİR bileşenleri de yaz — Candy rutini
+                // oyuncuya geri oynatacak (RutinTekrari), hash'ten chunk geri alınamaz.
+                int tekrar = tp.imzaKaydet(imza, com.photonpulse.candy.rutin.RutinKaydi
+                    .paketle(pos.getX() >> 4, pos.getZ() >> 4, saatDilimi, aktivite));
+                double ongoruHedef = Math.min(100, (tekrar / (double) tp.imzaAdet) * 100);
                 tp.ongorulebilirlik = TruePersonality.kayma(tp.ongorulebilirlik, ongoruHedef, 0.1);
 
                 // Öngörülebilirlik yüksekse Candy sıkılır → özgüven artar (senin felsefen)

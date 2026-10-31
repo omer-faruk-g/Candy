@@ -65,7 +65,16 @@ public class CommandManagerMixin {
             if (nodes.isEmpty()) return;
 
             // TÜM parse edilen node'ları kontrol et — herhangi biri level-0'da geçmiyorsa cheat.
+            // 1.21.9'da izin modeli sayısal seviyeden PermissionPredicate'e geçti:
+            // withLevel(0) kalktı, karşılığı "hiçbir izni olmayan" kaynak.
+            //? if >=1.21.9 {
+            /*ServerCommandSource level0 =
+                source.withPermissions(net.minecraft.command.permission.PermissionPredicate.NONE);
+            */
+            //?}
+            //? if <1.21.9 {
             ServerCommandSource level0 = source.withLevel(0);
+            //?}
             boolean cheatKomutu = false;
             for (var parsed : nodes) {
                 try {
@@ -90,6 +99,9 @@ public class CommandManagerMixin {
 
             tp.candyOzguven = Math.min(100, tp.candyOzguven + 5);
             tp.korkuSkoru = Math.min(100, tp.korkuSkoru + 3);
+            // v8.2: cheat denemesi "Candy'den kaçma" ekseninin girdisi.
+            // Engelleme zaten yapılıyordu; artık ÖLÇÜLÜYOR da — Kurul öğrenebilsin.
+            com.photonpulse.candy.kacis.KacisSensoru.komutDenemesi(player);
 
             if (!tp.komutEngellemesiGorulduMu) {
                 tp.komutEngellemesiGorulduMu = true;

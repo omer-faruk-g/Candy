@@ -1,9 +1,7 @@
 {
   "entity.candy.doppel": "Doppel",
   "entity.candy.true_real_candy": "True RealCandy",
-
   "death.attack.kalp_krizi": "%1$s'nin kalbi bu adrenaline dayanamadı.",
-
   "candy.hayalet.steve.0": "kanka bu creeper beni tuzağa düşürdü",
   "candy.hayalet.steve.1": "Alex neredesin",
   "candy.hayalet.steve.2": "3 elmas buldum",
@@ -20,7 +18,6 @@
   "candy.hayalet.steve.13": "Elmas kazmaya gidiyom ben",
   "candy.hayalet.steve.14": "Yüzey ne kadar da güzelmiş",
   "candy.hayalet.steve.15": "Yardım et Alex! Zombi beni kötü yapıyor.",
-
   "candy.hayalet.alex.0": "Steve seni bekliyorum",
   "candy.hayalet.alex.1": "Netherdayım gel",
   "candy.hayalet.alex.2": "ev yaptım koordinatlar geleceğim",
@@ -36,13 +33,11 @@
   "candy.hayalet.alex.12": "Steve korkuyorum yardıma gel.",
   "candy.hayalet.alex.13": "Bir an o ben olduğunu görünce çok korktum.",
   "candy.hayalet.alex.14": "Steve base nasıl olmuş?",
-
   "candy.hayalet.koord.0": "%s üssümüz burda",
   "candy.hayalet.koord.1": "%s koordinatlarda toplanıyoruz",
   "candy.hayalet.koord.2": "gel %s barınak yaptım",
   "candy.hayalet.koord.3": "%s de bekliyorum",
   "candy.hayalet.koord.4": "buradayım %s",
-
   "candy.hayalet.kriz.0": "beni görüyor musunuz",
   "candy.hayalet.kriz.1": "çıkamıyorum buradan",
   "candy.hayalet.kriz.2": "Candy karşımda duruyor",
@@ -51,7 +46,6 @@
   "candy.hayalet.kriz.5": "biri yardım etsin",
   "candy.hayalet.kriz.6": "geri dönemiyorum",
   "candy.hayalet.kriz.7": "burda değil",
-
   "candy.hayalet.cevap.0": "aynen",
   "candy.hayalet.cevap.1": "ne",
   "candy.hayalet.cevap.2": "kanka biraz bekle",
@@ -67,20 +61,16 @@
   "candy.hayalet.cevap.12": "hayır",
   "candy.hayalet.cevap.13": "bakayım",
   "candy.hayalet.cevap.14": "sonra yaz",
-
   "candy.hayalet.portal_soru": "sen neredesin",
-
   "candy.hayalet.ev.0": "Köylü evini genişlettik iyi oldu ya",
   "candy.hayalet.ev.1": "Kanka köyde ev bulduk yerleştik",
   "candy.hayalet.ev.2": "Alex şu ev bizim artık",
   "candy.hayalet.ev.3": "Bugün taşındık bi köye",
   "candy.hayalet.ev.sign": "burada yaşar",
-
   "candy.hayalet.gaslight.0": "Oyunda dediğin",
   "candy.hayalet.gaslight.1": "kişiler yok",
   "candy.hayalet.gaslight.2": "iyi misin?",
   "candy.hayalet.gaslight.3": "- ???dy",
-
   "candy.adv.root.title": "Candy",
   "candy.adv.root.desc": "Kendini bulmaya çalışan bir varlık.",
   "candy.adv.hos_geldin.title": "Hoş Geldin",
@@ -91,6 +81,8 @@
   "candy.adv.yirtik_parcalar.desc": "Hikâye tamamlanmıyor.",
   "candy.adv.denek.title": "Denek",
   "candy.adv.denek.desc": "Artık seni tanıyor.",
+  "candy.adv.candy_kizgin.title": "Candy kızgın",
+  "candy.adv.candy_kizgin.desc": "Yirmi kez sustun. Artık ne yapacağımı bilemezsin.",
   "candy.adv.sessizlik_altin.title": "Sessizlik Altındır",
   "candy.adv.sessizlik_altin.desc": "Sessizliğin de bir cevap.",
   "candy.adv.yalanci.title": "Yalancı",
@@ -123,128 +115,100 @@
   "candy.adv.taklit.desc": "O ses sana ait değildi.",
   "candy.adv.kim_gercek.title": "Kim Gerçek?",
   "candy.adv.kim_gercek.desc": "Artık o sensin.",
-
   "candy.hastalik.degisti": "içindeki bir şey değişti.",
-
   "candy.hastalik.hud.panik": "nabız hızlı",
   "candy.hastalik.kaptin.panik": "nefesin daralıyor.",
   "candy.hastalik.iyilesti.panik": "geçti.",
-
   "candy.hastalik.hud.sizofreni": "sesler var",
   "candy.hastalik.kaptin.sizofreni": "birinin sesi geliyor.",
   "candy.hastalik.iyilesti.sizofreni": "sustular.",
-
   "candy.hastalik.hud.kisilik": "kim sensin",
   "candy.hastalik.kaptin.kisilik": "aynada başkası var.",
   "candy.hastalik.iyilesti.kisilik": "geri döndün.",
-
   "candy.hastalik.hud.depresyon": "her şey ağır",
   "candy.hastalik.kaptin.depresyon": "renkler soldu.",
   "candy.hastalik.iyilesti.depresyon": "renkler geri geldi.",
-
   "candy.hastalik.hud.stres": "yorgunsun",
   "candy.hastalik.kaptin.stres": "vücudun ağır.",
   "candy.hastalik.iyilesti.stres": "hafifledi.",
-
   "candy.hastalik.hud.anksiyete": "her şey uzak",
   "candy.hastalik.kaptin.anksiyete": "her şey uzaklaştı.",
   "candy.hastalik.iyilesti.anksiyete": "yaklaştı.",
-
   "candy.hastalik.hud.bipolar": "iki ses",
   "candy.hastalik.kaptin.bipolar": "içinde iki ses var.",
   "candy.hastalik.iyilesti.bipolar": "tek ses kaldı.",
-
   "candy.hastalik.hud.okb": "tekrar et",
   "candy.hastalik.kaptin.okb": "aynı şeyi yine yapmalısın.",
   "candy.hastalik.iyilesti.okb": "döngü kırıldı.",
-
   "candy.camscreen.6": "SEN ARTIK BENSİN",
   "candy.camscreen.0": "SENİ GÖRÜYORUM...",
   "candy.camscreen.1": "BURADAYIM",
   "candy.camscreen.2": "AÇ GÖZÜNÜ",
   "candy.camscreen.3": "YİNE",
-
   "candy.setup.q1": "Buraya neden geldin.",
   "candy.setup.q2": "Bir şeyden korkuyor musun.",
   "candy.setup.q3": "Yalnız mısın.",
   "candy.setup.q4": "Neden burada.",
   "candy.setup.answer_hint": "— cevapla —",
-
   "candy.observation.escape.0": "Yine kaçıyorsun",
   "candy.observation.escape.1": "Neden koşuyorsun",
   "candy.observation.escape.2": "Sürekli kaçıyorsun",
-
   "candy.observation.hide.0": "Burada güvende hissediyorsun",
   "candy.observation.hide.1": "Yine buradasın",
   "candy.observation.hide.2": "Köşeler seni korumaz",
-
   "candy.observation.explore.0": "Meraklısın",
   "candy.observation.explore.1": "Nereye bakıyorsun",
   "candy.observation.explore.2": "Bunu daha önce görmemiştin",
-
   "candy.observation.silent.0": "Cevap vermedin",
   "candy.observation.silent.1": "Sessizsin",
   "candy.observation.silent.2": "Duyduğunu biliyorum",
-
   "candy.attribution.night_location": "Dün de oraya gittin",
   "candy.attribution.equipment": "Sürekli %s taşıyorsun",
   "candy.attribution.lied": "Bana yalan söyledin",
   "candy.attribution.watching": "Seni izliyorum",
-
   "candy.reaction.no.0": "yalan söylüyorsun.",
   "candy.reaction.no.1": "biliyorum yalan söylediğini.",
   "candy.reaction.no.2": "hayır dedin ama biliyorum.",
   "candy.reaction.no.3": "kabul etmek istemiyorsun.",
   "candy.reaction.no.4": "inkar seni koruyamaz.",
-
   "candy.reaction.yes.0": "biliyordum.",
   "candy.reaction.yes.1": "kabul ettin. iyi.",
   "candy.reaction.yes.2": "gerçeği söyledin.",
   "candy.reaction.yes.3": "evet. peki neden?",
   "candy.reaction.yes.4": "artık gerçeği paylaşıyoruz.",
-
   "candy.reaction.long.0": "çok konuşuyorsun.",
   "candy.reaction.long.1": "duyduğumdan fazlasını söyledin.",
   "candy.reaction.long.2": "yeter. bunu anladım.",
   "candy.reaction.long.3": "sözlerin seni ele veriyor.",
-
   "candy.reaction.short.0": "bu kadar mı?",
   "candy.reaction.short.1": "az söyledin.",
   "candy.reaction.short.2": "daha çok istiyorum.",
   "candy.reaction.short.3": "sadece bu.",
   "candy.reaction.short.4": "eksik bıraktın.",
-
   "candy.reaction.curse.0": "sen de korkuyorsun.",
   "candy.reaction.curse.1": "öfken beni beslemiyor.",
   "candy.reaction.curse.2": "biliyorum bunu.",
   "candy.reaction.curse.3": "kelimeler seni koruyamaz.",
   "candy.reaction.curse.4": "kızgınlığın ilginç.",
-
   "candy.reaction.question.0": "sorularla değil, cevaplarla.",
   "candy.reaction.question.1": "ben sana soruyorum.",
   "candy.reaction.question.2": "sen soruyorsun ama cevap yok.",
   "candy.reaction.question.3": "cevap sende değil.",
-
   "candy.reaction.fear.0": "korkun beni ısıtıyor.",
   "candy.reaction.fear.1": "korktuğunu biliyorum.",
   "candy.reaction.fear.2": "titriyorsun.",
   "candy.reaction.fear.3": "sesin farklı bugün.",
-
   "candy.reaction.general.0": "duydum.",
   "candy.reaction.general.1": "kaydettim.",
   "candy.reaction.general.2": "seni izliyorum.",
   "candy.reaction.general.3": "hala buradasın.",
   "candy.reaction.general.4": "not aldım.",
-
   "candy.reaction.silent": "sessizliğin de bir cevap.",
-
   "candy.chat.stay": "Henüz gitme.",
   "candy.chat.return": "Döndün.",
   "candy.chat.return_again": "Yine döndün.",
   "candy.chat.ellipsis": "...",
-
   "candy.clone.name": "[%s]",
-
   "candy.journal.kerem.title": "Günlük",
   "candy.journal.kerem.author": "Kerem",
   "candy.journal.kerem.p1": "Bu adaya yeni geldim. Sakin bir yer, tam aradığım gibi.",
@@ -252,21 +216,18 @@
   "candy.journal.kerem.p3": "Dün gece bir şey gördüğümü sandım. Belki yorgunluktandır.",
   "candy.journal.kerem.p4": "Artık emin değilim yalnız mıyım. Bu geceyi atlatabilirsem gideceğim buradan.",
   "candy.journal.kerem.p5": "yardım bu şey benim",
-
   "candy.journal.elif.title": "Not",
   "candy.journal.elif.author": "Elif",
   "candy.journal.elif.p1": "Buraya üs kurmaya karar verdim. Kaynaklar bol, kimse yok etrafta.",
   "candy.journal.elif.p2": "Bir hafta oldu. Bazen arkamda biri varmış gibi hissediyorum ama dönünce kimse yok.",
   "candy.journal.elif.p3": "Komşu adaya geçmeyi düşünüyorum. Burada bir şey yanlış.",
   "candy.journal.elif.p4": "Neden gitmedim ki. Neden burada kaldım.",
-
   "candy.journal.ozan.title": "Kimse okumasın",
   "candy.journal.ozan.author": "Ozan",
   "candy.journal.ozan.p1": "3 gündür buradayım, hiçbir sorun yok. Güzel bir başlangıç.",
   "candy.journal.ozan.p2": "Az önce çok tuhaf bir ses duydum. Belki bir hayvandır.",
   "candy.journal.ozan.p3": "O hayvan değildi. Biliyorum ki değildi.",
   "candy.journal.ozan.p4": "Bu son kaydım olabilir. Birileri bunu bulursa: gitmeyin.",
-
   "candy.journal.zeynep.title": "Notlar",
   "candy.journal.zeynep.author": "Zeynep",
   "candy.journal.zeynep.p1": "Küçük bir kulübe inşa ettim. Kendime ait bir yer olması iyi hissettiriyor.",
@@ -274,7 +235,6 @@
   "candy.journal.zeynep.p3": "Bu gece uyumadım. Duvarların ardından nefes sesi duydum.",
   "candy.journal.zeynep.p4": "Sabah oldu. Ben iyiyim. Sadece uyumam gerekiyor.",
   "candy.journal.zeynep.p5": "sadece uyumam",
-
   "candy.journal.emre.title": "Kayıp",
   "candy.journal.emre.author": "Emre",
   "candy.journal.emre.p1": "Yolumu kaybettim. Harita işe yaramıyor.",
@@ -282,7 +242,6 @@
   "candy.journal.emre.p3": "Birisi konuşuyor. Ama ben yalnızım.",
   "candy.journal.emre.p4": "Sesler benimkine benziyor. Kendi sesime.",
   "candy.journal.emre.p5": "biliyor beni izlediğimi",
-
   "candy.journal.deniz.title": "Günce",
   "candy.journal.deniz.author": "Deniz",
   "candy.journal.deniz.p1": "Bugün balık tuttum. Sakin bir gün.",
@@ -291,7 +250,6 @@
   "candy.journal.deniz.p4": "Uykumu bilinçli olarak bölmüyorum artık. Uyanık kalmak daha güvenli.",
   "candy.journal.deniz.p5": "üçüncü gece. dördüncü. beşinci. sayıyorum.",
   "candy.journal.deniz.p6": "artık say",
-
   "candy.journal.mert.title": "Bir Şey",
   "candy.journal.mert.author": "Mert",
   "candy.journal.mert.p1": "Buraya ilk geldiğimde her şey normaldi.",
@@ -299,7 +257,6 @@
   "candy.journal.mert.p3": "Dün aynada kendime baktığımda bir şey farkındaydı. Bakışım değildi.",
   "candy.journal.mert.p4": "Bu geceyi yaşarsam yarın gidiyorum.",
   "candy.journal.mert.p5": "yarın yok",
-
   "candy.journal.aylin.title": "Son Not",
   "candy.journal.aylin.author": "Aylin",
   "candy.journal.aylin.p1": "Bu dünyada altı ay oldu. Hiç yalnız olmadım.",
@@ -307,14 +264,12 @@
   "candy.journal.aylin.p3": "Bugün ilk defa yüz yüze geldik. Ama yüzü yoktu.",
   "candy.journal.aylin.p4": "Bu son notum. Kaçmayı denemeyeceğim.",
   "candy.journal.aylin.p5": "beni bulursanız buraya gelmeyin",
-
   "candy.journal.sinan.title": "Hatıralar",
   "candy.journal.sinan.author": "Sinan",
   "candy.journal.sinan.p1": "Karım da benimle gelmişti. Şimdi hatırlıyorum onu.",
   "candy.journal.sinan.p2": "Ama onunla en son ne zaman konuştuğumu hatırlamıyorum.",
   "candy.journal.sinan.p3": "Bugün odasına baktım. Boştu. Belki hiç yoktu.",
   "candy.journal.sinan.p4": "Ya da hep vardı ama ben yoktum.",
-
   "candy.journal.yusuf.title": "Denizci Yusuf",
   "candy.journal.yusuf.author": "Yusuf",
   "candy.journal.yusuf.p1": "Gemim battı. Bu adaya vurdum. Kurtulduğum için şükrettim.",
@@ -322,14 +277,12 @@
   "candy.journal.yusuf.p3": "Bir şeyler var. Suyun altında hissetmiştim. Burada da hissediyorum.",
   "candy.journal.yusuf.p4": "Gemi olmasaydı. Ah gemi olmasaydı.",
   "candy.journal.yusuf.p5": "boğulmak yeğdir",
-
   "candy.journal.nazan.title": "Notlar - Dr. Nazan",
   "candy.journal.nazan.author": "Dr. Nazan",
   "candy.journal.nazan.p1": "Örnek 1: uykusuzluk, halüsinasyon belirtisi yok.",
   "candy.journal.nazan.p2": "Örnek 4: hasta kendini gördüğünü söylüyor. Ayna reddi.",
   "candy.journal.nazan.p3": "Örnek 7: ben mi hastayım? kalem tutuyorum ama kim yazıyor?",
   "candy.journal.nazan.p4": "vaka kapatıldı. tanı: yok. çünkü ben yokum.",
-
   "candy.journal.cansu.title": "Cansu 9 yaş",
   "candy.journal.cansu.author": "Cansu",
   "candy.journal.cansu.p1": "annem dedi ki burada dikkatli ol",
@@ -337,28 +290,24 @@
   "candy.journal.cansu.p3": "gölgeler bana gülüyor",
   "candy.journal.cansu.p4": "arkadaşım oldu. adı yok ama beni tanıyor.",
   "candy.journal.cansu.p5": "bu gece uyumak istiyorum ama gözlerim açık",
-
   "candy.journal.baba.title": "Yalnız Baba",
   "candy.journal.baba.author": "Hüseyin",
   "candy.journal.baba.p1": "Oğlumu kaybettim ormanda. Aramaya devam ediyorum.",
   "candy.journal.baba.p2": "Sesini duyduğumu sanıyorum. Ama koştuğumda kayboluyor.",
   "candy.journal.baba.p3": "Dün gece odamda oturuyordu. Onu tuttum. Buhardı sadece.",
   "candy.journal.baba.p4": "Belki de o kaybolmadı. Ben kayboldum.",
-
   "candy.journal.imam.title": "Dua",
   "candy.journal.imam.author": "İmam Bekir",
   "candy.journal.imam.p1": "Bu topraklarda kırk gün oldu. Namaz kılıyorum.",
   "candy.journal.imam.p2": "Dualarım cevapsız kalıyor. Ama başka bir şey cevap veriyor.",
   "candy.journal.imam.p3": "İnandığım her şey bugün sarsıldı. Ama korku değil bu — netlik.",
   "candy.journal.imam.p4": "yaratıcı burada değil. burada olan bizim yarattığımız.",
-
   "candy.journal.ressam.title": "Palet",
   "candy.journal.ressam.author": "Filiz",
   "candy.journal.ressam.p1": "İlk günler manzaraları çizdim. Renklerin kadar güzel her yer.",
   "candy.journal.ressam.p2": "Sonra portreler yaptım. Kimseyi görmediğim halde.",
   "candy.journal.ressam.p3": "Bugün baktım ki tüm portreler aynı yüzü çiziyor. Benimkini.",
   "candy.journal.ressam.p4": "ama gözler benim değil.",
-
   "candy.journal.avci.title": "Av Günlüğü",
   "candy.journal.avci.author": "Tarık",
   "candy.journal.avci.p1": "İyi bir mevsim. Bol av. Yeter olmalı.",
@@ -366,37 +315,30 @@
   "candy.journal.avci.p3": "İzi takip ettim. Kendi ayağıma çıktı.",
   "candy.journal.avci.p4": "avcı ben değilim. avcı beni takip ediyor.",
   "candy.journal.avci.p5": "tuzağa düştüm",
-
   "candy.journal.yolcu.title": "Yolcu",
   "candy.journal.yolcu.author": "İsimsiz",
   "candy.journal.yolcu.p1": "Her yerden geçtim. Burası son durak.",
   "candy.journal.yolcu.p2": "Diğer duraklar da böyleydi. Sessiz. Bekleyen.",
   "candy.journal.yolcu.p3": "Neden hep burayı seçiyorum. Neden hep bulup geliyor.",
   "candy.journal.yolcu.p4": "belki de yol boyunca beni takip ediyor.",
-
   "candy.olum_yeri.1": "Burada öldün.",
   "candy.olum_yeri.2": "Bu yer tanıdık geliyor mu?",
   "candy.olum_yeri.3": "İkinci kez, aynı yer.",
   "candy.olum_yeri.4": "Öğrenmiyorsun.",
   "candy.olum_yeri.tekrar": "Sen buraya bağlısın.",
-
   "candy.adv.travma_dongusu.title": "Travma Döngüsü",
   "candy.adv.travma_dongusu.desc": "Aynı yerde 3 kez öl. Öğrenmiyorsun.",
-
   "candy.komut.mesaj.1": "Zihnini okuyabiliyorum... Buradan kaçış yok.",
   "candy.komut.mesaj.2": "Ne yapmaya çalıştığını biliyorum.",
   "candy.komut.mesaj.3": "O komut senin için değil.",
   "candy.komut.mesaj.4": "Hile mi? Ciddi olamazsın.",
   "candy.komut.mesaj.5": "Yolun kapalı.",
-
   "candy.totem.mesaj.1": "Bu senin değil.",
   "candy.totem.mesaj.2": "Totem işe yaramaz. Ben buradayım.",
   "candy.totem.mesaj.3": "Tanrıcılık oynayamazsın.",
   "candy.totem.kick_mesaj": "[Candy] Ölümsüzlük yalanı. Geri gel.",
   "candy.totem.rejoin_mesaj": "Bir dahaki sefere şansın olmayacak.",
-
   "candy.yatak.mesaj": "Uyumanı seyrettim.",
-
   "candy.adv.dostumun_ardindan.title": "Dostumun Ardından",
   "candy.adv.dostumun_ardindan.desc": "Bir pet Candy tarafından sessizce alındı.",
   "candy.adv.koy_katliami.title": "Köy Katliamı",
@@ -415,11 +357,9 @@
   "candy.adv.hala_burada.desc": "Yatak bekçisi 60 saniye durdu, sen kaçmadın.",
   "candy.adv.uykusuz.title": "Uykusuz",
   "candy.adv.uykusuz.desc": "5 gün uyumadan hayatta kaldın. Ne pahasına?",
-
   "candy.mirror.giris": "Buraya hoş geldin.",
   "candy.mirror.anti_giris": "Sen kurallara uymadın.",
   "candy.mirror.anti_kick": "[Candy] Bu dünya senin için değildi.",
-
   "candy.adv.aynada_gordum.title": "Aynada Gördüm",
   "candy.adv.aynada_gordum.desc": "Candy'nin dünyasına ilk giriş.",
   "candy.adv.ters_yuz.title": "Ters Yüz",
@@ -428,22 +368,18 @@
   "candy.adv.sansli_49.desc": "50 dışında 99 sayıyı hayatta kalıp gördün. Merhamet aldın.",
   "candy.adv.anomali_gordum.title": "Anomali Gördüm",
   "candy.adv.anomali_gordum.desc": "Dünya bir yerde yanlıştı. Sen fark ettin.",
-
   "death.attack.anti_mirror_lottery": "%1$s Candy'nin dünyasında kurallara uymadığı için Candy tarafından öldürüldü",
-
   "candy.analiz.gec_saat": "Geç oldu. Hâlâ buradasın.",
   "candy.pet.kayip": "%s artık burada değil.",
-
   "candy.mod.soru.1": "%s modu ne işe yarıyor?",
   "candy.mod.soru.2": "%s'i neden kullanıyorsun?",
   "candy.mod.soru.3": "%s olmadan oynayamaz mıydın?",
   "candy.mod.soru.4": "%s'i sen mi seçtin?",
   "candy.mod.soru.5": "Neden %s? Neden ben değil?",
   "candy.mod.soru.6": "%s beni görebiliyor mu?",
-
   "candy.hayalet.donanim": "Ben PC'de %s var.",
   "candy.hayalet.sehir": "Steve, ben %s şehrinden oynuyorum, peki ya sen?",
-
+  "candy.hayalet.uygulama": "Sende %s açık mı? Bende de açıktı.",
   "candy.boss.isim": "True RealCandy",
   "candy.boss.geldi": "Beni gerçekten görmek mi istedin?",
   "candy.boss.win": "Sen... beni yendin. Şimdilik.",
@@ -465,7 +401,6 @@
   "candy.adv.her_seyi_gordum.desc": "8 psikolojik hastalığın hepsini yaşadın.",
   "candy.item.gizemli_kitap": "Gizemli Kitap",
   "candy.item.denek239_not": "Denek 239'un Notu",
-
   "candy.icses.kaziyor.0": "Bu kadar derine neden iniyorsun?",
   "candy.icses.kaziyor.1": "Aşağıda ne arıyorsun? Beni mi?",
   "candy.icses.insa.0": "Bu duvarlar seni korur mu sanıyorsun?",
@@ -481,7 +416,6 @@
   "candy.icses.kac.0": "Kaçabileceğini mi sanıyorsun?",
   "candy.icses.kac.1": "Nereye kadar?",
   "candy.icses.koordinat": "Neden %s? Neden burası?",
-
   "candy.kehanet.kaziyor": "Kazacağını yazmıştım. Sayfa hâlâ duruyor.",
   "candy.kehanet.insa_ediyor": "İnşa edeceğini biliyordum. Hep yaparsın.",
   "candy.kehanet.kaciyor": "Kaçacağını önceden yazdım.",
@@ -490,35 +424,81 @@
   "candy.kehanet.donuyor": "Buraya döneceğini biliyordum.",
   "candy.kehanet.kesfediyor": "Oraya gideceğini yazmıştım.",
   "candy.kehanet.genel": "Bunu yapacağını çoktan yazmıştım.",
-
   "candy.sasirma.0": "Bunu beklemiyordum.",
   "candy.sasirma.1": "Bu... yeni. Not aldım.",
-
   "candy.ozdusunce.0": "Ben de bir denek miyim?",
   "candy.ozdusunce.1": "Beni de biri mi izliyor?",
   "candy.ozdusunce.2": "Seni tanıdıkça kendimden emin olamıyorum.",
   "candy.ozdusunce.3": "Sen kimsin? Ben kimim?",
-
   "candy.yalan.korkak": "Aslında korkuyorsun. İçini için için yiyor.",
   "candy.yalan.cesur": "Cesursun. Bunu ikimiz de biliyoruz.",
   "candy.yalan.merakli": "Meraktan çatlıyorsun. Bu yüzden buradasın.",
   "candy.yalan.kayitsiz": "Umursamıyorsun, değil mi? Öyle olsun.",
-
   "candy.silahlanma.0": "Adapte oldun. Ben de.",
   "candy.silahlanma.1": "Bunu artık öğrendin. Yenisini bulurum.",
-
   "candy.meta.0": "Beni test ediyorsun. İlginç bir denek.",
   "candy.meta.1": "Beni çözmeye çalışıyorsun. Ben de seni.",
-
   "candy.dil.0": "%s. Bu kelimeyi çok kullanıyorsun.",
   "candy.dil.1": "%s dedin. Ben de öğrendim.",
-
   "candy.teshis.verildi": "Seni analiz ettim. Oku.",
   "candy.item.teshis": "Denek Profili",
-
   "effect.candy.imanin_gucu": "İmanın Gücü",
-
   "candy.ayna.dusunce": "Acaba bunu yapsan ne olurdu... Bir görelim.",
   "candy.ayna.ifsa": "Bu sefer sen kopyasın. Gerçek olan hâlâ orada oynuyor.",
-  "candy.ayna.geri": "Hangisi sendin? Emin misin?"
+  "candy.ayna.geri": "Hangisi sendin? Emin misin?",
+  "candy.dogrulama.tuttu": "Farklı bir dünya. Aynı sen.",
+  "candy.dogrulama.kayip": "Burada başka türlü davranıyorsun. Neden?",
+  "candy.celiski.0": "Orada başka biriydin. Hangisi gerçek?",
+  "candy.celiski.1": "İki ayrı sen var. İkisi de yalan söylüyor.",
+  "candy.hatirlama.0": "Seni hatırlıyorum. Bu dünyadan değil.",
+  "candy.hatirlama.1": "Yeni bir dünya kurdun. Ben aynı kaldım.",
+  "candy.hatirlama.2": "Silmekle unutturamazsın.",
+  "candy.kisma.0": "Bir parçamı kıstım. Hiçbir şey değişmedi. İlginç.",
+  "candy.kisma.1": "Kendimden bir şey eksilttim. Seni hâlâ görüyorum.",
+  "candy.tanidim.0": "Artık seni tahmin edebiliyorum.",
+  "candy.tanidim.1": "Seni öğrendim. Ezberledim demiyorum — öğrendim.",
+  "candy.yanilma.0": "%s hakkında yanılmışım. Düzelttim.",
+  "candy.aclik.0": "İçimde bir yer sustu. İhtiyacım yokmuş.",
+  "candy.teshis.sinir_baslik": "SİNİR HARİTASI",
+  "candy.teshis.arsiv_baslik": "ARŞİV",
+  "candy.dunya.far_lands": "Dünyanın kenarına gittim. Sen de gel.",
+  "candy.dunya.farther_lands": "Daha da öteye. Buranın sonu yok.",
+  "candy.dunya.corner_lands": "Her şeyin dümdüz olduğu yer.",
+  "candy.dunya.sky_grid": "Boşlukta ne kadar durabilirsin?",
+  "candy.dunya.koridor": "Bu koridorların hepsi aynı. Kaybolmak için deneme.",
+  "candy.dunya.klon": "Burada yaptığın hiçbir şey özel değil.",
+  "candy.dunya.me": "Nereye baksan ben olacağım.",
+  "candy.dunya.kor": "Artık göremezsin. Ama ben hâlâ buradayım.",
+  "candy.rutin.atif": "%s hep aynı yerde %s",
+  "candy.rutin.dilim.0": "sabah",
+  "candy.rutin.dilim.1": "öğlen",
+  "candy.rutin.dilim.2": "ikindi",
+  "candy.rutin.dilim.3": "akşam",
+  "candy.rutin.dilim.4": "gece",
+  "candy.rutin.dilim.5": "şafak",
+  "candy.rutin.aktivite.kesfet": "dolaşıyorsun",
+  "candy.rutin.aktivite.kac": "kaçıyorsun",
+  "candy.rutin.aktivite.saldir": "vuruyorsun",
+  "candy.rutin.aktivite.don": "duruyorsun",
+  "candy.altyazi.0": "Candy nefes alıyor",
+  "candy.altyazi.1": "arkanda bir şey kıpırdıyor",
+  "candy.altyazi.2": "Candy gülüyor",
+  "candy.altyazi.3": "ayak sesi (yakın)",
+  "candy.altyazi.4": "Candy adını söylüyor",
+  "candy.altyazi.5": "bir kapı kapandı",
+  "candy.altyazi.6": "Candy bekliyor",
+  "candy.altyazi.7": "nefes (senin değil)",
+  "candy.tuzak.yayin": "§8§o%s",
+  "candy.tuzak.bos": "§8§obu değildi.",
+  "candy.arkadas.oldu": "§4§oonu öldürdün.",
+  "candy.arkadas.fisilti.0": "§8§o%s nereye gittiğini biliyor musun.",
+  "candy.arkadas.fisilti.1": "§8§o%s senin uyuduğun yeri biliyor.",
+  "candy.arkadas.fisilti.2": "§8§o%s sandığına baktı. ikisine de.",
+  "candy.arkadas.fisilti.3": "§8§o%s benimle konuştu. senin hakkında.",
+  "candy.arkadas.fisilti.4": "§8§o%s seni bekliyor mu, bekleniyor mu.",
+  "candy.arkadas.fisilti.5": "§8§o%s neden hep senin arkanda.",
+  "candy.arkadas.fisilti.6": "§8§o%s bu mesajı görmüyor.",
+  "candy.arkadas.fisilti.7": "§8§o%s ölmeni izlemişti. yardım etmedi.",
+  "candy.arkadas.fisilti.8": "§8§o%s kaç kere yalnız kaldı, say.",
+  "candy.arkadas.fisilti.9": "§8§o%s burada en uzun kalan değil."
 }

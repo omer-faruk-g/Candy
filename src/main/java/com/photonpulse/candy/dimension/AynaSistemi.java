@@ -17,9 +17,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.Heightmap;
 
-import java.util.ArrayDeque;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -59,7 +57,41 @@ public class AynaSistemi {
     private static int tick = 0;
 
     // Per-player hareket kaydı: her frame float[]{x,y,z,yaw,pitch}
-    private static final Map<UUID, Deque<float[]>> kayit = new HashMap<>();
+    private static final Map<UUID, Kayit> kayit = new HashMap<>();
+
+    /**
+     * Hareket kaydı — sabit boyutlu ring buffer.
+     *
+     * <h3>NEDEN {@code Deque<float[]>} DEĞİL</h3>
+     * Eski hâli oyuncu başına HER TICK bir {@code new float[5]} tahsis ediyordu (saniyede
+     * 20, durumdan bağımsız) ve oynatma tarafı {@code Iterator} ile 160 adım yürüyordu.
+     * Tampon zaten sabit kapasiteli ({@value #KAYIT_CAP}); sabit bir {@code float[]} ring
+     * aynı veriyi sıfır tahsisle ve O(1) erişimle tutar.
+     */
+    private static final class Kayit {
+        final float[] veri = new float[KAYIT_CAP * 5];
+        int yazim = 0;      // sıradaki yazım slotu (kare cinsinden)
+        int adet = 0;       // dolu kare sayısı (en fazla KAYIT_CAP)
+
+        void ekle(float x, float y, float z, float yaw, float pitch) {
+            int t = yazim * 5;
+            veri[t] = x; veri[t + 1] = y; veri[t + 2] = z;
+            veri[t + 3] = yaw; veri[t + 4] = pitch;
+            yazim = (yazim + 1) % KAYIT_CAP;
+            if (adet < KAYIT_CAP) adet++;
+        }
+
+        /** {@code geriAdim} kare önceki kareyi hedefe yazar; 0 = en yeni kare. */
+        boolean kare(int geriAdim, float[] hedef) {
+            if (geriAdim < 0 || geriAdim >= adet) return false;
+            int slot = ((yazim - 1 - geriAdim) % KAYIT_CAP + KAYIT_CAP) % KAYIT_CAP;
+            System.arraycopy(veri, slot * 5, hedef, 0, 5);
+            return true;
+        }
+    }
+
+    /** Oynatma karesinin yeniden kullanılan tamponu — tek thread (sunucu) kullanır. */
+    private static final float[] kareScratch = new float[5];
     // Aktif Ayna kopyası NPC'si
     private static final Map<UUID, UUID> kopyaEntity = new HashMap<>();
     // Hazırlık fazı: düzenek kuruldu, bu tick'e gelince oyuncu Ayna'ya alınacak
@@ -81,11 +113,9 @@ public class AynaSistemi {
                 UUID id = player.getUuid();
 
                 // 1) Her tick hareketi kaydet (ring buffer)
-                Deque<float[]> buf = kayit.computeIfAbsent(id, k -> new ArrayDeque<>());
-                buf.addLast(new float[]{
-                    (float) player.getX(), (float) player.getY(), (float) player.getZ(),
-                    player.getYaw(), player.getPitch()});
-                while (buf.size() > KAYIT_CAP) buf.removeFirst();
+                Kayit buf = kayit.computeIfAbsent(id, k -> new Kayit());
+                buf.ekle((float) player.getX(), (float) player.getY(), (float) player.getZ(),
+                    player.getYaw(), player.getPitch());
 
                 // 2) Hazırlık fazı: düzenek kuruldu → süre dolunca oyuncuyu Ayna'ya AL
                 Long hb = hazirlikBitis.get(id);
@@ -205,7 +235,7 @@ public class AynaSistemi {
     }
 
     /** Kopya NPC'yi kaydın ECHO_GECIKME kadar geçmişindeki frame'e taşı (gecikmeli eko). */
-    private static void kopyayiSur(MinecraftServer server, ServerPlayerEntity player, Deque<float[]> buf) {
+    private static void kopyayiSur(MinecraftServer server, ServerPlayerEntity player, Kayit buf) {
         UUID npcId = kopyaEntity.get(player.getUuid());
         if (npcId == null) return;
         ServerWorld ayna = server.getWorld(CandyDimensions.AYNA);
@@ -217,12 +247,10 @@ public class AynaSistemi {
             return;
         }
         // Buffer'dan ECHO_GECIKME frame geriyi al
-        if (buf.size() <= ECHO_GECIKME) return;
-        int geri = buf.size() - ECHO_GECIKME;
-        java.util.Iterator<float[]> it = buf.iterator();
-        float[] frame = null;
-        for (int i = 0; i < geri && it.hasNext(); i++) frame = it.next();
-        if (frame == null) return;
+        // ECHO_GECIKME kare geriyi al — eskiden 160 adımlık Iterator yürüyüşüydü.
+        if (buf.adet <= ECHO_GECIKME) return;
+        final float[] frame = kareScratch;
+        if (!buf.kare(ECHO_GECIKME, frame)) return;
         kopya.refreshPositionAndAngles(frame[0], frame[1], frame[2], frame[3], frame[4]);
         kopya.setHeadYaw(frame[3]);
         kopya.setBodyYaw(frame[3]);

@@ -1,0 +1,7 @@
+plugins {
+    id 'dev.kikugie.stonecutter'
+}
+
+// Aktif düğüm — IDE ve ./gradlew build bunu derler.
+// Değiştirmek için: ./gradlew "Set active project to 1.21.11"
+stonecutter.active '1.21.7'

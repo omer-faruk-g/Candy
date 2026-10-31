@@ -3,6 +3,29 @@ pluginManagement {
         maven { url = 'https://maven.fabricmc.net/' }
         gradlePluginPortal()
     }
+    plugins {
+        // Tek loom tüm düğümleri çeviriyor; düğüm başına ayrı loom sürümü mümkün değil
+        // (settings bir kez değerlendirilir), o yüzden en yeni stabil sürüm.
+        id 'fabric-loom' version '1.17.2'
+    }
+}
+
+plugins {
+    id("dev.kikugie.stonecutter").version "0.9.8"
 }
 
 rootProject.name = 'candy'
+
+stonecutter {
+    // Proje Groovy; Stonecutter varsayılanı Kotlin.
+    kotlinController = false
+    centralScript = "build.gradle"
+
+    create(rootProject) {
+        // 26.x BİLİNÇLİ OLARAK YOK: Yarn mapping'leri 1.21.11'de duruyor
+        // (meta.fabricmc.net/v2/versions/yarn son gameVersion = 1.21.11).
+        // 26.x Mojang official mapping istiyor; bu, 204 sınıftaki her MC sembolünün
+        // yeniden adlandırılması demek — build işi değil, kaynak göçü işi.
+        versions("1.21.7", "1.21.11")
+    }
+}

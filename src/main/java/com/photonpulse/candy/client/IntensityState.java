@@ -33,8 +33,19 @@ public final class IntensityState {
         sonServerGuncelleme = System.currentTimeMillis();
     }
 
-    /** 0.0 = sakin, 1.0 = tam kaos. */
+    /**
+     * 0.0 = sakin, 1.0 = tam kaos.
+     *
+     * <p>v8.4: dönüş {@link CandyMixinConfig#yogunlukTavani} ile kırpılır. Tek çıkış
+     * noktası burası olduğu için tavan bütün mixinlere aynı anda uygulanır — her mixine
+     * ayrı ayar eklemek gerekmiyor.</p>
+     */
     public static double get() {
+        return Math.min(ham(), CandyMixinConfig.yogunlukTavani);
+    }
+
+    /** Tavan uygulanmamış ham yoğunluk. */
+    private static double ham() {
         long simdi = System.currentTimeMillis();
         if (simdi - sonServerGuncelleme < TAZE_SURE_MS) {
             return serverIntensity;

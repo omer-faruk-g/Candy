@@ -1,6 +1,6 @@
 package com.photonpulse.candy.mixin.client;
 
-import net.minecraft.client.MinecraftClient;
+import com.photonpulse.candy.client.KaranlikState;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,11 +9,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * LightmapTextureManagerMixin (v3.0 Faz 1.2) — Mirror'da lightmap karartma.
+ * LightmapTextureManagerMixin (v3.0 Faz 1.2, v8.1 şifre karanlığı) — lightmap karartma.
  *
  * getDarkness(LivingEntity, float, float) private methodu return değerini modifiye eder.
- * Player Mirror/Anti-Mirror'daysa minimum darkness zorlanır — dünya sürekli karanlık hisseder.
  * Bu vanilla lightmap pipeline'ına yerleşir → tüm blok aydınlatması etkilenir.
+ *
+ * İki ayrı kaynak:
+ *   1. Mirror / Anti-Mirror boyutu → minimum karanlık zorlanır (v3.0).
+ *   2. Çözülen şifre sayısı → her kademe ~1/15 karanlık ekler (v8.1). Boyuttan bağımsız,
+ *      yani overworld'de de geçerli — "dünyanın genel ışık seviyesi" istenen buydu.
  */
 @Mixin(LightmapTextureManager.class)
 public class LightmapTextureManagerMixin {
@@ -23,13 +27,23 @@ public class LightmapTextureManagerMixin {
                                        CallbackInfoReturnable<Float> cir) {
         try {
             if (entity == null || entity.getWorld() == null) return;
-            String dimId = entity.getWorld().getRegistryKey().getValue().toString();
-            if (!dimId.equals("candy:mirror") && !dimId.equals("candy:anti_mirror")) return;
-
             float mevcut = cir.getReturnValueF();
-            // Mirror'da minimum %55 karanlık — DARKNESS effect üstüne ekstra baseline
-            float min = dimId.equals("candy:anti_mirror") ? 0.75f : 0.55f;
-            if (mevcut < min) cir.setReturnValue(min);
+            float sonuc = mevcut;
+
+            // v8.1: şifre karanlığı — her boyutta geçerli, taban olarak eklenir.
+            float taban = KaranlikState.taban();
+            if (taban > 0.0f) {
+                sonuc = Math.min(1.0f, sonuc + (1.0f - sonuc) * taban);
+            }
+
+            String dimId = entity.getWorld().getRegistryKey().getValue().toString();
+            if (dimId.equals("candy:mirror") || dimId.equals("candy:anti_mirror")) {
+                // Mirror'da minimum %55 karanlık — DARKNESS effect üstüne ekstra baseline
+                float min = dimId.equals("candy:anti_mirror") ? 0.75f : 0.55f;
+                if (sonuc < min) sonuc = min;
+            }
+
+            if (sonuc != mevcut) cir.setReturnValue(sonuc);
         } catch (Throwable ignored) {}
     }
 }

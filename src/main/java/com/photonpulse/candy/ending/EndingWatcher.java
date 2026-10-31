@@ -57,7 +57,7 @@ public class EndingWatcher {
         // Server-wide broadcast — herkes duyar
         String isim = player.getName().getString();
         Text msg = Text.literal(isim + " artık Candy.").formatted(Formatting.DARK_RED, Formatting.BOLD);
-        player.getServer().getPlayerManager().broadcast(msg, false);
+        player.getWorld().getServer().getPlayerManager().broadcast(msg, false);
 
         Candy.LOG.info("[Candy] ENDING → {} artık Candy (ozguven=100)", isim);
     }

@@ -1,0 +1,6 @@
+# Stonecutter src/ agacini YERINDE yeniden yaziyor ve satir sonlarini LF'e normalize
+# ediyor. Bu olmadan her surum degisimi butun dosyalari "degismis" gosteriyor.
+* text=auto eol=lf
+*.jar binary
+*.png binary
+*.ogg binary

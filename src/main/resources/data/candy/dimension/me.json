@@ -1,0 +1,15 @@
+{
+  "type": "candy:kdunya",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "layers": [
+        { "block": "minecraft:bedrock", "height": 1 },
+        { "block": "candy:me", "height": 128 }
+      ],
+      "biome": "minecraft:plains",
+      "features": false,
+      "lakes": false
+    }
+  }
+}

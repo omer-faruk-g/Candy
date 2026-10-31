@@ -54,8 +54,17 @@ public class CandyChatOkur {
         TruePersonality tp = PersonalityManager.get(sender);
         if (!tp.kurulumTamam) return;
 
-        String metin = msg.getSignedContent().toLowerCase(Locale.ROOT);
+        final String ham = msg.getSignedContent();
+        String metin = ham.toLowerCase(Locale.ROOT);
         if (metin.isEmpty()) return;
+
+        // v8.1: oyuncu ikilik şifreyi çözüp buraya yazdı mı? Jeton büyük/küçük harf
+        // duyarsız eşleşiyor ama ham metin veriliyor — lowercase'lemek gerekmiyor.
+        // v8.3: TUZAK kontrolü gerçek şifreden ÖNCE. Tuzak cevabı SifreIzleyici'ye
+        // girerse "yanlış satır" sayılır ve Candy'nin özgüveni YÜKSELİR — olması
+        // gerekenin tam tersi (tuzağı görülen Candy küçülür).
+        if (com.photonpulse.candy.sifre.TuzakYayini.kontrol(sender, tp, ham)) return;
+        com.photonpulse.candy.sifre.SifreIzleyici.kontrol(sender, tp, ham, "sohbet");
 
         if (icerir(metin, CANDY_ANAHTAR)) {
             tp.korkuSkoru = Math.min(100, tp.korkuSkoru + 5);

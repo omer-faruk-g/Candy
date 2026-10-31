@@ -113,6 +113,170 @@ public class TruePersonality {
 
     // ── v3.0: Anti-Mirror lottery (Phase 4) ──
     public java.util.Set<Integer> kullanilanLotterySayilari = new java.util.HashSet<>();
+    // ── v7: Kurul dünyaları (DunyaKurulu 5dk kararı) ──
+    /** Kurulun dünya kararını en son ne zaman verdiği (overworld saati, tick). */
+    public long kurulSonKarar = 0L;
+    /** Şu an bir kurul dünyasındaysa oraya giriş tick'i (0 = değil). */
+    public long kurulDunyaGirisTick = 0L;
+    /** Kurul dünyasına giderken kaydedilen dönüş koordinatı (overworld, asLong). */
+    public long kurulDonusPoz = 0L;
+    /** Şu an hangi kurul dünyasında (enum adı; null/"" = overworld). */
+    public String kurulDunyaId = null;
+
+    // ── v8.0: tabela öfkesi ──
+    /**
+     * Candy'nin yazdığı ve oyuncunun HİÇ dokunmadan yok olmasına izin verdiği tabela sayısı.
+     *
+     * Kırılan tabela sayılmaz (kırmak bir tepkidir), değiştirilen tabela sayılmaz (cevaptır).
+     * Yalnızca 30 saniye boyunca hiç dokunulmayanlar. 20'de {@code candy_kizgin} başarımı.
+     */
+    public int ihmalSayisi = 0;
+    /**
+     * 0..1 — ihmalden doğan öfke. Şiddet çarpanı DEĞİL, <b>varyans</b> çarpanı:
+     * kurul üyelerinin keşif gürültüsünü ve Hakem'in keşif eşiğini ölçekler, yani
+     * Candy daha sert değil daha <i>tahmin edilemez</i> olur.
+     */
+    public double candyOfke = 0.0;
+
+    // ── v8.0: Vagus (yerel gözlemci) — yalnızca GİRDİ, karar yolunda okunmaz ──
+    /** Vagus'un güncel tahmini (0..1). Bilgi yoksa 0,5 (nötr). */
+    public double vagusTahmin = 0.5;
+    /** Vagus oyuncuyu ne kadar çözdü — Brier kalibrasyonu (0..1). Bilgi yoksa 0,5. */
+    public double vagusKalibrasyon = 0.5;
+    /** "Yeni yaklaştı" darbesi (0..1), her nabızda sönümlenir. */
+    public double vagusDarbe = 0.0;
+    /** Vagus'un şimdiye kadarki en iyi kalibrasyonu — darbe eşiği buna göre. */
+    public double vagusEnIyi = 0.0;
+
+    // ── v8.1: İkilik şifre + ışık ──
+    // Dört alan da int/long: eski v8.0 JSON'unda yoklar, Gson 0 ile doldurur → göç gerekmez.
+    /** Hangi şifre indeksleri dağıtıldı — bitmask, en çok 32 şifre. */
+    public int sifreVerilen = 0;
+    /** Hangi şifre indeksleri çözülüp geri yazıldı — bitmask. Tekrar sayılmaz. */
+    public int sifreCozulen = 0;
+    /**
+     * Dünyanın ışığı kaç kademe düşük görünüyor (0..maksIsikDusumu).
+     * Çözülen her şifre bir artırır; client lightmap'ine taban karanlık olarak gider.
+     */
+    public int isikDusumu = 0;
+    /** Son şifre dağıtım tick'i — aralık bunun üzerinden ölçülür. */
+    public long sifreSonDagitim = 0L;
+
+    // ── v8.2: geri besleme kanalları + iki yeni duyu ekseni ──
+    // Hepsi ilkel (int/long/double): eski v8.1 JSON'unda yoklar, Gson 0 ile doldurur.
+    // Tek istisna rutinPaketleri (dizi) ve o da imzalariOnar() içinde kurtarılıyor.
+    /**
+     * ARKAYA BAKMA eksenı (0..1) — oyuncu ne sıklıkta 180°'e yakın dönüyor.
+     *
+     * Mirror.txt'nin en güçlü mekaniği "bakılmayan yere müdahale"ydi ve Candy'de ölçülen
+     * bir eksen bile yoktu. Artık Kurul'un öğrenebileceği bir kişilik boyutu: sürekli
+     * arkasını kollayan oyuncuya <i>önden</i>, hiç bakmayana <i>arkadan</i> gidilir.
+     * Duyu indeksi 52.
+     */
+    public double arkayaBakma = 0.0;
+    /**
+     * KAÇIŞ ARAYIŞI eksenı (0..1) — creative/spectator, peaceful, cheat komutu denemesi,
+     * F3, modu kaldırıp geri koyma. Hepsi "oyundan değil Candy'den kaçma" davranışı.
+     * Duyu indeksi 53.
+     */
+    public double kacisArayisi = 0.0;
+    /** Kaçış denemelerinin ham sayacı (log + tabela atfı için). */
+    public int kacisDenemesi = 0;
+    /**
+     * PERDE kademesi (0..3) — Kurul kalibrasyonla hangi olay sınıflarını <b>kazandı</b>.
+     *
+     * Asla düşmez: bir kez kazanılan tırmanma hakkı geri alınmaz. The Mimic kademeleri
+     * "hayatta kalınan gün"e bağlıyor; burada ölçüte bağlı — Candy oyuncuyu doğru tahmin
+     * etmeye başlayınca yeni mekaniklere erişir. Hem yay var hem emergent kalıyor.
+     */
+    public int perdeKademe = 0;
+    /** Rutin geri oynatması kaç kez yapıldı. */
+    public int rutinTekrari = 0;
+    /** Son rutin geri oynatma tick'i (soğuma). */
+    public long rutinSonTick = 0L;
+    /** Oyuncunun en son görüldüğü dünya tick'i — modsuz oynandı mı tespiti. */
+    public long sonGorulenDunyaTick = 0L;
+    /** Mod kaldırılıp geri konduğu kaç kez anlaşıldı. */
+    public int modsuzOynandi = 0;
+
+    // ── v8.3: dünyaya uzanan el (mob koordinasyonu, tuzak, kaydırma, Arkadaş) ──
+    // Hepsi ilkel: eski JSON'da yoklar, Gson 0/false ile doldurur.
+    /**
+     * TOPLAM oynanan tick — oturumlar arası birikir, asla sıfırlanmaz.
+     *
+     * {@code oturumBaslangicTick} yalnızca o oturumu ölçüyordu; "oyun süresine bağlı"
+     * mekanikler için kalıcı bir sayaç gerekiyordu. Dünya tick'i değil <b>oyuncu</b>
+     * tick'i: AFK sunucuda dünya ilerler ama bu oyuncu oynamıyorsa burası ilerlemez.
+     */
+    public long toplamOynananTick = 0L;
+    /** Kaç tuzak yayını bu oyuncuya ulaştı. */
+    public int tuzakGonderilen = 0;
+    /** Kaç tuzağı çözdü (ve hiçbir şey kazanmadı). */
+    public int tuzakCozulen = 0;
+    /**
+     * TUZAK İLGİSİ eksenı (0..1) — oyuncu şifre/bulmaca malzemesinin peşine düşüyor mu.
+     *
+     * Bulmacayı kovalayan oyuncuyla hiç bakmayan oyuncu farklı iki zayıflık: birine
+     * sahte şifre yetiyor, diğerine hiç işlemiyor. Duyu indeksi 55.
+     */
+    public double tuzakIlgisi = 0.0;
+    /** Konum kaydırması kaç kez uygulandı. */
+    public int kaydirmaSayisi = 0;
+    /** Son kaydırma tick'i (soğuma). */
+    public long kaydirmaSonTick = 0L;
+    /** Bu oyuncu Arkadaş'ı öldürdü mü (0 ya da 1 — ikinci kez olamaz, geri gelmiyor). */
+    public int arkadasOldurdu = 0;
+    /**
+     * ARKADAŞ YASI eksenı (0..1) — Arkadaş öldürüldükten sonra kalan <b>kalıcı</b> öfke.
+     *
+     * Diğer bütün duygular sönümlenir; bu sönmez. Oyuncu Candy'yi bir kez gerçekten
+     * yaralayabilir ve Candy bunu unutmaz. {@code candyOfke} için taban değeri olur:
+     * öfke bunun altına düşemez. Duyu indeksi 54.
+     */
+    public double arkadasYasi = 0.0;
+    /** Arkadaş kaç kez bu oyuncuyla aynı dünyada bulundu (tanışıklık). */
+    public int arkadasKarsilasma = 0;
+
+    /**
+     * Öfke tabanı — {@code candyOfke} bunun altına <b>düşemez</b>.
+     *
+     * <p>Arkadaş öldürüldüyse Candy'nin öfkesi bir daha sıfırlanmıyor. Şifre çözmek,
+     * tabelayı okumak, iyi oynamak: hiçbiri bu tabanın altına indirmiyor. Taban
+     * {@code 0.85} çünkü {@code ArkadasEntity.onDeath} öfkeyi oraya çıkarıyor —
+     * sönümleme o anı geri alamaz.</p>
+     */
+    public double ofkeTabani() {
+        return Math.max(0.0, Math.min(1.0, arkadasYasi)) * 0.85;
+    }
+
+    /**
+     * Öfkeyi azaltır ama {@link #ofkeTabani()} altına indirmez.
+     *
+     * <p>Öfkeyi düşüren her yer bunu kullanmalı; çıplak {@code Math.max(0.0, ...)}
+     * Arkadaş'ın ölümünü zamanla siler ve mekaniğin tek kalıcı sonucu kaybolur.</p>
+     */
+    public void ofkeAzalt(double miktar) {
+        candyOfke = Math.max(ofkeTabani(), candyOfke - Math.abs(miktar));
+    }
+
+    /**
+     * {@code tuzakIlgisi} (duyu 55) — oyuncunun 0/1 dizilerini çözmeye oturma eğilimi.
+     *
+     * <p>Çözülen / gönderilen oranı. Oran tek başına yetmez: 1/1 ile 9/20 aynı şey
+     * değil, o yüzden gönderim sayısı bir güven çarpanı olarak çarpılıyor (5 yayından
+     * sonra tam ağırlık). Böylece ilk tuzağı çözen oyuncu anında "şifre delisi"
+     * sayılmıyor.</p>
+     */
+    public void tuzakIlgisiGuncelle() {
+        if (tuzakGonderilen <= 0) { tuzakIlgisi = 0.0; return; }
+        double oran = (double) tuzakCozulen / tuzakGonderilen;
+        double guven = Math.min(1.0, tuzakGonderilen / 5.0);
+        tuzakIlgisi = Math.max(0.0, Math.min(1.0, oran * guven));
+    }
+
+    /** En son ziyaret edilen kurul dünyası (dönüşten sonra da kalır) — tekrar cezası için. */
+    public String kurulSonDunya = null;
+
     // Overworld candy-kill sonrası dönülecek gerçek dünya koordinatı (asLong)
     public long sonMirrorGiris = 0L;
     public long antiMirrorGirisTick = 0L;
@@ -140,8 +304,91 @@ public class TruePersonality {
 
     // 1) Öngörülebilirlik (0-100) — hep aynı davranış = yüksek. Yüksekse Candy hızlı domine eder.
     public double ongorulebilirlik = 50.0;
-    // Son davranış imzaları (rota+aktivite hash'i) — tekrar tespiti için
-    public java.util.List<Integer> davranisImzalari = new java.util.ArrayList<>();
+    /** İmza tamponunun kapasitesi — eski {@code List} davranışıyla birebir (30). */
+    public static final int IMZA_CAP = 30;
+    /**
+     * Son davranış imzaları (rota+aktivite hash'i) — tekrar tespiti için.
+     *
+     * v8: {@code List<Integer>} değil <b>sabit int[] ring</b>. Eskisi saniyede oyuncu
+     * başına {@code Integer} boxing + {@code remove(0)} (O(n) kaydırma) + bir stream
+     * pipeline üretiyordu. Ring aynı pencereyi (son 30 imza) sıfır tahsisle tutar.
+     * Dolu slotlar daima {@code 0..imzaAdet-1} aralığındadır.
+     */
+    public int[] davranisImzalari = new int[IMZA_CAP];
+    /** Tampondaki dolu imza sayısı (en fazla {@link #IMZA_CAP}). */
+    public int imzaAdet = 0;
+    /** Sıradaki yazım slotu. */
+    public int imzaYazim = 0;
+
+    /**
+     * v8.2 — imzanın BİLEŞENLERİ, {@link #davranisImzalari} ile aynı slotta.
+     *
+     * <h3>NEDEN GEREKLİ</h3>
+     * {@code davranisImzalari} bir hash tutuyor ve hash tek yönlü: "en çok tekrarlanan
+     * rutin" bulunabiliyor ama <i>neydi</i> sorusu cevaplanamıyordu. Candy oyuncunun
+     * rutinini ona geri oynatacaksa (chunk + saat dilimi) bileşenlerin kendisi lazım.
+     * Hash'i bileşenlerden yeniden üretmek yerine paralel tutuyoruz: hash formülü
+     * diskteki eski imzalarla birebir uyumlu kalmak zorunda, dokunulmamalı.
+     *
+     * Paket düzeni için {@link com.photonpulse.candy.rutin.RutinKaydi}.
+     */
+    public long[] rutinPaketleri = new long[IMZA_CAP];
+
+    /**
+     * İmzayı ring'e yazar ve <b>yazdıktan sonra</b> tampondaki tekrar sayısını döndürür —
+     * eski {@code add} + {@code stream().filter().count()} ikilisiyle aynı sonuç.
+     *
+     * @param paket imzanın çözülebilir bileşenleri ({@code RutinKaydi.paketle})
+     */
+    public int imzaKaydet(int imza, long paket) {
+        if (davranisImzalari == null || davranisImzalari.length != IMZA_CAP) imzalariOnar();
+        int slot = imzaYazim;
+        davranisImzalari[slot] = imza;
+        rutinPaketleri[slot] = paket;
+        imzaYazim = (imzaYazim + 1) % IMZA_CAP;
+        if (imzaAdet < IMZA_CAP) imzaAdet++;
+        int tekrar = 0;
+        for (int i = 0; i < imzaAdet; i++) if (davranisImzalari[i] == imza) tekrar++;
+        return tekrar;
+    }
+
+    /**
+     * Eski kayıtları ring düzenine taşır.
+     *
+     * Disk formatı değişti: v7 bir JSON dizisi (değişken uzunluk) yazıyordu. Gson onu
+     * {@code int[]} olarak okur ama uzunluğu {@value #IMZA_CAP} olmayabilir. En YENİ
+     * kayıtlar korunur (eski listenin sonu), sayaçlar buna göre kurulur.
+     */
+    public void imzalariOnar() {
+        // v8.2: paket dizisi imza dizisiyle AYNI uzunlukta olmalı — slotlar eşlenik.
+        // v8.1 kayıtlarında alan hiç yok (Gson null bırakır): paketler 0 ile başlar,
+        // yani "bilinmeyen rutin". Yeni imzalar geldikçe kendiliğinden dolar; göç yok.
+        if (rutinPaketleri == null || rutinPaketleri.length != IMZA_CAP) {
+            long[] p = new long[IMZA_CAP];
+            if (rutinPaketleri != null && rutinPaketleri.length > 0) {
+                int m = Math.min(rutinPaketleri.length, IMZA_CAP);
+                System.arraycopy(rutinPaketleri, rutinPaketleri.length - m, p, 0, m);
+            }
+            rutinPaketleri = p;
+        }
+        int[] eski = davranisImzalari;
+        if (eski != null && eski.length == IMZA_CAP) {
+            // v8 formatı. Sayaç yoksa (v7'de tam 30 kayıt vardı) tamponu dolu say.
+            if (imzaAdet <= 0 && imzaYazim <= 0) { imzaAdet = IMZA_CAP; imzaYazim = 0; }
+            imzaAdet = Math.max(0, Math.min(IMZA_CAP, imzaAdet));
+            imzaYazim = ((imzaYazim % IMZA_CAP) + IMZA_CAP) % IMZA_CAP;
+            return;
+        }
+        int[] yeni = new int[IMZA_CAP];
+        int n = 0;
+        if (eski != null && eski.length > 0) {
+            n = Math.min(eski.length, IMZA_CAP);
+            System.arraycopy(eski, eski.length - n, yeni, 0, n);
+        }
+        davranisImzalari = yeni;
+        imzaAdet = n;
+        imzaYazim = n % IMZA_CAP;
+    }
 
     // 2) Tetikleyici Profili — korkuSkoru sıçradığında o an ne vardı? (sebep → şiddet)
     // Anahtarlar: "karanlik", "klon", "ses", "yeralti", "dusuk_can", "gece", "yalniz"
@@ -346,7 +593,7 @@ public class TruePersonality {
         if (olumYeriTekrar == null) olumYeriTekrar = new HashMap<>();
         if (kullanilanLotterySayilari == null) kullanilanLotterySayilari = new java.util.HashSet<>();
         // v3.0 Analiz 2.0
-        if (davranisImzalari == null) davranisImzalari = new ArrayList<>();
+        imzalariOnar();   // v8: List<Integer> → int[] ring göçü
         if (korkuTetikleyicileri == null) korkuTetikleyicileri = new HashMap<>();
         if (baglanmalar == null) baglanmalar = new HashMap<>();
         if (saatlikRutin == null) saatlikRutin = new HashMap<>();

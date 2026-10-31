@@ -18,7 +18,7 @@ public class CandyBasarimlar {
     public static void tetikle(ServerPlayerEntity player, String kod) {
         try {
             if (player == null) return;
-            MinecraftServer server = player.getServer();
+            MinecraftServer server = player.getWorld().getServer();
             if (server == null) return;
             AdvancementEntry adv = server.getAdvancementLoader()
                 .get(Identifier.of("candy", kod));

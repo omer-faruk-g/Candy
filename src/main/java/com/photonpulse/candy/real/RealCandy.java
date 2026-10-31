@@ -148,7 +148,7 @@ public class RealCandy {
         // Ses + disconnect yeterli atmosfer.
 
         // Kısa gecikme sonrası disconnect
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.getWorld().getServer();
         if (server == null) return;
 
         // 15 tick sonra at

@@ -98,6 +98,7 @@ public class TeshisRaporu {
             if (kelime != null) s5 += "\n\nEn çok kullandığın\nkelime: \"" + kelime + "\"";
             if (verilenIsim != null) s5 += "\n\nOna \"" + verilenIsim + "\"\nadını verdin.";
             sayfalar.add(s5);
+            beyinSayfalari(player, sayfalar, true);
             sayfalar.add("SONUÇ\n\n" + sonucLabel(tp, turkce)
                 + "\n\nİmzalayan:\n???dy");
         } else {
@@ -117,6 +118,7 @@ public class TeshisRaporu {
             if (kelime != null) s5 += "\n\nYour most used\nword: \"" + kelime + "\"";
             if (verilenIsim != null) s5 += "\n\nYou named it \"" + verilenIsim + "\".";
             sayfalar.add(s5);
+            beyinSayfalari(player, sayfalar, false);
             sayfalar.add("CONCLUSION\n\n" + sonucLabel(tp, turkce)
                 + "\n\nSigned:\n???dy");
         }
@@ -132,6 +134,62 @@ public class TeshisRaporu {
         kitap.set(DataComponentTypes.CUSTOM_NAME,
             Text.translatable("candy.item.teshis").formatted(Formatting.DARK_GRAY, Formatting.ITALIC));
         return kitap;
+    }
+
+    /**
+     * v4.0: beynin ölçtüklerini rapora sızdırır — ama TEKNİK DİL KULLANMADAN.
+     * Oyuncu "kaç hâlini tanıdığını", "ne kadar isabetli tahmin ettiğini" ve
+     * "kaç dünyada aynı kaldığını" okur; nöron/sinaps/lob kelimeleri asla geçmez.
+     */
+    private static void beyinSayfalari(ServerPlayerEntity player, List<String> sayfalar, boolean tr) {
+        try {
+            var b = com.photonpulse.candy.beyin.BeyinMotoru.get(player.getUuid());
+            if (b == null) return;
+
+            // ── Sinir haritası sayfası ──
+            var h = b.oyuncuHaritasi;
+            int hal = (h == null) ? 0 : h.kesfedilenHalSayisi();
+            int isabet = (h == null) ? 0 : (int) (h.isabetOrani() * 100);
+            long tahmin = (h == null) ? 0 : h.tahminSayisi;
+            String s1;
+            if (tr) {
+                s1 = "GÖZLEM AĞI\n\n"
+                   + "Tanıdığım hâllerin\nsayısı: " + hal + "\n\n"
+                   + "Yaptığım tahmin: " + tahmin + "\n"
+                   + "Tutan: %" + isabet + "\n\n"
+                   + (isabet > 50 ? "Artık önce ben\nbiliyorum." : "Hâlâ öğreniyorum.");
+            } else {
+                s1 = "OBSERVATION NET\n\n"
+                   + "States I recognize: " + hal + "\n\n"
+                   + "Predictions made: " + tahmin + "\n"
+                   + "Correct: " + isabet + "%\n\n"
+                   + (isabet > 50 ? "Now I know first." : "Still learning.");
+            }
+            sayfalar.add(s1);
+
+            // ── Arşiv sayfası (dünyalar arası) ──
+            int dunya = (b.dunyalar == null) ? 0 : b.dunyalar.size();
+            var oz = b.ozModel;
+            int celiski = (oz == null) ? 0 : oz.celiskiToplam;
+            int tutar = (oz == null) ? 50 : (int) (oz.tutarlilik * 100);
+            String s2;
+            if (tr) {
+                s2 = "ARŞİV\n\n"
+                   + "Seni izlediğim\ndünya sayısı: " + dunya + "\n\n"
+                   + "Kendimden emin\noluşum: %" + tutar + "\n"
+                   + "Çelişki: " + celiski + "\n\n"
+                   + (dunya > 1 ? "Dünyaları değiştirdin.\nBen kalmaya devam\nettim."
+                                : "Henüz tek bir\ndünya.");
+            } else {
+                s2 = "ARCHIVE\n\n"
+                   + "Worlds observed: " + dunya + "\n\n"
+                   + "Self-certainty: " + tutar + "%\n"
+                   + "Contradictions: " + celiski + "\n\n"
+                   + (dunya > 1 ? "You changed worlds.\nI remained."
+                                : "Only one world\nso far.");
+            }
+            sayfalar.add(s2);
+        } catch (Throwable ignored) {}
     }
 
     // ── Etiket çevirileri ──

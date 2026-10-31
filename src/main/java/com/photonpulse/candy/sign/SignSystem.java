@@ -16,12 +16,20 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.SignText;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkStatus;
+import net.minecraft.world.chunk.WorldChunk;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,7 +60,13 @@ public class SignSystem {
     private static final Random RNG = new Random();
 
     // Hangi oyuncu, hangi tabelayı zaten okudu (aynı cevabı 2 kez analiz etmeyelim)
-    private static final Map<UUID, Map<BlockPos, Long>> okunmusTabelalar = new HashMap<>();
+    private static final Map<UUID, Map<TabelaAnahtar, Long>> okunmusTabelalar = new HashMap<>();
+
+    /**
+     * Tarama tamponu — her taramada temizlenip yeniden doldurulur, tahsis edilmez.
+     * Yalnızca sunucu thread'inden kullanılır (tüm SignSystem gibi).
+     */
+    private static final List<BlockPos> adaylar = new ArrayList<>(32);
 
     // 12000 tick (10 dk) geçen okuma kayıtları silinir — uzun oturumda birikmesin
     private static final long OKUNMUS_UNUT_TICK = 12000L;
@@ -61,11 +75,59 @@ public class SignSystem {
     // Oyuncu üzerine yazınca metin değişir → cevap olarak kabul edilir.
     // LinkedHashMap: ekleme sırasını korur, MAKS_TAKIP dolarsa en eskisi düşer.
     private static final int MAKS_TAKIP_TABELA = 500;
-    private static final Map<BlockPos, String> candyTabelalari = new LinkedHashMap<>();
+    private static final Map<TabelaAnahtar, TabelaKaydi> candyTabelalari = new LinkedHashMap<>();
+
+    /** Tabelanın ÖMRÜ — bu kadar tick dokunulmazsa yok olur (600 tick = 30 saniye). */
+    private static final long OMUR_TICK = 600L;
+    /** Ömür süpürmesi sıklığı — 30 s'lik bir süre için 1 s çözünürlük kâfi. */
+    private static final int OMUR_SUPURME_ARALIGI = 20;
+    /**
+     * Chunk yüklü olmadığı için bloğu kaldıramadığımız kaydın ne kadar sonra tamamen
+     * düşürüleceği. İhmal zaten 30 s'de işlenmiş olur; bu yalnızca temizlik üst sınırı.
+     */
+    private static final long KAYIT_SERT_TAVAN = OMUR_TICK + 6000L;   // +5 dk
+    /** Kaç ihmal başarımı tetikler. */
+    private static final int OFKE_BASARIM_ESIGI = 20;
+
+    /**
+     * Tabela kimliği — <b>dünya + konum</b>.
+     *
+     * v7'de anahtar yalnızca {@code BlockPos} idi. Kurul her 5 dakikada oyuncuyu 8 dünya
+     * arasında taşıdığından Koridor'daki (100,64,100) ile overworld'deki (100,64,100) aynı
+     * girdiye çakışıyordu: bir dünyadaki oyuncu tabelası başka dünyada "Candy'nin" sanılıyor,
+     * cevabı analiz edilmiyordu. {@code sunucuKapan()} bunu kapanışta temizliyordu ama kök
+     * neden tek oturum içinde de yaşıyordu.
+     */
+    private record TabelaAnahtar(RegistryKey<World> dunya, BlockPos poz) {}
+
+    /**
+     * Bir Candy tabelasının sicili.
+     *
+     * Record değil kasıtlı: {@code konulduTick} sahibi çevrimdışıyken İLERİ kaydırılır
+     * (sayaç durur), yani her süpürmede değişiyor. Record olsa 500 tabela × saniyede 1
+     * süpürme = saniyede 500 gereksiz nesne olurdu.
+     */
+    private static final class TabelaKaydi {
+        final UUID sahip;
+        final String metin;
+        /** Ömür sayacının başlangıcı; sahip çevrimdışıyken ileri kaydırılır. */
+        long konulduTick;
+        /** Süpürmenin bu kaydı en son gördüğü tick (çevrimdışı kaydırması için). */
+        long sonGorulduTick;
+        /** İhmal bir kez sayıldı mı (chunk yüklenmediği için blok hâlâ duruyor olabilir). */
+        boolean ihmalSayildi;
+
+        TabelaKaydi(UUID sahip, String metin, long tick) {
+            this.sahip = sahip;
+            this.metin = metin;
+            this.konulduTick = tick;
+            this.sonGorulduTick = tick;
+        }
+    }
 
     // Cevap analiz edilmiş tabelalar (per-player). Aynı tabela ikinci kez okunmasın:
     // orjinal silindikten sonra 30 sn sonra tekrar cevap sanılıp analiz ediliyordu.
-    private static final Map<UUID, Set<BlockPos>> analizEdilen = new HashMap<>();
+    private static final Map<UUID, Set<TabelaAnahtar>> analizEdilen = new HashMap<>();
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(SignSystem::onTick);
@@ -117,6 +179,113 @@ public class SignSystem {
                 belkiTabelaYaz(player);
             }
         }
+
+        if (tickSayaci % OMUR_SUPURME_ARALIGI == 0) {
+            omurSupur(server);
+        }
+    }
+
+    /**
+     * ÖMÜR SÜPÜRMESİ — 30 saniyedir dokunulmamış Candy tabelalarını yok eder ve ihmali sayar.
+     *
+     * <p>Dört ayrı durumu ayırt eder, çünkü üçü ihmal DEĞİLDİR:</p>
+     * <ul>
+     *   <li><b>Sahip çevrimdışı</b> → sayaç durur. Yokluk, yok saymak değil.</li>
+     *   <li><b>Tabela kırılmış</b> → kayıt sessizce düşer, ihmal sayılmaz. Kırmak bir
+     *       tepkidir; oyuncu Candy'yi görmezden gelmemiş.</li>
+     *   <li><b>Chunk yüklü değil</b> → oyuncu dokunmadan uzaklaşmış: ihmal SAYILIR
+     *       (kimse kıramaz, tabela orada duruyor), ama blok kaldırılamaz; kayıt
+     *       {@link #KAYIT_SERT_TAVAN}'a kadar tutulup tekrar denenir.</li>
+     *   <li><b>Tabela yerinde</b> → ihmal sayılır, blok yok edilir.</li>
+     * </ul>
+     */
+    private static void omurSupur(MinecraftServer server) {
+        if (candyTabelalari.isEmpty()) return;
+
+        Iterator<Map.Entry<TabelaAnahtar, TabelaKaydi>> it = candyTabelalari.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<TabelaAnahtar, TabelaKaydi> e = it.next();
+            TabelaAnahtar anahtar = e.getKey();
+            TabelaKaydi kayit = e.getValue();
+
+            ServerWorld world = server.getWorld(anahtar.dunya());
+            if (world == null) continue;                 // dünya yüklü değil — kaydı tut
+            final long now = world.getTime();
+
+            ServerPlayerEntity sahip = server.getPlayerManager().getPlayer(kayit.sahip);
+            if (sahip == null) {
+                // ÇEVRİMDIŞI: geçen süreyi sayaca EKLEME — başlangıcı ileri kaydır.
+                kayit.konulduTick += Math.max(0L, now - kayit.sonGorulduTick);
+                kayit.sonGorulduTick = now;
+                continue;
+            }
+            kayit.sonGorulduTick = now;
+
+            if (now - kayit.konulduTick < OMUR_TICK) continue;   // süre dolmadı
+
+            if (!world.isPosLoaded(anahtar.poz())) {
+                // Oyuncu çevrimiçi ama tabelanın chunk'ı yüklü değil: dokunmadan uzaklaşmış.
+                if (!kayit.ihmalSayildi) {
+                    ihmalIsle(sahip);
+                    kayit.ihmalSayildi = true;
+                }
+                if (now - kayit.konulduTick > KAYIT_SERT_TAVAN) it.remove();
+                continue;
+            }
+
+            BlockEntity be = world.getBlockEntity(anahtar.poz());
+            if (!(be instanceof SignBlockEntity)) {
+                it.remove();                  // KIRILMIŞ → nötr, ihmal sayılmaz
+                continue;
+            }
+
+            if (!kayit.ihmalSayildi) ihmalIsle(sahip);
+            yokEt(world, anahtar.poz());
+            it.remove();
+        }
+    }
+
+    /**
+     * Tabelayı sessizce değil, <i>hissedilir</i> biçimde kaldırır: duman + boğuk tahta sesi.
+     * Candy'nin cümlesinin kaybolması bir olay olmalı, fark edilmeyen bir temizlik değil.
+     */
+    private static void yokEt(ServerWorld world, BlockPos pos) {
+        double x = pos.getX() + 0.5, y = pos.getY() + 0.5, z = pos.getZ() + 0.5;
+        try {
+            world.spawnParticles(ParticleTypes.SMOKE, x, y, z, 8, 0.15, 0.2, 0.15, 0.01);
+            world.playSound(null, x, y, z, SoundEvents.BLOCK_WOOD_BREAK,
+                SoundCategory.BLOCKS, 0.35f, 0.55f);
+        } catch (Throwable ignored) {}
+        world.removeBlock(pos, false);
+    }
+
+    /**
+     * Bir ihmali işler: sayacı artırır, öfkeyi büyütür, eşikte başarımı verir.
+     *
+     * <p>Öfke ŞİDDET değil VARYANS çarpanıdır — {@code Kurul} üyelerinin keşif gürültüsünü
+     * ve {@code Hakem}'in keşif eşiğini ölçekler. Sonuç: Candy daha sert değil, daha
+     * tahmin edilemez olur. 40 ihmalde doyar.</p>
+     */
+    private static void ihmalIsle(ServerPlayerEntity sahip) {
+        TruePersonality tp = PersonalityManager.get(sahip);
+        tp.ihmalSayisi++;
+        tp.candyOfke = Math.min(1.0, tp.candyOfke + 0.025);
+        if (tp.ihmalSayisi == OFKE_BASARIM_ESIGI) {
+            com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(sahip, "candy_kizgin");
+            Candy.LOG.info("[Candy] {} 20 tabelayı yok saydı — öfke eşiği aşıldı",
+                sahip.getName().getString());
+        }
+    }
+
+    /**
+     * Oyuncu bir Candy tabelasıyla ETKİLEŞTİ (yazıyı silip yeniden yazdı) → tabela yok olur
+     * ve öfke bir tık geri çekilir. Konuşmaya başlayınca Candy sakinleşir.
+     */
+    private static void etkilesimdenYokEt(ServerWorld world, BlockPos pos, TruePersonality tp) {
+        tp.ofkeAzalt(0.05);   // v8.3: Arkadaş yası tabanının altına inmez
+        if (world.isPosLoaded(pos) && world.getBlockEntity(pos) instanceof SignBlockEntity) {
+            yokEt(world, pos);
+        }
     }
 
     /**
@@ -128,91 +297,145 @@ public class SignSystem {
         ServerWorld world = (ServerWorld) player.getWorld();
         BlockPos merkez = player.getBlockPos();
         TruePersonality tp = PersonalityManager.get(player);
-        Map<BlockPos, Long> okunmus = okunmusTabelalar.computeIfAbsent(player.getUuid(), k -> new HashMap<>());
+        RegistryKey<World> dunya = world.getRegistryKey();
+        Map<TabelaAnahtar, Long> okunmus =
+            okunmusTabelalar.computeIfAbsent(player.getUuid(), k -> new HashMap<>());
 
         // Eski kayıtları buda — sonsuz büyümesin
         long unutEsigi = world.getTime() - OKUNMUS_UNUT_TICK;
         okunmus.entrySet().removeIf(e -> e.getValue() < unutEsigi);
 
-        int R = 12;
-        for (int dx = -R; dx <= R; dx++) {
-            for (int dy = -3; dy <= 3; dy++) {
-                for (int dz = -R; dz <= R; dz++) {
-                    BlockPos p = merkez.add(dx, dy, dz);
-                    BlockEntity be = world.getBlockEntity(p);
-                    if (!(be instanceof SignBlockEntity sign)) continue;
+        topla(world, merkez);
+        for (int i = 0; i < adaylar.size(); i++) {
+            tabelaIncele(player, tp, world, dunya, adaylar.get(i), okunmus);
+        }
+        adaylar.clear();
+    }
 
-                    // Kısa cooldown (3 sn) — cevap algılama gecikmesini engelle
-                    long now = world.getTime();
-                    Long lastRead = okunmus.get(p);
-                    if (lastRead != null && now - lastRead < 60) continue;
+    /**
+     * Menzildeki tabela konumlarını {@link #adaylar} tamponuna toplar.
+     *
+     * <p>v8 OPTİMİZASYON: eskiden 25×7×25 = <b>4375</b> adet {@code BlockPos} tahsisi +
+     * 4375 {@code getBlockEntity} noktasal sorgusu yapılıyordu — oyuncu başına 2 saniyede
+     * bir. 25×25'lik alan en fazla ~16 chunk'a değer ve tipik chunk'ta 0-5 block entity
+     * var, yani aynı sonuç ~16 map gezintisiyle çıkıyor.</p>
+     *
+     * <p>İki incelik: (1) {@code getChunk(x, z, FULL, false)} chunk ÜRETMEYE zorlamaz —
+     * {@code getChunk(x, z)} zorlardı ve tarama dünyayı büyütürdü. (2) Adaylar tamponlanır,
+     * çünkü inceleme sırasında blok silinebiliyor ve chunk'ın block entity map'i üzerinde
+     * gezerken silmek {@code ConcurrentModificationException} atardı.</p>
+     */
+    private static void topla(ServerWorld world, BlockPos merkez) {
+        adaylar.clear();
+        final int R = 12;
+        final int xMin = merkez.getX() - R, xMax = merkez.getX() + R;
+        final int zMin = merkez.getZ() - R, zMax = merkez.getZ() + R;
+        final int yMin = merkez.getY() - 3,  yMax = merkez.getY() + 3;
 
-                    String metin = tabelaMetni(sign);
-                    if (metin.isBlank()) continue;
-
-                    // Cevap zaten analiz edildiyse tekrar okuma
-                    Set<BlockPos> analiz = analizEdilen.computeIfAbsent(
-                        player.getUuid(), k -> new HashSet<>());
-                    if (analiz.contains(p)) {
-                        okunmus.put(p, now);
-                        continue;
-                    }
-
-                    String orjinal = candyTabelalari.get(p);
-
-                    if (orjinal == null) {
-                        // Candy'nin koyduğu tabela değil.
-                        // KURULUM sırasında: Candy tabelasına YAKIN (≤5 blok) ise o soruya cevap say.
-                        // Böylece oyuncu yanına yeni bir tabela koyup cevaplayabilir.
-                        if (!tp.kurulumTamam) {
-                            BlockPos yakinCandy = null;
-                            for (BlockPos cp : candyTabelalari.keySet()) {
-                                if (cp.getSquaredDistance(p) <= 25) {   // 5 blok
-                                    yakinCandy = cp;
-                                    break;
-                                }
-                            }
-                            if (yakinCandy != null) {
-                                SignTemplates.cevapAnaliz(metin, tp);
-                                Candy.LOG.info("[Candy] yakın tabela cevabı alındı: {}", metin);
-                                candyTabelalari.remove(yakinCandy);
-                                analiz.add(yakinCandy);
-                                analiz.add(p);
-                                okunmus.put(p, now);
-                                reaksiyonYerlestir(player, tp, metin);
-                                continue;
-                            }
-                            // Yakında Candy tabelası yok — kullanıcının dekoratif tabelası, sayma
-                            okunmus.put(p, now);
-                            continue;
-                        }
-                        // Kurulum sonrası her tabela cevap materyali olabilir (bir kez)
-                        SignTemplates.cevapAnaliz(metin, tp);
-                        Candy.LOG.info("[Candy] serbest tabela cevabı: {}", metin);
-                        analiz.add(p);
-                        okunmus.put(p, now);
-                        reaksiyonYerlestir(player, tp, metin);
-                        continue;
-                    }
-
-                    // Candy'nin koyduğu tabela
-                    if (orjinal.equals(metin)) {
-                        // İçerik hala orijinal — oyuncu henüz cevaplamamış
-                        okunmus.put(p, now);
-                        continue;
-                    }
-
-                    // Oyuncu Candy'nin tabelasını değiştirdi — cevap
-                    SignTemplates.cevapAnaliz(metin, tp);
-                    Candy.LOG.info("[Candy] kurulum cevabı alındı: {}", metin);
-                    candyTabelalari.remove(p);
-                    analiz.add(p);
-                    okunmus.put(p, now);
-                    // Diyalog reaksiyonu — Candy oyuncuya cevap versin
-                    reaksiyonYerlestir(player, tp, metin);
+        for (int cx = xMin >> 4; cx <= (xMax >> 4); cx++) {
+            for (int cz = zMin >> 4; cz <= (zMax >> 4); cz++) {
+                Chunk c = world.getChunk(cx, cz, ChunkStatus.FULL, false);
+                if (!(c instanceof WorldChunk wc)) continue;
+                for (Map.Entry<BlockPos, BlockEntity> e : wc.getBlockEntities().entrySet()) {
+                    if (!(e.getValue() instanceof SignBlockEntity)) continue;
+                    BlockPos p = e.getKey();
+                    if (p.getX() < xMin || p.getX() > xMax) continue;
+                    if (p.getZ() < zMin || p.getZ() > zMax) continue;
+                    if (p.getY() < yMin || p.getY() > yMax) continue;
+                    adaylar.add(p.toImmutable());
                 }
             }
         }
+    }
+
+    /** Tek bir tabelayı inceler: Candy'nin mi, cevap mı, etkileşim mi? */
+    private static void tabelaIncele(ServerPlayerEntity player, TruePersonality tp,
+                                     ServerWorld world, RegistryKey<World> dunya,
+                                     BlockPos p, Map<TabelaAnahtar, Long> okunmus) {
+        if (!(world.getBlockEntity(p) instanceof SignBlockEntity sign)) return;
+        final TabelaAnahtar anahtar = new TabelaAnahtar(dunya, p);
+
+        // Kısa cooldown (3 sn) — cevap algılama gecikmesini engelle
+        final long now = world.getTime();
+        Long lastRead = okunmus.get(anahtar);
+        if (lastRead != null && now - lastRead < 60) return;
+
+        String metin = tabelaMetni(sign);
+        if (metin.isBlank()) return;
+
+        // v8.1: şifre kontrolü analiz önbelleğinden ÖNCE — oyuncu daha önce sayılmış bir
+        // tabelanın üstüne jetonu yazmış olabilir. SifreIzleyici kendi "çözüldü" bitmask'ini
+        // tuttuğu için tekrar tetiklenme riski yok.
+        com.photonpulse.candy.sifre.SifreIzleyici.kontrol(player, tp, metin, "tabela");
+
+        // Cevap zaten analiz edildiyse tekrar okuma
+        Set<TabelaAnahtar> analiz = analizEdilen.computeIfAbsent(
+            player.getUuid(), k -> new HashSet<>());
+        if (analiz.contains(anahtar)) {
+            okunmus.put(anahtar, now);
+            return;
+        }
+
+        TabelaKaydi kayit = candyTabelalari.get(anahtar);
+
+        if (kayit == null) {
+            // Candy'nin koyduğu tabela değil.
+            // KURULUM sırasında: Candy tabelasına YAKIN (≤5 blok) ise o soruya cevap say.
+            // Böylece oyuncu yanına yeni bir tabela koyup cevaplayabilir.
+            if (!tp.kurulumTamam) {
+                TabelaAnahtar yakinCandy = null;
+                for (TabelaAnahtar ca : candyTabelalari.keySet()) {
+                    // Dünya kontrolü ŞART: başka dünyadaki aynı koordinat "yakın" değildir.
+                    if (!ca.dunya().equals(dunya)) continue;
+                    if (ca.poz().getSquaredDistance(p) <= 25) {   // 5 blok
+                        yakinCandy = ca;
+                        break;
+                    }
+                }
+                if (yakinCandy != null) {
+                    SignTemplates.cevapAnaliz(metin, tp);
+                    Candy.LOG.info("[Candy] yakın tabela cevabı alındı: {}", metin);
+                    candyTabelalari.remove(yakinCandy);
+                    // ETKİLEŞİM: oyuncu cevapladı → Candy'nin soru tabelası yok olur
+                    etkilesimdenYokEt(world, yakinCandy.poz(), tp);
+                    analiz.add(yakinCandy);
+                    analiz.add(anahtar);
+                    okunmus.put(anahtar, now);
+                    reaksiyonYerlestir(player, tp, metin);
+                    return;
+                }
+                // Yakında Candy tabelası yok — kullanıcının dekoratif tabelası, sayma
+                okunmus.put(anahtar, now);
+                return;
+            }
+            // Kurulum sonrası her tabela cevap materyali olabilir (bir kez)
+            SignTemplates.cevapAnaliz(metin, tp);
+            Candy.LOG.info("[Candy] serbest tabela cevabı: {}", metin);
+            analiz.add(anahtar);
+            okunmus.put(anahtar, now);
+            reaksiyonYerlestir(player, tp, metin);
+            return;
+        }
+
+        // Candy'nin koyduğu tabela
+        if (kayit.metin.equals(metin)) {
+            // İçerik hala orijinal — oyuncu henüz cevaplamamış.
+            // NOT: düzenleme ekranını açıp AYNI metinle kapatmak etkileşim DEĞİLDİR;
+            // istek "yazı silip yazma" diyor ve bu karşılaştırma onu bedava veriyor.
+            okunmus.put(anahtar, now);
+            return;
+        }
+
+        // Oyuncu Candy'nin tabelasını değiştirdi — cevap (ve ETKİLEŞİM)
+        SignTemplates.cevapAnaliz(metin, tp);
+        Candy.LOG.info("[Candy] kurulum cevabı alındı: {}", metin);
+        candyTabelalari.remove(anahtar);
+        analiz.add(anahtar);
+        okunmus.put(anahtar, now);
+        // Metin OKUNDUKTAN sonra yok et — cevap kaybolmasın
+        etkilesimdenYokEt(world, p, tp);
+        // Diyalog reaksiyonu — Candy oyuncuya cevap versin
+        reaksiyonYerlestir(player, tp, metin);
     }
 
     /**
@@ -397,10 +620,12 @@ public class SignSystem {
 
         if (candyMi) {
             if (candyTabelalari.size() >= MAKS_TAKIP_TABELA) {
-                Iterator<BlockPos> it = candyTabelalari.keySet().iterator();
+                Iterator<TabelaAnahtar> it = candyTabelalari.keySet().iterator();
                 if (it.hasNext()) { it.next(); it.remove(); }
             }
-            candyTabelalari.put(pos.toImmutable(), metinBirlestir(satirlar));
+            candyTabelalari.put(
+                new TabelaAnahtar(world.getRegistryKey(), pos.toImmutable()),
+                new TabelaKaydi(player.getUuid(), metinBirlestir(satirlar), world.getTime()));
         }
 
         sign.markDirty();
