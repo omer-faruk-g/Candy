@@ -19,6 +19,8 @@ plugins {
 
 rootProject.name = 'candy'
 
+def neoforgeAcik = providers.gradleProperty('candy.neoforge').getOrElse('false').toBoolean()
+
 stonecutter {
     // Proje Groovy; Stonecutter varsayılanı Kotlin.
     kotlinController = false
@@ -34,9 +36,19 @@ stonecutter {
     //
     // 26.x henüz yok, ama ARTIK ENGEL DEĞİL: kaynak Mojang resmî adlarına göçtü,
     // düğüm eklemek sıradan sürüm işi (bkz. MULTILOADER.md "Mapping göçü").
+    //
+    // NeoForge düğümleri ANAHTARIN ARKASINDA, varsayılan KAPALI.
+    // Neden: `./gradlew build` kök projede koşunca BÜTÜN düğümleri derler. NeoForge
+    // düğümleri henüz derlenmiyor (src/main/java'daki 101 dosya hâlâ net.fabricmc.*
+    // import ediyor), yani açık bırakılsa kökteki build ve CI kırmızı olurdu —
+    // "her commit'te Fabric yeşil" kuralı bunu yasaklıyor.
+    // Açmak için:  ./gradlew -Pcandy.neoforge=true :1.21.7-neoforge:compileJava
+    // Port bitip jar üretmeye başladığında gradle.properties'te varsayılanı true yap.
     create(rootProject) {
         versions("1.21.7", "1.21.11")
-        vers("1.21.7-neoforge", "1.21.7")
-        vers("1.21.11-neoforge", "1.21.11")
+        if (neoforgeAcik) {
+            vers("1.21.7-neoforge", "1.21.7")
+            vers("1.21.11-neoforge", "1.21.11")
+        }
     }
 }

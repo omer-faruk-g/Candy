@@ -34,6 +34,11 @@ jobs:
       - name: Build
         run: ./gradlew build --stacktrace
 
+      # Stonecutter her dugumun jar'ini versions/<dugum>/build/libs altina koyuyor.
+      # tumunuTopla hepsini kok build/libs'e kopyalar — asagidaki iki adim orayi okuyor.
+      - name: JAR'lari tek yerde topla
+        run: ./gradlew tumunuTopla --stacktrace
+
       - name: JAR'ı artifact olarak yükle
         uses: actions/upload-artifact@v4
         with:

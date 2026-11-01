@@ -408,7 +408,15 @@ düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeni
 | Forge | ❌ yok | ❌ yok |
 
 NeoForge düğümleri (`versions/1.21.7-neoforge`, `versions/1.21.11-neoforge`)
-Gradle'da var ve Minecraft+NeoForge classpath'i çözülüyor, ama **derlenmiyor**:
+**varsayılan olarak kapalı** — `gradle.properties` içindeki `candy.neoforge=false`.
+Kökteki `./gradlew build` bütün düğümleri derlediği için, derlenmeyen bir düğüm açık
+bırakılsa build ve CI kırmızı olurdu. Üzerinde çalışmak için:
+
+```bash
+./gradlew -Pcandy.neoforge=true :1.21.7-neoforge:compileJava
+```
+
+Açıldığında Minecraft+NeoForge classpath'i çözülüyor, ama kaynak **derlenmiyor**:
 `src/main/java` içindeki 101 dosya hâlâ `net.fabricmc.*` import ediyor. Platform
 katmanı (`src/fabric/java`, `src/neoforge/java`) kuruldu ama henüz yalnızca sunucu
 tick kancasını kapsıyor. Envanter ve sıradaki adımlar: [MULTILOADER.md](MULTILOADER.md).

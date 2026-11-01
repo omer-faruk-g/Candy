@@ -382,6 +382,13 @@ build betiği **bilinçli olarak yok** — `replacements` listesi tek yerde kalm
 zorunda, iki kopya arasındaki herhangi bir fark aktif düğüm değiştiğinde
 paylaşılan `src/` ağacını yarım çevrilmiş bırakırdı.
 
+**NeoForge düğümleri varsayılan olarak KAPALI** (`gradle.properties` →
+`candy.neoforge=false`). Gerekçe ölçümle bulundu: kökteki `./gradlew build`
+**bütün** düğümleri derliyor — yalnızca aktif düğümü değil. Derlenmeyen bir düğüm
+açık bırakılsa hem yerel build hem CI kırmızı olurdu, bu da "her commit'te Fabric
+yeşil" kuralını bozardı. Çalışmak için `-Pcandy.neoforge=true`; port jar üretmeye
+başlayınca varsayılan `true` yapılır.
+
 Araçlar: **ModDevGradle 2.0.148** (Java 17 bytecode → JDK 21'de çalışır, plugin
 portal'dan çözülüyor). `stonecutter.constants.match(loader, 'fabric', 'neoforge')`
 eklendi, yani kaynakta `//? if fabric {` / `//? if neoforge {` kullanılabilir.
