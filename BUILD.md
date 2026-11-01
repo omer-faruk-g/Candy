@@ -357,5 +357,22 @@ düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeni
 
 ## Loader desteği
 
-Şu an yalnızca **Fabric**. NeoForge ve Forge portunun mimari kararı ve ölçülmüş
-kapsamı [MULTILOADER.md](MULTILOADER.md) içinde — karar verildi, kod henüz taşınmadı.
+Şu an yalnızca **Fabric** — 1.21.7 ve 1.21.11.
+
+| Loader | 1.21.7 | 1.21.11 |
+|---|---|---|
+| Fabric | ✅ jar üretiyor | ✅ jar üretiyor |
+| NeoForge | ❌ yok | ❌ yok |
+| Forge | ❌ yok | ❌ yok |
+
+NeoForge portu **denendi ve engele çarptı.** İki yol da ölçüldü:
+
+- **ModDevGradle/NeoGradle** — NeoForge Mojang resmî adlarına derlenmiş, Candy'nin
+  kaynağı Yarn adlarını taşıyor (143 dosya, 156 ayrı sınıf adı). Build işi değil,
+  kaynak göçü işi.
+- **Architectury Loom** (Yarn adlarını koruyan tek yol) — kurulum çalıştı, NeoForge
+  kurulumu 10 MCP adımını ve access transformer'ları geçti, sonra Minecraft'ı Yarn'a
+  remap ederken upstream çakışmasında durdu (`InGameHud.renderHotbar`). **1.21.7 ve
+  1.21.11'de aynı.** arch-loom 1.17 en yeni hat olduğu için sürüm yükseltme çıkışı yok.
+
+Ayrıntı, doğrulama yöntemi ve sıradaki adımlar: [MULTILOADER.md](MULTILOADER.md).
