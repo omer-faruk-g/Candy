@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -69,7 +69,7 @@ public class SanityController {
     );
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(SanityController::onTick);
+        SunucuTick.END_SERVER_TICK.register(SanityController::onTick);
         Candy.LOG.info("[Candy] SanityController aktif");
     }
 

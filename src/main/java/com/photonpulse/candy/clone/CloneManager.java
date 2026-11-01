@@ -12,7 +12,7 @@ import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -61,7 +61,7 @@ public class CloneManager {
     private static final Map<UUID, List<UUID>> aktifKlonlar = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(CloneManager::onTick);
+        SunucuTick.END_SERVER_TICK.register(CloneManager::onTick);
         Candy.LOG.info("[Candy] CloneManager aktif");
     }
 

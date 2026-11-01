@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.net.GoruntuPayload;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -55,7 +55,7 @@ public final class GoruntuTetik {
             } catch (Throwable ignored) {}
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             final long simdi = server.getTickCount();
             if (simdi % 20 != 0) return;
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {

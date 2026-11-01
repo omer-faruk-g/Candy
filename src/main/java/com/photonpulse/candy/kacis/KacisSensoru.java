@@ -3,7 +3,7 @@ package com.photonpulse.candy.kacis;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
@@ -74,7 +74,7 @@ public final class KacisSensoru {
             ServerPlayer player = context.player();
             context.server().execute(() -> olay(player, "f3", DARBE * Math.min(1.0, f3 / 1200.0)));
         });
-        ServerTickEvents.END_SERVER_TICK.register(KacisSensoru::onTick);
+        SunucuTick.END_SERVER_TICK.register(KacisSensoru::onTick);
         Candy.LOG.info("[Candy] KacisSensoru aktif — kaçış arayışı ekseni ölçülüyor");
     }
 

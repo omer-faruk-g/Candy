@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.dimension.CandyDimensions;
 import com.photonpulse.candy.entity.CandyEntities;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -37,7 +37,7 @@ public class BossManager {
         BossCountdown.register();
 
         // Mirror'da geçirilen süreyi say + spawn şartı + WIN sessizlik penceresi yönetimi
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % 20 != 0) return; // saniyede bir
             long simdi = server.overworld().getGameTime();
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {

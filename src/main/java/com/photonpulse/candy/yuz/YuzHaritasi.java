@@ -5,7 +5,7 @@ import com.google.gson.JsonParser;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -59,7 +59,7 @@ public class YuzHaritasi {
 
     public static void register() {
         paletHazirla();
-        ServerTickEvents.END_SERVER_TICK.register(YuzHaritasi::onTick);
+        SunucuTick.END_SERVER_TICK.register(YuzHaritasi::onTick);
         Candy.LOG.info("[Candy] YuzHaritasi aktif — {} (v3.0)",
             DEBUG ? "DEBUG (20sn)" : "3.5 dk kontrol, 5 dk cooldown, %15");
     }

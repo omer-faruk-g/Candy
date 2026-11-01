@@ -3,7 +3,7 @@ package com.photonpulse.candy.meta;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
@@ -52,7 +52,7 @@ public final class ArkaBakis {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(ArkaBakis::onTick);
+        SunucuTick.END_SERVER_TICK.register(ArkaBakis::onTick);
         Candy.LOG.info("[Candy] ArkaBakis aktif — arkaya bakma ekseni ölçülüyor");
     }
 

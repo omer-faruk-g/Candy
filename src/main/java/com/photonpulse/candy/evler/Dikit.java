@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.lore.YirtikSayfa;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -39,7 +39,7 @@ public class Dikit {
     private static long sonYapim = -100000L;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
             long simdi = server.overworld().getGameTime();
             if (simdi - sonYapim < MIN_ARA) return;

@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sign.SignSystem;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -42,7 +42,7 @@ public class ModFarkindaligi {
 
     public static void register() {
         modlariTopla();
-        ServerTickEvents.END_SERVER_TICK.register(ModFarkindaligi::onTick);
+        SunucuTick.END_SERVER_TICK.register(ModFarkindaligi::onTick);
         Candy.LOG.info("[Candy] ModFarkindaligi aktif — {} kullanıcı modu görüldü ({})",
             MOD_ADLARI.size(), DEBUG ? "DEBUG 20sn" : "3.3 dk kontrol, 5 dk cooldown, %20");
     }

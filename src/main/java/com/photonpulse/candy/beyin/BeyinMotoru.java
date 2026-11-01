@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeGrowth;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -166,7 +166,7 @@ public class BeyinMotoru {
                 Beyin.GIRDI_SAYISI, BeyinGirdi.OZELLIK_ADLARI.size());
             return;
         }
-        ServerTickEvents.END_SERVER_TICK.register(BeyinMotoru::onTick);
+        SunucuTick.END_SERVER_TICK.register(BeyinMotoru::onTick);
         Candy.LOG.info("[Candy] BeyinMotoru aktif — KURUL: {} üye x {} nöron = {} nöron / {} lob, ölçek {}, karışım {}",
             Kurul.UYE_SAYISI, Lob.toplamNoron(),
             (long) Kurul.UYE_SAYISI * Lob.toplamNoron(), Lob.LOBLAR.length,

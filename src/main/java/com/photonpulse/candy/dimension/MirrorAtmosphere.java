@@ -1,7 +1,7 @@
 package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,7 +21,7 @@ public class MirrorAtmosphere {
     private static final Random RNG = new Random();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             // Her 20 tick (1 sn) — DARKNESS renew
             if (server.getTickCount() % 20 == 0) {
                 for (ServerPlayer player : server.getPlayerList().getPlayers()) {

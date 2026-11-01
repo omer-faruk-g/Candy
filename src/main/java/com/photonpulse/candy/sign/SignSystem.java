@@ -10,7 +10,7 @@ import com.photonpulse.candy.simulation.ShadowTreeManager;
 import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -129,7 +129,7 @@ public class SignSystem {
     private static final Map<UUID, Set<TabelaAnahtar>> analizEdilen = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(SignSystem::onTick);
+        SunucuTick.END_SERVER_TICK.register(SignSystem::onTick);
         Candy.LOG.info("[Candy] SignSystem aktif");
     }
 

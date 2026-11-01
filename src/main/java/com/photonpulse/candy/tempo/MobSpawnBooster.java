@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -54,7 +54,7 @@ public class MobSpawnBooster {
     };
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(MobSpawnBooster::onTick);
+        SunucuTick.END_SERVER_TICK.register(MobSpawnBooster::onTick);
         Candy.LOG.info("[Candy] MobSpawnBooster aktif — veri açlığı");
     }
 

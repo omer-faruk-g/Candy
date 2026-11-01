@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -37,7 +37,7 @@ public class PetOlumu {
     private static final Random RNG = new Random();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(PetOlumu::onTick);
+        SunucuTick.END_SERVER_TICK.register(PetOlumu::onTick);
         Candy.LOG.info("[Candy] PetOlumu aktif — {} (v3.0)",
             DEBUG ? "DEBUG (10sn %100 kotuluk>=0)" : "4 dk %7");
     }

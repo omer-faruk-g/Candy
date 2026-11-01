@@ -9,7 +9,7 @@ import com.photonpulse.candy.beyin.Kurul;
 import com.photonpulse.candy.beyin.Lob;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -60,7 +60,7 @@ public final class DunyaKurulu {
     private DunyaKurulu() {}
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(DunyaKurulu::onTick);
+        SunucuTick.END_SERVER_TICK.register(DunyaKurulu::onTick);
         Candy.LOG.info("[Candy] DunyaKurulu aktif — kurul her 5dk dünya kararı verir ({} seçenek)", SECENEK);
     }
 

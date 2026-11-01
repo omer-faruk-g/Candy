@@ -3,7 +3,7 @@ package com.photonpulse.candy.simulation;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 
 import java.util.Map;
@@ -33,7 +33,7 @@ public class SimulationEngine {
     private static final double HIZ_PSIKO = 0.02;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(SimulationEngine::onTick);
+        SunucuTick.END_SERVER_TICK.register(SimulationEngine::onTick);
         Candy.LOG.info("[Candy] SimulationEngine aktif");
     }
 

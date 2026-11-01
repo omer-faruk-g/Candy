@@ -2,7 +2,7 @@ package com.photonpulse.candy.core;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.psikoloji.Ozguven;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -43,7 +43,7 @@ public class FearDetection {
     private static final Map<UUID, Double> geriGelisAkumulator = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(FearDetection::onTick);
+        SunucuTick.END_SERVER_TICK.register(FearDetection::onTick);
         Candy.LOG.info("[Candy] FearDetection aktif");
     }
 

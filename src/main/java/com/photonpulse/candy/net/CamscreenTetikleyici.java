@@ -3,7 +3,7 @@ package com.photonpulse.candy.net;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerLevel;
@@ -48,7 +48,7 @@ public class CamscreenTetikleyici {
             Candy.LOG.debug("[Candy] Camscreen payload zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
             long simdi = server.overworld().getGameTime();
             // v1.9.0: sessizlik protokolü aktifse camscreen atma

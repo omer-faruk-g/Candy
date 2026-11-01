@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
@@ -96,7 +96,7 @@ public class HayaletOyuncular {
             joinBekleyenTick = server.overworld().getGameTime() + 60L;
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(HayaletOyuncular::onTick);
+        SunucuTick.END_SERVER_TICK.register(HayaletOyuncular::onTick);
 
         // v1.4.6: player chat mesajı → cevap kuyruğuna ekle (%25)
         ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {

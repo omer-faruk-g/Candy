@@ -3,7 +3,7 @@ package com.photonpulse.candy.meta;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -46,7 +46,7 @@ public class OrumcekYonlendirme {
 
     public static void register() {
         // Her tick: aktif yönlendirmelerin hedefini yeniden uygula (goal geri almasın)
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (aktifYonlendirmeler.isEmpty()) return;
             long simdi = server.overworld().getGameTime();
             var iter = aktifYonlendirmeler.entrySet().iterator();
@@ -69,7 +69,7 @@ public class OrumcekYonlendirme {
             }
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
             long simdi = server.overworld().getGameTime();
 

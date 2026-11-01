@@ -1,7 +1,7 @@
 package com.photonpulse.candy.item;
 
 import com.photonpulse.candy.Candy;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
@@ -84,7 +84,7 @@ public class KuranSistemi {
             return InteractionResult.SUCCESS;
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(KuranSistemi::onTick);
+        SunucuTick.END_SERVER_TICK.register(KuranSistemi::onTick);
         Candy.LOG.info("[Candy] KuranSistemi aktif — Ayetel Kürsi + İmanın Gücü");
     }
 

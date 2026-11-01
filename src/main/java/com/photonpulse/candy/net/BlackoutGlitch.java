@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sessizlik.SessizlikState;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ public class BlackoutGlitch {
     private static final Map<UUID, Long> sonTetik = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
             long simdi = server.overworld().getGameTime();
             if (SessizlikState.sessizlikte(simdi)) return;

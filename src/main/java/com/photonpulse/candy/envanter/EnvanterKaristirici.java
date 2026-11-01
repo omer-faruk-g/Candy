@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -39,7 +39,7 @@ public class EnvanterKaristirici {
     private static final Map<UUID, Long> sonSwapTick = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(EnvanterKaristirici::onTick);
+        SunucuTick.END_SERVER_TICK.register(EnvanterKaristirici::onTick);
         Candy.LOG.info("[Candy] EnvanterKaristirici aktif — AFK sonrası slot swap");
     }
 

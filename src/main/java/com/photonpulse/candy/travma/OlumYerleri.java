@@ -6,7 +6,7 @@ import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -66,7 +66,7 @@ public class OlumYerleri {
         });
 
         // Proximity kontrolü
-        ServerTickEvents.END_SERVER_TICK.register(OlumYerleri::onTick);
+        SunucuTick.END_SERVER_TICK.register(OlumYerleri::onTick);
 
         Candy.LOG.info("[Candy] OlumYerleri aktif — travma hafızası (v3.0)");
     }

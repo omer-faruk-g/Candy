@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyEntities;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -60,7 +60,7 @@ public final class ArkadasYonetici {
     private static int sayac = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(ArkadasYonetici::onTick);
+        SunucuTick.END_SERVER_TICK.register(ArkadasYonetici::onTick);
         Candy.LOG.info("[Candy] ArkadasYonetici aktif");
     }
 

@@ -6,7 +6,7 @@ import com.photonpulse.candy.entity.CandyEntities;
 import com.photonpulse.candy.sessizlik.SessizlikState;
 import com.photonpulse.candy.simulation.SimulatedPersonality;
 import com.photonpulse.candy.simulation.SimulationManager;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -87,7 +87,7 @@ public class ZihinselProva {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(ZihinselProva::onTick);
+        SunucuTick.END_SERVER_TICK.register(ZihinselProva::onTick);
         Candy.LOG.info("[Candy] ZihinselProva aktif — hayali test + karar motoru (v3.1)");
     }
 

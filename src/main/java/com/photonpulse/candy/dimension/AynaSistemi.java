@@ -6,7 +6,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -97,7 +97,7 @@ public class AynaSistemi {
     private static final Map<UUID, Long> hazirlikBitis = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(AynaSistemi::onTick);
+        SunucuTick.END_SERVER_TICK.register(AynaSistemi::onTick);
         Candy.LOG.info("[Candy] AynaSistemi aktif — kopya + düzenek + takas (v3.2)");
     }
 

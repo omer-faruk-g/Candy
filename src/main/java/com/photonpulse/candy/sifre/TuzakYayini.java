@@ -3,7 +3,7 @@ package com.photonpulse.candy.sifre;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -81,7 +81,7 @@ public final class TuzakYayini {
     private static volatile String aktifDuzMetin = null;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(TuzakYayini::onTick);
+        SunucuTick.END_SERVER_TICK.register(TuzakYayini::onTick);
         Candy.LOG.info("[Candy] TuzakYayini aktif — herkese aynı ikilik mesaj");
     }
 

@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -29,7 +29,7 @@ public class AntiMirrorLottery {
     private static final Random RNG = new Random();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(AntiMirrorLottery::onTick);
+        SunucuTick.END_SERVER_TICK.register(AntiMirrorLottery::onTick);
         // Not: Anti-Mirror ölüm sonrası gerçek dünyaya dönüş MirrorGirisi'nde (AFTER_RESPAWN).
         Candy.LOG.info("[Candy] AntiMirrorLottery aktif (v3.0)");
     }

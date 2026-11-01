@@ -68,6 +68,12 @@ if (loader == 'fabric') {
     // zaten o adlari tasiyor, remap yok. (Gocten once bu yol kapali idi.)
     apply plugin: 'net.neoforged.moddev'
 
+    // Port suresince TAM hata listesi lazim; javac varsayilan 100'de kesiyor ve
+    // kesilmis sayi "ilerleme yok" gibi gorunuyor. Port bitince kaldirilabilir.
+    tasks.withType(JavaCompile).configureEach {
+        it.options.compilerArgs << '-Xmaxerrs' << '2000'
+    }
+
     neoForge {
         version = property('neoforge_version')
         // Mixin yapilandirmasi neoforge.mods.toml icindeki [[mixins]] ile bildiriliyor;

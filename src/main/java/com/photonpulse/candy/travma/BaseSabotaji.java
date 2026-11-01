@@ -5,7 +5,7 @@ import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -57,7 +57,7 @@ public class BaseSabotaji {
             tp.sonUykuTick = player.level().getGameTime();
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(BaseSabotaji::onTick);
+        SunucuTick.END_SERVER_TICK.register(BaseSabotaji::onTick);
         Candy.LOG.info("[Candy] BaseSabotaji aktif — {} (v3.0)",
             DEBUG ? "DEBUG (20sn, 10+ blok uzakta)" : "10 dk, 50+ uzakta, 5-6 blok sessiz");
     }

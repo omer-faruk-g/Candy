@@ -3,7 +3,7 @@ package com.photonpulse.candy.real;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.DisconnectionDetails;
@@ -54,7 +54,7 @@ public class RealCandy {
     private static final Set<UUID> donenler = new HashSet<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(RealCandy::onTick);
+        SunucuTick.END_SERVER_TICK.register(RealCandy::onTick);
 
         // Disconnect state'i Candy.java DISCONNECT handler'ında merkezi yönetiliyor
         // (tp.sonAyrilmaTick + donenler işaretlemesi orada). Cache temizliği

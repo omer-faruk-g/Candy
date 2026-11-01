@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sessizlik.SessizlikState;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
@@ -33,7 +33,7 @@ public class CandyKahkaha {
     private static final Map<UUID, Long> sonKahkaha = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(CandyKahkaha::onTick);
+        SunucuTick.END_SERVER_TICK.register(CandyKahkaha::onTick);
         Candy.LOG.info("[Candy] CandyKahkaha aktif — özgüven ≥ 60'ta üstünlük kahkahası");
     }
 

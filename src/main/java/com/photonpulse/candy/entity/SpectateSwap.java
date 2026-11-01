@@ -3,7 +3,7 @@ package com.photonpulse.candy.entity;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -42,7 +42,7 @@ public class SpectateSwap {
     private static final Map<UUID, Entity> orijinalKamera = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(SpectateSwap::onTick);
+        SunucuTick.END_SERVER_TICK.register(SpectateSwap::onTick);
         Candy.LOG.info("[Candy] SpectateSwap aktif — kamera hile'si");
     }
 

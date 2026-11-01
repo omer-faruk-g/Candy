@@ -6,7 +6,7 @@ import com.photonpulse.candy.beyin.Kurul;
 import com.photonpulse.candy.beyin.UyeSicili;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Locale;
@@ -86,7 +86,7 @@ public final class Vagus {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(Vagus::onTick);
+        SunucuTick.END_SERVER_TICK.register(Vagus::onTick);
         Candy.LOG.info("[Candy] Vagus kayıtlı — yerel gözlemci (v8.0)");
     }
 

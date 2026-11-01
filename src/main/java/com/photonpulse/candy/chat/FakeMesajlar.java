@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -37,7 +37,7 @@ public class FakeMesajlar {
     private static final Map<UUID, Long> bekleyenJoin = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(FakeMesajlar::onTick);
+        SunucuTick.END_SERVER_TICK.register(FakeMesajlar::onTick);
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             if (RNG.nextDouble() > JOIN_FAKE_IHTIMAL) return;

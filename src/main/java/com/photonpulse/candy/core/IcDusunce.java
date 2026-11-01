@@ -3,7 +3,7 @@ package com.photonpulse.candy.core;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.ChatFormatting;
@@ -67,7 +67,7 @@ public class IcDusunce {
             return InteractionResult.PASS;
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(IcDusunce::onTick);
+        SunucuTick.END_SERVER_TICK.register(IcDusunce::onTick);
         Candy.LOG.info("[Candy] IcDusunce aktif — niyet çıkarımı + felsefi sorgulama (v3.1)");
     }
 

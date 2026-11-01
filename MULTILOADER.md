@@ -418,6 +418,22 @@ Doğrulanan iki bilinmeyen (derleyiciyle, tahminle değil):
   `net.neoforged.fml.common.EventBusSubscriber`,
   `net.neoforged.neoforge.event.tick.ServerTickEvent.Post` hepsi çözülüyor, 0 hata.
 
+### En büyük yan kazanç: 26.x artık mapping yüzünden engelli DEĞİL
+
+Bunu ayrıca yazmak gerekiyor, çünkü **projenin benimsenmesindeki baskın değişken
+loader değil sürüm kapsamı.** Pazar lideri `from-the-fog` 26.3'e kadar destekliyor.
+
+Eski engel şuydu: Yarn eşlemeleri **1.21.11'de duruyor**, 26.x ise Mojang resmî
+mapping istiyor. Yani Yarn'da kalındığı sürece 26.x **kalıcı olarak kapalıydı** — ve
+açmanın bedeli 143 dosyadaki her MC sembolünün yeniden adlandırılmasıydı.
+
+Kaynak artık Mojang adlarını taşıyor. Bu yüzden 26.x düğümü eklemek **sıradan sürüm
+işi** oldu: yeni `versions/<sürüm>/`, o sürümün API farkları için `replacements`
+kuralı ya da `//? if` direktifi, `javap` ile doğrulama. Ad göçü **yok**.
+
+Bu, NeoForge portundan bağımsızdır: **NeoForge hiç bitmese bile 26.x yolu açık.**
+İki iş ayrı ayrı teslim edilebilir.
+
 ### Kalan iş — ölçülmüş envanter
 
 NeoForge düğümünde `compileJava` **100 hata** veriyor ve hatalarının **hiçbiri
@@ -428,7 +444,7 @@ NeoForge düğümünde `compileJava` **100 hata** veriyor ve hatalarının **hi�
 
 | Tip | Dosya | Çağrı biçimi | NeoForge karşılığı |
 |---|---|---|---|
-| `ServerTickEvents` | **65** | 68 × `END_SERVER_TICK.register(X::onTick)` — hepsi tek kalıp | `ServerTickEvent.Post` (**yazıldı**) |
+| ~~`ServerTickEvents`~~ | ~~65~~ | 68 × `END_SERVER_TICK.register(X::onTick)` | ✅ **TAŞINDI** → `SunucuTick` |
 | `PayloadTypeRegistry` | 16 | 18 × `playS2C().register(ID, CODEC)`, 8 × `playC2S()` | `RegisterPayloadHandlersEvent` + `PayloadRegistrar` |
 | `Environment` / `EnvType` | 14 | `@Environment(EnvType.CLIENT)` | `@OnlyIn(Dist.CLIENT)` — anotasyon, metotla sarılamaz → `//? if fabric` |
 | `ServerPlayNetworking` | 13 | 14 × `send`, 4 × `registerGlobalReceiver` | `PacketDistributor` / `PayloadRegistrar` |
@@ -441,9 +457,16 @@ NeoForge düğümünde `compileJava` **100 hata** veriyor ve hatalarının **hi�
 | diğer 18 tip | 1–2'şer | — | mod bus olayları |
 | `ModInitializer` / `ClientModInitializer` | 2 | 4 giriş noktası | `@Mod` sınıfı + `Dist` ayrımı |
 
-**İyi haber, ölçülmüş:** 101 dosyanın **60'ı** yalnızca üç şeye ihtiyaç duyuyor
-(`ServerTickEvents` + `Environment` + `FabricLoader`), 44'ü yalnızca
-`ServerTickEvents`'e. Yani uzun kuyruk üç küçük platform parçasıyla kapanıyor.
+**İlerleme:** `ServerTickEvents` taşındı — 65 dosya, 68 çağrı, hepsi tek kalıp
+olduğu için betikle. `net.fabricmc` import eden dosya **101 → 57**, `net.fabricmc`
+import satırı **178 → 113**. Gövdeler değişmedi: platform sınıfı `SunucuTick`,
+çağrı biçimini (`END_SERVER_TICK.register(X::onTick)`) birebir koruduğu için
+yalnızca import satırları değişti.
+
+> **Hata sayısı hakkında uyarı:** NeoForge düğümünde ilk ölçülen "100 hata"
+> javac'ın **varsayılan üst sınırıydı**, gerçek sayı değil. `-Xmaxerrs 2000`
+> eklendikten sonra gerçek sayı görünüyor: **268**. Yani 100 bir taban, karşılaştırma
+> için kullanılamaz. Bundan sonraki ilerleme 268'e karşı ölçülecek.
 
 **Payload sınıfları hiç değişmeyecek** — zaten vanilla `CustomPacketPayload` +
 `StreamCodec` kullanıyorlar (Fabric'in değil Minecraft'ın tipleri). NeoForge'un

@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -40,7 +40,7 @@ public class MesaleKirici {
     private static final Map<UUID, Long> sonPatlamaTick = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(MesaleKirici::onTick);
+        SunucuTick.END_SERVER_TICK.register(MesaleKirici::onTick);
         Candy.LOG.info("[Candy] MesaleKirici aktif — mağara meşale patlaması");
     }
 

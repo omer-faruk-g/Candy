@@ -6,7 +6,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.JsonDepo;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
@@ -66,7 +66,7 @@ public class TreeGrowth {
     // ─────────────────────────────────────────────────────────
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(TreeGrowth::onTick);
+        SunucuTick.END_SERVER_TICK.register(TreeGrowth::onTick);
         Candy.LOG.info("[Candy] TreeGrowth aktif — kişilik ağacı büyüyor");
     }
 

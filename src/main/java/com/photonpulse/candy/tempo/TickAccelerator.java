@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerTickRateManager;
 import net.minecraft.server.level.ServerLevel;
@@ -43,7 +43,7 @@ public class TickAccelerator {
     private static float sonLogladigimTPS = NORMAL_TPS;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(TickAccelerator::onTick);
+        SunucuTick.END_SERVER_TICK.register(TickAccelerator::onTick);
         Candy.LOG.info("[Candy] TickAccelerator aktif — kaynayan kurbağa");
     }
 

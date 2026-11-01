@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 // Ozguven aynı package — import gerekmez
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -55,7 +55,7 @@ public class PsikolojiTakip {
     private static final double YUKSEK_KORKU_ESIK = 70.0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(PsikolojiTakip::onTick);
+        SunucuTick.END_SERVER_TICK.register(PsikolojiTakip::onTick);
 
         // Mob'dan damage yeme
         ServerLivingEntityEvents.AFTER_DAMAGE.register(

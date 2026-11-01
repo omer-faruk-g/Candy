@@ -3,7 +3,7 @@ package com.photonpulse.candy.lore;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -33,7 +33,7 @@ public class TeshisRaporu {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(TeshisRaporu::onTick);
+        SunucuTick.END_SERVER_TICK.register(TeshisRaporu::onTick);
         Candy.LOG.info("[Candy] TeshisRaporu aktif — klinik profil (v3.2)");
     }
 

@@ -3,7 +3,7 @@ package com.photonpulse.candy.core;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -40,7 +40,7 @@ public class DerinAnaliz {
     private static final Map<UUID, Float> oncekiYaw = new HashMap<>();   // v3.2 paranoya
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(DerinAnaliz::onTick);
+        SunucuTick.END_SERVER_TICK.register(DerinAnaliz::onTick);
 
         // Yetenek — isabetli vuruş sayacı
         AttackEntityCallback.EVENT.register((player, world, hand, target, hit) -> {

@@ -5,7 +5,7 @@ import com.photonpulse.candy.clone.CloneManager;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Random;
 
@@ -29,7 +29,7 @@ public class SessizlikYoneticisi {
     private static final Random RNG = new Random();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             long simdi = server.overworld().getGameTime();
 
             // Sessizlik bittiyse → forced event

@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -62,7 +62,7 @@ public class SesTaklit {
             se(SoundEvents.PLAYER_SMALL_FALL)
         };
 
-        ServerTickEvents.END_SERVER_TICK.register(SesTaklit::onTick);
+        SunucuTick.END_SERVER_TICK.register(SesTaklit::onTick);
         Candy.LOG.info("[Candy] SesTaklit aktif — Candy player seslerini çalıyor");
     }
 

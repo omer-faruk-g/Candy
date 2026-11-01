@@ -9,7 +9,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
 import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -124,7 +124,7 @@ public class RuyaSistemi {
         });
 
         // Bekçilerin 60 sn dolunca despawn — hala_burada achievement kontrolü
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (aktifBekciler.isEmpty()) return;
             long simdi = server.overworld().getGameTime();
             var iter = aktifBekciler.entrySet().iterator();
@@ -151,7 +151,7 @@ public class RuyaSistemi {
 
         // Artık temizliği — sunucu restart'ında aktifBekciler boşalır ama entity dünyada
         // kalır (invulnerable + AI'sız → sonsuza dek durur). Player yaklaşınca temizle.
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % 200 != 0) return;
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 ServerLevel world = (ServerLevel) player.level();
@@ -168,7 +168,7 @@ public class RuyaSistemi {
 
         // Uykusuz gün sayacı — server günü değişiminde artır (basit)
         // Ayrı tick handler ile — her Minecraft günü sonu (24000 tick)
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % 24000 != 0) return;
             long simdi = server.overworld().getGameTime();
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {

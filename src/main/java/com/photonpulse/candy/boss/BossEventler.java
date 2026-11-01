@@ -6,7 +6,7 @@ import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
@@ -51,7 +51,7 @@ public class BossEventler {
     private static final Map<UUID, Long> sonBossTick = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(BossEventler::onTick);
+        SunucuTick.END_SERVER_TICK.register(BossEventler::onTick);
         Candy.LOG.info("[Candy] BossEventler aktif — Bekci / Yansıma / Fısıltı");
     }
 

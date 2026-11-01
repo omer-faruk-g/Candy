@@ -3,7 +3,7 @@ package com.photonpulse.candy.environment;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -31,7 +31,7 @@ public class KarartmaSistemi {
     private static final int EFEKT_SURESI = 100;     // 5 sn (check'ten uzun = kesintisiz)
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % TICK_ARALIGI != 0) return;
 
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {

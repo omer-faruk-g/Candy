@@ -3,7 +3,7 @@ package com.photonpulse.candy.sifre;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.SplittableRandom;
 
@@ -42,7 +42,7 @@ public final class SifreMotoru {
     private static final SplittableRandom RNG = new SplittableRandom();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (server.getTickCount() % ARALIK_TICK != 0) return;
             if (!SifreAyar.al().acik) return;
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {

@@ -3,7 +3,7 @@ package com.photonpulse.candy.core;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.psikoloji.Ozguven;
 import com.photonpulse.candy.shadow.ShadowState;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -38,7 +38,7 @@ public class ObservationEngine {
     private static final Map<UUID, Vec3> oncekiPozisyon = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(ObservationEngine::onServerTick);
+        SunucuTick.END_SERVER_TICK.register(ObservationEngine::onServerTick);
         AttackEntityCallback.EVENT.register(ObservationEngine::onSaldiri);
         Candy.LOG.info("[Candy] ObservationEngine aktif");
     }

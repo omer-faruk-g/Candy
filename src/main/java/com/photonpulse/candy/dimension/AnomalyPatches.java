@@ -2,7 +2,7 @@ package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -36,7 +36,7 @@ public class AnomalyPatches {
     private static final Set<Long> islenenChunklar = new HashSet<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(AnomalyPatches::onTick);
+        SunucuTick.END_SERVER_TICK.register(AnomalyPatches::onTick);
         Candy.LOG.info("[Candy] AnomalyPatches aktif — %10 chunk anomaly (v3.0)");
     }
 
