@@ -1,11 +1,19 @@
 // Stonecutter MERKEZ BETİĞİ — her düğüm (versions/<sürüm>) için bir kez çalışır.
 // Sürüme bağlı değerler versions/<sürüm>/gradle.properties'ten gelir.
+// LOADER SECIMI: tek merkez betik iki loader'i da cevirir. Eklenti kosullu uygulanir
+// cunku plugins{} blogu kosul kabul etmez — "apply false" ile classpath'e alinir,
+// sonra dugumun loader'ina gore apply edilir.
+// Neden tek betik: stonecutter replacements listesi TEK yerde kalmak zorunda. Iki kopya
+// olsaydi aralarindaki herhangi bir fark, aktif dugum degistiginde paylasilan src/
+// agacini yarim cevrilmis halde birakirdi (bkz. asagidaki UYARI).
 plugins {
-    id 'fabric-loom'
     id 'java'
+    id 'fabric-loom' apply false
+    id 'net.neoforged.moddev' apply false
 }
 
 def mc = stonecutter.current.version
+def loader = (findProperty('loader') ?: 'fabric').toString()
 
 version = "${property('mod_version')}+${mc}"
 group = property('maven_group')
@@ -14,32 +22,62 @@ base { archivesName = property('archives_base_name') }
 repositories {
     mavenCentral()
     maven { url = 'https://maven.fabricmc.net/' }
+    maven { url = 'https://maven.neoforged.net/releases' }
 }
 
-dependencies {
-    minecraft "com.mojang:minecraft:${property('minecraft_version')}"
-    // Mojang resmî adları — TÜM düğümlerde. Yarn eşlemeleri 1.21.11'de durduğu için
-    // Yarn'da kalmak 26.x hattını kalıcı olarak kapatıyordu; kaynak Mojang adlarına
-    // göçtü (bkz. MULTILOADER.md "Mapping göçü"). Yarn artık hiçbir düğümde kullanılmıyor,
-    // ama versions/<sürüm>/gradle.properties içindeki yarn_mappings anahtarı
-    // doğrulama/karşılaştırma için korundu.
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:${property('loader_version')}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
-    // Gson zaten Minecraft ile geliyor, ayrıca eklemiyoruz
-}
+if (loader == 'fabric') {
+    apply plugin: 'fabric-loom'
 
-// Test profili: ./gradlew runTest
-// runClient GERCEK davranisi korur (45 sn cooldown, komut kilidi acik, dev komutu yok).
-// runTest ise kapiyi acar: /candy komutu + kisa cooldown + vanilla cheat komutlari.
-// Yalnizca dev run'i etkiler; jar'a hicbir sey sizmaz.
-loom {
-    runs {
-        test {
-            client()
-            name = "Candy Test Client"
-            vmArg "-Dcandy.debug=true"   // /candy komutu + kisa cooldown
-            vmArg "-Dcandy.nolock=true"  // /gamemode /tp /time gibi vanilla komutlar
+    dependencies {
+        minecraft "com.mojang:minecraft:${property('minecraft_version')}"
+        // Mojang resmî adları — TÜM düğümlerde. Yarn eşlemeleri 1.21.11'de durduğu için
+        // Yarn'da kalmak 26.x hattını kalıcı olarak kapatıyordu; kaynak Mojang adlarına
+        // göçtü (bkz. MULTILOADER.md "Mapping göçü"). Yarn artık hiçbir düğümde kullanılmıyor,
+        // ama versions/<sürüm>/gradle.properties içindeki yarn_mappings anahtarı
+        // doğrulama/karşılaştırma için korundu.
+        mappings loom.officialMojangMappings()
+        modImplementation "net.fabricmc:fabric-loader:${property('loader_version')}"
+        modImplementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
+        // Gson zaten Minecraft ile geliyor, ayrıca eklemiyoruz
+    }
+
+    // Test profili: ./gradlew runTest
+    // runClient GERCEK davranisi korur (45 sn cooldown, komut kilidi acik, dev komutu yok).
+    // runTest ise kapiyi acar: /candy komutu + kisa cooldown + vanilla cheat komutlari.
+    // Yalnizca dev run'i etkiler; jar'a hicbir sey sizmaz.
+    loom {
+        runs {
+            test {
+                client()
+                name = "Candy Test Client"
+                vmArg "-Dcandy.debug=true"   // /candy komutu + kisa cooldown
+                vmArg "-Dcandy.nolock=true"  // /gamemode /tp /time gibi vanilla komutlar
+            }
+        }
+    }
+} else {
+    // NeoForge: ModDevGradle. Minecraft'i Mojang resmi adlariyla veriyor — kaynak
+    // zaten o adlari tasiyor, remap yok. (Gocten once bu yol kapali idi.)
+    apply plugin: 'net.neoforged.moddev'
+
+    neoForge {
+        version = property('neoforge_version')
+        // Mixin yapilandirmasi neoforge.mods.toml icindeki [[mixins]] ile bildiriliyor;
+        // candy.mixins.json oldugu gibi yeniden kullaniliyor.
+        validateAccessTransformers = true
+        runs {
+            client { client() }
+            // Test profili Fabric tarafiyla ayni bayraklari tasir.
+            testClient {
+                client()
+                systemProperty 'candy.debug', 'true'
+                systemProperty 'candy.nolock', 'true'
+            }
+        }
+        mods {
+            candy {
+                sourceSet sourceSets.main
+            }
         }
     }
 }
@@ -50,7 +88,8 @@ def mcDep = property('minecraft_dep')
 processResources {
     inputs.property "version", modSurum
     inputs.property "minecraft_dep", mcDep
-    filesMatching("fabric.mod.json") {
+    // Iki loader'in metadata dosyasi da ayni iki degeri bekliyor.
+    filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
         expand "version": modSurum, "minecraft_dep": mcDep
     }
 }
@@ -70,9 +109,11 @@ jar {
 }
 
 // Her düğümün jar'ı kök build/libs altında toplanır — dağıtımı tek yerden yapmak için.
+// Fabric'te dagitilan jar remapJar'in cikti; NeoForge'da remap yok, jar dogrudan.
+def dagitimJar = loader == 'fabric' ? tasks.named('remapJar') : tasks.named('jar')
 tasks.register('tumunuTopla', Copy) {
-    dependsOn tasks.named('remapJar')
-    from tasks.named('remapJar')
+    dependsOn dagitimJar
+    from dagitimJar
     into rootProject.layout.buildDirectory.dir('libs')
 }
 
@@ -112,6 +153,10 @@ tasks.register('yazCp') {
 // (migrateMappings, 1.21.7 ve 1.21.11) birebir karsilastirildi; asagidakiler iki agac
 // arasinda farklilasan butun sembollerdir.
 stonecutter {
+    // Loader sabitleri: kaynakta `//? if fabric {` / `//? if neoforge {` kullanilabilir.
+    // Dal (branch) DEGIL — paylasilan src/ agaci tek, yalnizca satirlar aciliyor/kapaniyor.
+    constants.match(loader, 'fabric', 'neoforge')
+
     replacements.string(current.parsed >= '1.21.9') {
         // Sinif yeniden adlandirmalari. Candy'de ayni adi tasiyan kendi sinifi yok,
         // mixin method= dizgilerinde de gecmiyorlar (dogrulandi), o yuzden ciplak.
