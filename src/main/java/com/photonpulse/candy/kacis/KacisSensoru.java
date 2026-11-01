@@ -4,8 +4,8 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -63,11 +63,11 @@ public final class KacisSensoru {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playC2S().register(KacisPayload.ID, KacisPayload.CODEC);
+            AgKayit.playC2S().register(KacisPayload.ID, KacisPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Kacis C2S zaten kayıtlı: {}", t.getMessage());
         }
-        ServerPlayNetworking.registerGlobalReceiver(KacisPayload.ID, (payload, context) -> {
+        SunucuAg.registerGlobalReceiver(KacisPayload.ID, (payload, context) -> {
             // İstemciden gelen SAYI, metin değil — hiçbir kişisel veri taşımıyor.
             int f3 = Math.max(0, Math.min(20_000, payload.f3Tick()));
             if (f3 <= 0) return;

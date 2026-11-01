@@ -3,8 +3,8 @@ package com.photonpulse.candy.altyazi;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.AltyaziPayload;
 import com.photonpulse.candy.net.BaslikPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -27,17 +27,17 @@ public final class Altyazi {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(AltyaziPayload.ID, AltyaziPayload.CODEC);
+            AgKayit.playS2C().register(AltyaziPayload.ID, AltyaziPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Altyazi payload zaten kayıtlı: {}", t.getMessage());
         }
         try {
-            PayloadTypeRegistry.playS2C().register(BaslikPayload.ID, BaslikPayload.CODEC);
+            AgKayit.playS2C().register(BaslikPayload.ID, BaslikPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Baslik payload zaten kayıtlı: {}", t.getMessage());
         }
         try {
-            PayloadTypeRegistry.playS2C().register(
+            AgKayit.playS2C().register(
                 com.photonpulse.candy.net.IkilikEkranPayload.ID,
                 com.photonpulse.candy.net.IkilikEkranPayload.CODEC);
         } catch (Throwable t) {
@@ -51,7 +51,7 @@ public final class Altyazi {
         try {
             if (player == null) return;
             if (indeks < 0 || indeks >= ALTYAZI_SAYISI) return;
-            ServerPlayNetworking.send(player, new AltyaziPayload(indeks, sureMs));
+            SunucuAg.send(player, new AltyaziPayload(indeks, sureMs));
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Altyazi gönderilemedi: {}", t.getMessage());
         }
@@ -62,7 +62,7 @@ public final class Altyazi {
         try {
             if (player == null) return;
             if (indeks < 0 || indeks >= BASLIK_SAYISI) return;
-            ServerPlayNetworking.send(player, new BaslikPayload(indeks, false));
+            SunucuAg.send(player, new BaslikPayload(indeks, false));
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Başlık gönderilemedi: {}", t.getMessage());
         }
@@ -88,7 +88,7 @@ public final class Altyazi {
             if (indeks < 0 || indeks >= com.photonpulse.candy.sifre.IkilikMetin.FISILTI.length) {
                 return;
             }
-            ServerPlayNetworking.send(player,
+            SunucuAg.send(player,
                 new com.photonpulse.candy.net.IkilikEkranPayload(indeks, sureMs, kanal));
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] İkilik ekran gönderilemedi: {}", t.getMessage());
@@ -99,7 +99,7 @@ public final class Altyazi {
     public static void baslikGeriAl(ServerPlayer player) {
         try {
             if (player == null) return;
-            ServerPlayNetworking.send(player, new BaslikPayload(0, true));
+            SunucuAg.send(player, new BaslikPayload(0, true));
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Başlık geri alınamadı: {}", t.getMessage());
         }

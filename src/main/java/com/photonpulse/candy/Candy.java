@@ -58,7 +58,7 @@ import com.photonpulse.candy.travma.TotemIptali;
 import com.photonpulse.candy.tree.TreeGrowth;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import com.photonpulse.candy.platform.SunucuBaglanti;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -148,7 +148,7 @@ public class Candy implements ModInitializer {
         });
 
         // Oyuncu bağlantı yaşam döngüsü
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             var player = handler.player;
             var tp = PersonalityManager.get(player);
             LOG.info("[Candy] oyuncu geldi: {} (kurulum: {})",
@@ -197,7 +197,7 @@ public class Candy implements ModInitializer {
             }
         });
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+        SunucuBaglanti.DISCONNECT.register((handler, server) -> {
             var uid = handler.player.getUUID();
             // Önce tp'yi güncel tut — cleanup diske yazacak, kayıp olmasın
             var tp = PersonalityManager.get(uid);

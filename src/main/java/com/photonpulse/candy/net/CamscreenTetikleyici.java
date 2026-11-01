@@ -4,8 +4,8 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -42,7 +42,7 @@ public class CamscreenTetikleyici {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(
+            AgKayit.playS2C().register(
                 CamscreenPayload.ID, CamscreenPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Camscreen payload zaten kayıtlı: {}", t.getMessage());
@@ -97,7 +97,7 @@ public class CamscreenTetikleyici {
                 int sure = image ? (400 + RNG.nextInt(300)) : (350 + RNG.nextInt(200));
 
                 try {
-                    ServerPlayNetworking.send(player, new CamscreenPayload(idx, sure));
+                    SunucuAg.send(player, new CamscreenPayload(idx, sure));
                 } catch (Throwable t) {
                     // Vanilla client — payload bilinmiyor, sessizce geç
                     continue;

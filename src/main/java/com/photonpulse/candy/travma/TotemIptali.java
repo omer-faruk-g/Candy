@@ -7,7 +7,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import com.photonpulse.candy.platform.SunucuBaglanti;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -77,7 +77,7 @@ public class TotemIptali {
         });
 
         // Rejoin sonrası — 1 HP + hunger 0
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             var player = handler.player;
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.totemBekliyor) return;

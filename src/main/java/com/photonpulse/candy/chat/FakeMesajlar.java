@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import com.photonpulse.candy.platform.SunucuBaglanti;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -39,7 +39,7 @@ public class FakeMesajlar {
     public static void register() {
         SunucuTick.END_SERVER_TICK.register(FakeMesajlar::onTick);
 
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             if (RNG.nextDouble() > JOIN_FAKE_IHTIMAL) return;
             long hedef = server.overworld().getGameTime() + JOIN_GECIKME_TICK;
             bekleyenJoin.put(handler.player.getUUID(), hedef);

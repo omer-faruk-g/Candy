@@ -2,8 +2,8 @@ package com.photonpulse.candy.meta;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.UygulamaPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
 import java.util.UUID;
@@ -30,12 +30,12 @@ public final class UygulamaBilgisi {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playC2S().register(UygulamaPayload.ID, UygulamaPayload.CODEC);
+            AgKayit.playC2S().register(UygulamaPayload.ID, UygulamaPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Uygulama C2S zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(UygulamaPayload.ID, (payload, context) -> {
+        SunucuAg.registerGlobalReceiver(UygulamaPayload.ID, (payload, context) -> {
             try {
                 int i = payload.indeks();
                 if (i < 0 || i >= UygulamaListesi.boyut()) return;   // liste dışı → yut

@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import com.photonpulse.candy.platform.SunucuBaglanti;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.chat.Component;
@@ -61,7 +61,7 @@ public class RealCandy {
         // sırası kritik — bu handler ayrı kalsa dp yazımı kaybolabilirdi.
 
         // Join'de eğer daha önce ayrılmışsa "Döndün." mesajı
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             UUID uid = handler.player.getUUID();
             // Grace period: her join'de yeni sayaç — kick'ten hemen sonra tekrar kick olmasın
             katilmaTick.put(uid, server.overworld().getGameTime());

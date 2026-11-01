@@ -88,8 +88,8 @@ public class DerinAnaliz {
 
         // Yeni oturum = geç saat uyarısı için yeni şans. (Aksi halde bayrak kalıcı
         // kalıp mesaj o dünyada bir daha ASLA gösterilmiyordu.)
-        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
-            (handler, sender, server) -> {
+        com.photonpulse.candy.platform.SunucuBaglanti.JOIN.register(
+            (handler, server) -> {
                 TruePersonality tp = PersonalityManager.get(handler.player);
                 tp.gecSaatUyarisiVerildi = false;
                 tp.oturumBaslangicTick = 0L; // ilk tick'te yeniden kurulur

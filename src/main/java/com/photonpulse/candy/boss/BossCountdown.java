@@ -2,8 +2,8 @@ package com.photonpulse.candy.boss;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.BossCountdownPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -13,7 +13,7 @@ public class BossCountdown {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(BossCountdownPayload.ID, BossCountdownPayload.CODEC);
+            AgKayit.playS2C().register(BossCountdownPayload.ID, BossCountdownPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] BossCountdown payload zaten kayıtlı: {}", t.getMessage());
         }
@@ -22,7 +22,7 @@ public class BossCountdown {
     /** saniye >= 0 göster, -1 gizle. */
     public static void gonder(ServerPlayer player, int saniye) {
         try {
-            ServerPlayNetworking.send(player, new BossCountdownPayload(saniye));
+            SunucuAg.send(player, new BossCountdownPayload(saniye));
         } catch (Throwable ignored) {}
     }
 }

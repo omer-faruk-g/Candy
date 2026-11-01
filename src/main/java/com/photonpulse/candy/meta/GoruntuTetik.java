@@ -5,9 +5,9 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.net.GoruntuPayload;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuBaglanti;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -42,12 +42,12 @@ public final class GoruntuTetik {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(GoruntuPayload.ID, GoruntuPayload.CODEC);
+            AgKayit.playS2C().register(GoruntuPayload.ID, GoruntuPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Goruntu payload zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+        SunucuBaglanti.DISCONNECT.register((handler, server) -> {
             try {
                 ServerPlayer p = handler.getPlayer();
                 geriAl(p);
@@ -121,7 +121,7 @@ public final class GoruntuTetik {
     public static void uygula(ServerPlayer player, int fov, int render) {
         if (player == null) return;
         try {
-            ServerPlayNetworking.send(player, new GoruntuPayload(fov, render, false));
+            SunucuAg.send(player, new GoruntuPayload(fov, render, false));
         } catch (Throwable ignored) {
             // Vanilla client — görüntü müdahalesi yalnızca modlu client'ta.
         }
@@ -131,7 +131,7 @@ public final class GoruntuTetik {
     public static void geriAl(ServerPlayer player) {
         if (player == null) return;
         try {
-            ServerPlayNetworking.send(player, new GoruntuPayload(-1, -1, true));
+            SunucuAg.send(player, new GoruntuPayload(-1, -1, true));
         } catch (Throwable ignored) {}
     }
 }

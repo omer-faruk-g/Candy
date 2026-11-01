@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sessizlik.SessizlikState;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,7 +69,7 @@ public class BlackoutGlitch {
                 int sureMs = 100 + RNG.nextInt(201); // 100-300ms
 
                 try {
-                    ServerPlayNetworking.send(player, new CamscreenPayload(IDX_BLACKOUT, sureMs));
+                    SunucuAg.send(player, new CamscreenPayload(IDX_BLACKOUT, sureMs));
                 } catch (Throwable t) {
                     continue; // vanilla client — payload bilinmiyor
                 }

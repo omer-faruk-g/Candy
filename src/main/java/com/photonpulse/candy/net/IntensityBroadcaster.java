@@ -5,8 +5,8 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -21,7 +21,7 @@ public class IntensityBroadcaster {
         // Payload type — single-player'da client de aynı JVM'de register etmeye çalışır.
         // Duplicate registration exception atar, o yüzden try/catch.
         try {
-            PayloadTypeRegistry.playS2C().register(
+            AgKayit.playS2C().register(
                 CandyIntensityPayload.ID, CandyIntensityPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Payload zaten kayıtlı (client tarafından): {}", t.getMessage());
@@ -36,7 +36,7 @@ public class IntensityBroadcaster {
                 double korku = tp.korkuSkoru;
                 double ozguven = tp.candyOzguven;
                 try {
-                    ServerPlayNetworking.send(player,
+                    SunucuAg.send(player,
                         new CandyIntensityPayload(agr, korku, ozguven));
                 } catch (Throwable t) {
                     // Client bu payload'ı bilmiyorsa (vanilla client) hata verir — sessizce yut

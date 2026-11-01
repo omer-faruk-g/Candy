@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.net.CamscreenPayload;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -51,7 +51,7 @@ public class EndingWatcher {
 
         // 5 sn full-screen camscreen text index 6 (ending mesajı)
         try {
-            ServerPlayNetworking.send(player, new CamscreenPayload(6, 5000));
+            SunucuAg.send(player, new CamscreenPayload(6, 5000));
         } catch (Throwable ignored) {}
 
         // Server-wide broadcast — herkes duyar

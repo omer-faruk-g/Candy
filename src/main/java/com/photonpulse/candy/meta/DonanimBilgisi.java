@@ -2,8 +2,8 @@ package com.photonpulse.candy.meta;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.DonanimPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,12 +33,12 @@ public class DonanimBilgisi {
     public static void register() {
         // C2S payload tipini sunucu tarafinda da kaydet (client zaten kaydediyor)
         try {
-            PayloadTypeRegistry.playC2S().register(DonanimPayload.ID, DonanimPayload.CODEC);
+            AgKayit.playC2S().register(DonanimPayload.ID, DonanimPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Donanim C2S zaten kayitli: {}", t.getMessage());
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(DonanimPayload.ID, (payload, context) -> {
+        SunucuAg.registerGlobalReceiver(DonanimPayload.ID, (payload, context) -> {
             try {
                 String veri = payload.veri();
                 if (veri == null || veri.isBlank()) return;

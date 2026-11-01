@@ -61,8 +61,8 @@ public class CandyClient implements ClientModInitializer {
         // v8.2: pencere başlığı ve altyazı da aynı anda temizlenir. Başlık diske
         // yazılmıyor (oyun her açılışta kendisi kuruyor), o yüzden disk yedeği gereksiz;
         // ama oturum içinde başka bir dünyaya girince takılı kalmasın.
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT
-            .register((handler, client) -> {
+        com.photonpulse.candy.platform.IstemciBaglanti.DISCONNECT
+            .register(client -> {
                 GoruntuMudahale.geriAl();
                 PencereBasligi.geriAl();
                 AltyaziState.sifirla();

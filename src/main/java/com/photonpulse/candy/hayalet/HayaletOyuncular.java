@@ -6,7 +6,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import com.photonpulse.candy.platform.SunucuBaglanti;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -91,7 +91,7 @@ public class HayaletOyuncular {
 
     public static void register() {
         // İlk oyuncu — fake join başlat
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             if (joinYazildi || joinBekleyenTick > 0) return;
             joinBekleyenTick = server.overworld().getGameTime() + 60L;
         });

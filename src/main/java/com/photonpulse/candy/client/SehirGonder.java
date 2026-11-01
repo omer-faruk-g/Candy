@@ -5,9 +5,9 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.SehirPayload;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import com.photonpulse.candy.platform.IstemciBaglanti;
+import com.photonpulse.candy.platform.IstemciAg;
+import com.photonpulse.candy.platform.AgKayit;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -36,12 +36,12 @@ public class SehirGonder {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playC2S().register(SehirPayload.ID, SehirPayload.CODEC);
+            AgKayit.playC2S().register(SehirPayload.ID, SehirPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Sehir C2S zaten kayıtlı (client): {}", t.getMessage());
         }
 
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+        IstemciBaglanti.JOIN.register(client -> {
             if (sehirCache != null) {
                 // Zaten biliniyor — direkt gönder, yeni ağ isteği atma
                 client.execute(() -> gonder(sehirCache));
@@ -68,8 +68,8 @@ public class SehirGonder {
 
     private static void gonder(String sehir) {
         try {
-            if (!ClientPlayNetworking.canSend(SehirPayload.ID)) return;
-            ClientPlayNetworking.send(new SehirPayload(sehir));
+            if (!IstemciAg.canSend(SehirPayload.ID)) return;
+            IstemciAg.send(new SehirPayload(sehir));
             Candy.LOG.info("[Candy] Sehir gonderildi");
         } catch (Throwable ignored) {}
     }

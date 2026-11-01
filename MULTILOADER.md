@@ -2,7 +2,8 @@
 
 > Durum: **kaynak Mojang resmî adlarına göçtü, Fabric iki MC düğümünde de yeşil.
 > NeoForge düğümleri ve araç zinciri kuruldu, ama NeoForge HENÜZ JAR ÜRETMİYOR** —
-> 101 dosya platform katmanına taşınmadı.
+> platform katmanının 2/4'ü bitti (tick + ağ), `net.fabricmc` import eden
+> **41 dosya** kaldı.
 >
 > Bu dosya üç katman taşıyor: (1) portun ilk denemesinde ölçülen engeller,
 > (2) o engellerden birinin nasıl kaldırıldığı — mapping göçü, (3) sıradaki adım.
@@ -13,7 +14,7 @@
 
 | Yol | Engel | Durum |
 |---|---|---|
-| **ModDevGradle / NeoGradle** | Mapping duvarı: 143 dosyada 156 Yarn sınıf adı | **Engel kaldırıldı** — kaynak Mojang adlarında, araç zinciri kurulu. Kalan: platform katmanı |
+| **ModDevGradle / NeoGradle** | Mapping duvarı: 143 dosyada 156 Yarn sınıf adı | **Engel kaldırıldı** — kaynak Mojang adlarında, araç zinciri kurulu. Kalan: platform katmanı 2/4 bitti (268 → 148 hata) |
 | **Architectury Loom** | Upstream remap çakışması: `InGameHud.renderHotbar` | **Artık ilgisiz** — Yarn'ı korumaya ihtiyaç yok |
 | **Stonecutter dalları** | Dal başına ayrı `src/` ağacı → 206 dosya loader başına kopya | Elendi, portun amacını bozuyor |
 
@@ -436,7 +437,7 @@ Bu, NeoForge portundan bağımsızdır: **NeoForge hiç bitmese bile 26.x yolu a
 
 ### Kalan iş — ölçülmüş envanter
 
-NeoForge düğümünde `compileJava` **100 hata** veriyor ve hatalarının **hiçbiri
+NeoForge düğümünde `compileJava` hata veriyor ama hatalarının **hiçbiri
 `net.minecraft` değil**. Mapping göçünün kanıtı bu: Minecraft tarafı tamamen
 çözülüyor, kalan her hata `net.fabricmc.*`.
 
@@ -445,14 +446,14 @@ NeoForge düğümünde `compileJava` **100 hata** veriyor ve hatalarının **hi�
 | Tip | Dosya | Çağrı biçimi | NeoForge karşılığı |
 |---|---|---|---|
 | ~~`ServerTickEvents`~~ | ~~65~~ | 68 × `END_SERVER_TICK.register(X::onTick)` | ✅ **TAŞINDI** → `SunucuTick` |
-| `PayloadTypeRegistry` | 16 | 18 × `playS2C().register(ID, CODEC)`, 8 × `playC2S()` | `RegisterPayloadHandlersEvent` + `PayloadRegistrar` |
+| ~~`PayloadTypeRegistry`~~ | ~~16~~ | 18 × `playS2C().register(ID, CODEC)`, 8 × `playC2S()` | ✅ **TAŞINDI** → `AgKayit` |
 | `Environment` / `EnvType` | 14 | `@Environment(EnvType.CLIENT)` | `@OnlyIn(Dist.CLIENT)` — anotasyon, metotla sarılamaz → `//? if fabric` |
-| `ServerPlayNetworking` | 13 | 14 × `send`, 4 × `registerGlobalReceiver` | `PacketDistributor` / `PayloadRegistrar` |
+| ~~`ServerPlayNetworking`~~ | ~~13~~ | 14 × `send`, 4 × `registerGlobalReceiver` | ✅ **TAŞINDI** → `SunucuAg` |
 | `FabricLoader` | 8 | `getConfigDir` ×5, `isModLoaded` ×2, `getGameDir`, `getAllMods`, `getModContainer` | `FMLPaths`, `ModList` |
-| `ServerPlayConnectionEvents` | 7 | join/disconnect | `PlayerEvent.PlayerLoggedIn/Out` |
+| ~~`ServerPlayConnectionEvents`~~ | ~~7~~ | join/disconnect | ✅ **TAŞINDI** → `SunucuBaglanti` |
 | `ServerLivingEntityEvents` | 5 | — | `LivingDeathEvent` vb. |
-| `ClientPlayNetworking` | 5 | 9 × `registerGlobalReceiver`, 4 × `send`, 4 × `canSend` | aynı payload kaydı |
-| `ClientPlayConnectionEvents` | 4 | — | `ClientPlayerNetworkEvent` |
+| ~~`ClientPlayNetworking`~~ | ~~5~~ | 9 × `registerGlobalReceiver`, 4 × `send`, 4 × `canSend` | ✅ **TAŞINDI** → `IstemciAg` |
+| ~~`ClientPlayConnectionEvents`~~ | ~~4~~ | — | ✅ **TAŞINDI** → `IstemciBaglanti` |
 | `AttackEntityCallback` | 3 | — | `AttackEntityEvent` |
 | diğer 18 tip | 1–2'şer | — | mod bus olayları |
 | `ModInitializer` / `ClientModInitializer` | 2 | 4 giriş noktası | `@Mod` sınıfı + `Dist` ayrımı |
@@ -463,10 +464,21 @@ import satırı **178 → 113**. Gövdeler değişmedi: platform sınıfı `Sunu
 çağrı biçimini (`END_SERVER_TICK.register(X::onTick)`) birebir koruduğu için
 yalnızca import satırları değişti.
 
-> **Hata sayısı hakkında uyarı:** NeoForge düğümünde ilk ölçülen "100 hata"
-> javac'ın **varsayılan üst sınırıydı**, gerçek sayı değil. `-Xmaxerrs 2000`
-> eklendikten sonra gerçek sayı görünüyor: **268**. Yani 100 bir taban, karşılaştırma
-> için kullanılamaz. Bundan sonraki ilerleme 268'e karşı ölçülecek.
+> ### ⚠ Hata sayısı 100 → 268 bir GERİLEME DEĞİL — ölçüm tavanıydı
+>
+> Bu belgede ve commit mesajlarında önce **100 hata**, sonra **268 hata** geçiyor.
+> Arada kod bozulmadı: **javac varsayılan olarak 100 hatada kesiyor**, yani ilk
+> ölçüm tavana çarpmış bir sayıydı, gerçek sayı değil. Yalnızca NeoForge
+> düğümüne `-Xmaxerrs 2000` eklendikten sonra gerçek sayı görünür oldu: **268**.
+>
+> Yani **100 bir taban değil, bir tavan**; iki sayı karşılaştırılamaz. Portun
+> ilerlemesi **268'e karşı** ölçülüyor:
+>
+> | Adım | Hata |
+> |---|---|
+> | ölçüm tavanı (gerçek değil) | ~~100~~ |
+> | 1/4 sonrası — gerçek taban | 268 |
+> | 2/4 sonrası (ağ katmanı) | **148** |
 
 **Payload sınıfları hiç değişmeyecek** — zaten vanilla `CustomPacketPayload` +
 `StreamCodec` kullanıyorlar (Fabric'in değil Minecraft'ın tipleri). NeoForge'un
@@ -480,12 +492,171 @@ olduğu gibi yeniden kullanılabilir; NeoForge'da `neoforge.mods.toml` içinde
 ediyor, NeoForge'da remap yok (Mojang adları zaten çalışma zamanı adları) — yani
 **aynı kaynak iki tarafta da doğru hedefi tutuyor.**
 
+### Ağ katmanı (adım 2/4) — taşındı, ama arayüz bir farkı KABUL ETTİ
+
+Beş tip taşındı, hepsi `com.photonpulse.candy.platform` altında; Fabric/NeoForge
+gövdeleri `src/fabric/java` ve `src/neoforge/java` ağaçlarında:
+
+| Fabric tipi | Platform sınıfı | Dosya |
+|---|---|---|
+| `PayloadTypeRegistry` | `AgKayit` | 16 |
+| `ServerPlayNetworking` | `SunucuAg` | 13 |
+| `ServerPlayConnectionEvents` | `SunucuBaglanti` | 7 |
+| `ClientPlayNetworking` | `IstemciAg` | 5 |
+| `ClientPlayConnectionEvents` | `IstemciBaglanti` | 4 |
+
+Toplam 25 dosya değişti.
+
+#### Sessiz uyumsuzluk taraması — `javap`, iki loader
+
+Derleme hatası vermeyen fark, derleme hatasından pahalıdır: jar üretilir, çalışır
+gibi görünür, protokol sessizce yanlıştır. Dört nokta tarandı.
+
+| Kontrol | Fabric (`fabric-networking-api-v1-5.1.6`) | NeoForge (`neoforge-21.11.48`) | Sonuç |
+|---|---|---|---|
+| Payload kimliği | `CustomPacketPayload.Type<T>` (`class_8710$class_9154`) | `CustomPacketPayload.Type<T>` | **birebir** |
+| Codec tipi | `StreamCodec<? super RegistryFriendlyByteBuf, T>` (`class_9139<? super class_9129, T>`) | `StreamCodec<? super RegistryFriendlyByteBuf, T>` | **birebir** |
+| Alıcı hangi thread'de | oyun thread'i | `PayloadRegistrar` varsayılan olarak ana thread'e sarıyor | **aynı** |
+| Bellek bağlantısında serileştirme | tek oyunculuda atlanabiliyor | **her zaman** serileştiriyor | **farksız** — 13 payload'ın hepsi yalnızca `int`/`double`/`boolean`/`String` taşıyan record, paylaşılan mutable nesne yok |
+
+Candy'nin 13 payload'ı `StreamCodec<RegistryFriendlyByteBuf, T>` bildiriyor; iki
+loader'ın `? super RegistryFriendlyByteBuf` sınırını da karşılıyor. **Payload
+sınıflarına tek satır dokunulmadı** — ilk ölçümün öngörüsü doğru çıktı.
+
+#### Taramada çıkan ÖNGÖRÜLMEYEN sessiz uyumsuzluk: `optional()`
+
+NeoForge kayıtları varsayılan olarak **zorunlu kanal**: kanalı taşımayan karşı
+taraf bağlantıdan **düşürülür**. Fabric bunu hiçbir zaman yapmaz. Candy ise
+vanilla karşı tarafa tahammül edecek şekilde yazılmış — her `send` try/catch
+içinde, istemcide `canSend` kapısı var.
+
+`optional()` çağrılmasa NeoForge jar'ı vanilla istemciyi atardı, Fabric jar'ı
+atmazken. Derleyici bunu göremez; test edilmezse kullanıcı bulur. `AgKayit`
+içinde `olay.registrar("1").optional()` yazılmasının tek sebebi bu.
+
+Yanındaki küçük fark: `registrar(String)` bir **ağ sürümü** istiyor (NeoForge
+sources'tan doğrulandı — mod kimliği değil); Fabric payload tipleri için sürüm
+pazarlığı yapmıyor. `"1"` sabitlendi. `optional()` ile birlikte sürümü farklı iki
+Candy yine bağlanabiliyor, yalnızca eksik kanal kullanılmıyor.
+
+#### Gizlenebilen fark: kayıt ZAMANLAMASI
+
+Fabric'te kayıt statik registry üzerinden, çağrıldığı anda olur. NeoForge'da
+yalnızca `RegisterPayloadHandlersEvent` içinde olabilir; o olay mod
+kurucularından **sonra** bir kez ateşlenir. Candy'nin bütün `register()`
+çağrıları `ModInitializer`/`ClientModInitializer` karşılığından, yani kurucu
+aşamasından geliyor → `AgKayit` NeoForge tarafında kayıtları **kuyruğa** alıyor,
+olay geldiğinde boşaltıyor. Bu farkı sarmalayıcı **gerçekten gizliyor**: çağrı
+yerleri iki loader'da da aynı satırı yazıyor.
+
+Kuyruk aynı zamanda **tekilleştiriyor**. Fabric aynı tipi ikinci kez kaydedince
+atıyor ve Candy bunu her çağrı yerinde try/catch ile yutuyor (tek oyunculuda
+sunucu ve istemci aynı JVM'de aynı tipi kaydediyor). NeoForge'da aynı atış olayın
+**içinde** olurdu, yani o try/catch'lerin dışında. Kuyruk ID'ye göre
+tekilleştirdiği için ikinci kayıt sessizce düşüyor; Candy'deki catch blokları
+NeoForge'da hiç ateşlenmiyor.
+
+#### GİZLENEMEYEN fark: C2S'te tip ve alıcı tek çağrıya girmek zorunda
+
+`javap` ile ölçülen asimetri — `PayloadRegistrar`:
+
+```
+playToClient(Type<T>, StreamCodec<? super RegistryFriendlyByteBuf,T>)                      <- alıcısız VAR
+playToClient(Type<T>, StreamCodec<? super RegistryFriendlyByteBuf,T>, IPayloadHandler<T>)
+playToServer(Type<T>, StreamCodec<? super RegistryFriendlyByteBuf,T>, IPayloadHandler<T>)
+                                                                                           <- alıcısız YOK
+```
+
+S2C tipi tek başına kaydedilebiliyor, **C2S kaydedilemiyor**: tip ve alıcı aynı
+çağrıya girmek zorunda. Fabric'te bu ikisi ayrı sınıflarda — tip
+`PayloadTypeRegistry`, alıcı `ServerPlayNetworking.registerGlobalReceiver`.
+
+Uydurmak yerine **arayüz farkı kabul etti:** alıcı kaydı iki loader'da da
+*yalnızca mod yüklenirken* geçerli. `SunucuAg`/`IstemciAg`'ın
+`registerGlobalReceiver`'ı alıcıyı `AgKayit` kuyruğuna veriyor, tip kaydıyla
+eşliyor (sıra önemsiz), olay içinde ikisi birlikte uygulanıyor.
+
+- Fabric'te bu sınır **teknik olarak yok**; oraya da yazıldı ki iki loader aynı
+  sözü versin, yoksa Fabric'te çalışan kod NeoForge'da sessizce ölürdü.
+- İnit'ten sonra çağrılırsa `AgKayit` **hata logluyor** — sessizce yanlış
+  çalışmıyor.
+- Alıcısı olmayan C2S tipi boş alıcıyla kaydediliyor. Bu doğru davranış: o JVM
+  payload'ı hiç almıyor (çok oyunculu istemci kendi C2S tipini yalnızca
+  *gönderebilmek* için kaydeder).
+- Candy'nin 13 alıcısının hepsi init zamanında, yani sınır pratikte bağlayıcı
+  değil. Arayüzün değeri, artık doğruyu söylemesi.
+
+#### Düşürülen parametre: `sender`
+
+Fabric'in JOIN imzası `(handler, sender, server)`; ortadaki `sender` Fabric'e
+özgü `PacketSender` ve NeoForge'da **karşılığı yok**. Candy'nin 7 JOIN çağrısının
+hiçbiri onu okumuyor. Hep `null` geçen hayalet bir parametre taşımak yerine
+arayüzden çıkarıldı — DISCONNECT'in zaten taşıdığı biçim.
+
+İstemci tarafında `handler` da düşürüldü (lambda tek parametreli `client` oldu):
+5 çağrının hiçbiri okumuyor **ve** NeoForge'da
+`ClientPlayerNetworkEvent.LoggingOut` anında `Minecraft.getConnection()` null
+olabiliyor, yani taşımak "bazen null" demekti.
+
+Sunucu tarafında `handler` **korundu ve uydurma değil**: NeoForge olayından gelen
+oyuncunun `ServerPlayer.connection` alanı aynı `ServerGamePacketListenerImpl`
+nesnesi, yani çağrı yerlerindeki `handler.player` ve `handler.getPlayer()` iki
+loader'da da aynı nesneyi okuyor. 1/4'teki kural burada da geçerli: gövdeler
+değişmedi, yalnızca import satırı, alıcı adı ve `sender` parametresi.
+
+#### Kalan, ÇALIŞMA ZAMANINDA doğrulanacak nokta
+
+Fabric'in JOIN'i (`Join.onPlayReady`) oyun aşaması hazır olduğunda, NeoForge'un
+`PlayerEvent.PlayerLoggedInEvent`'i oyuncu listesine eklendiğinde ateşleniyor —
+yakın, ama aynı nokta değil. Candy'nin 7 JOIN dinleyicisinin hiçbiri paket
+*göndermiyor* (hepsi kişilik/hafıza okuyup zamanlayıcı kuruyor), o yüzden fark
+derleme ya da protokol düzeyinde sorun değil. Yine de bu **ölçülmemiş** bir
+nokta: NeoForge jar üretilince ilk bakılacak yerlerden biri.
+
+#### Ölçüm (2/4 sonrası)
+
+| | 1/4 sonrası | 2/4 sonrası |
+|---|---|---|
+| NeoForge `compileJava` hata | 268 | **148** |
+| Hatalı dosya | 57 | **41** |
+| `net.fabricmc` import eden dosya | 57 | **41** |
+| `net.fabricmc` import satırı | 113 | **72** |
+| Kalan ayrı `net.fabricmc` tipi | 23 | **18** |
+
+`src/main/java` içinde `PayloadTypeRegistry`, `ServerPlayNetworking`,
+`ClientPlayNetworking`, `ServerPlayConnectionEvents`, `ClientPlayConnectionEvents`
+referansı: **sıfır** (beşi de).
+
+`src/fabric/java` ve `src/neoforge/java` ağaçlarından gelen hata: **sıfır** —
+yani on platform sınıfının hepsi iki loader'da da derleniyor. Bu, şu NeoForge
+API'lerinin çözüldüğünün derleyici kanıtı: `RegisterPayloadHandlersEvent`,
+`PayloadRegistrar.optional()`, `playToClient` (iki aşırı yükleme de),
+`playToServer`, `IPayloadHandler`, `IPayloadContext`,
+`PacketDistributor.sendToPlayer`, `ClientPacketDistributor.sendToServer`,
+`ICommonPacketListener.hasChannel`, `PlayerEvent.PlayerLoggedIn/OutEvent`,
+`ClientPlayerNetworkEvent.LoggingIn/LoggingOut`.
+
+Fabric: temizlenmiş `build/generated/stonecutter` ağacından kökte
+`./gradlew build` **BUILD SUCCESSFUL**, iki jar da üretildi.
+
+> **`@EventBusSubscriber` notu (yeniden kullanılacak):** bu NeoForge sürümünde
+> anotasyonun `bus` parametresi **yok** (`javap`: yalnızca `value()` ve
+> `modid()`). Olay hangi bus'a gideceğini kendi tipinden söylüyor —
+> `IModBusEvent` uygulayanlar mod bus'ına, diğerleri oyun bus'ına. Bu yüzden
+> `AgKayit` (mod bus olayı) ve `SunucuBaglanti` (oyun bus olayı) **aynı çıplak**
+> `@EventBusSubscriber` ile çalışıyor.
+
+> **`ServerPlayer.getServer()` YOK** (1.21.11, Mojang adları). Oyuncudan sunucuya
+> gitmenin yolu `player.level().getServer()` — kaynağın başka yerinde zaten
+> kullanılan biçim (`CandyBasarimlar.java`).
+
 ### Sıradaki adımlar (sırayla, her adımda Fabric yeşil)
 
 1. **Uzun kuyruk** — `SunucuTick`'in yanına `Platform` (FabricLoader karşılığı) ve
    `@Environment` için `//? if fabric` direktifleri; 60 dosyanın import satırları.
-2. **Ağ katmanı** — `CandyAg` platform sınıfı: payload kaydı, `send`, `canSend`,
-   `registerGlobalReceiver`. 16 + 13 + 5 dosya.
+2. ~~**Ağ katmanı**~~ — ✅ **BİTTİ** (2/4): `AgKayit`, `SunucuAg`, `IstemciAg`,
+   `SunucuBaglanti`, `IstemciBaglanti`. 25 dosya. Ayrıntı ve `javap` kanıtları
+   için yukarıdaki "Ağ katmanı (adım 2/4)" bölümü.
 3. **Olay katmanı** — kalan 18 tip, her biri 1–2 dosya.
 4. **Giriş noktası** — `@Mod` sınıfı + `META-INF/neoforge.mods.toml` (mixin
    bildirimi dahil). `processResources` toml'u da genişletiyor (yazıldı).

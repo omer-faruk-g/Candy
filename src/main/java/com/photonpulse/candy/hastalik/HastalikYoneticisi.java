@@ -5,8 +5,8 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.net.HastalikPayload;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -37,7 +37,7 @@ public class HastalikYoneticisi {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(HastalikPayload.ID, HastalikPayload.CODEC);
+            AgKayit.playS2C().register(HastalikPayload.ID, HastalikPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Hastalik payload zaten kayıtlı: {}", t.getMessage());
         }
@@ -64,7 +64,7 @@ public class HastalikYoneticisi {
                     tp.ilkKarartmaBaslangicTick = 0L;
                     // Client'a bildir
                     try {
-                        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(
+                        com.photonpulse.candy.platform.SunucuAg.send(
                             newPlayer, new HastalikPayload(""));
                     } catch (Throwable ignored) {}
                     Candy.LOG.info("[Candy] Ölüm sonrası hastalik reset → {}",
@@ -257,7 +257,7 @@ public class HastalikYoneticisi {
 
     private static void senkron(ServerPlayer player, String hastalik) {
         try {
-            ServerPlayNetworking.send(player, new HastalikPayload(hastalik == null ? "" : hastalik));
+            SunucuAg.send(player, new HastalikPayload(hastalik == null ? "" : hastalik));
         } catch (Throwable ignored) {}
     }
 }

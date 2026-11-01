@@ -2,8 +2,8 @@ package com.photonpulse.candy.meta;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.SehirPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
 import java.util.UUID;
@@ -19,12 +19,12 @@ public class SehirBilgisi {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playC2S().register(SehirPayload.ID, SehirPayload.CODEC);
+            AgKayit.playC2S().register(SehirPayload.ID, SehirPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Sehir C2S zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(SehirPayload.ID, (payload, context) -> {
+        SunucuAg.registerGlobalReceiver(SehirPayload.ID, (payload, context) -> {
             try {
                 String sehir = payload.sehir();
                 if (sehir == null || sehir.isBlank() || sehir.length() > 64) return;
