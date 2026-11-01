@@ -1,7 +1,8 @@
 # Çok loader portu — mapping göçü yapıldı, NeoForge hâlâ yok
 
 > Durum: **kaynak Mojang resmî adlarına göçtü, Fabric iki MC düğümünde de yeşil.
-> NeoForge hâlâ yok — denenmedi.**
+> NeoForge düğümleri ve araç zinciri kuruldu, ama NeoForge HENÜZ JAR ÜRETMİYOR** —
+> 101 dosya platform katmanına taşınmadı.
 >
 > Bu dosya üç katman taşıyor: (1) portun ilk denemesinde ölçülen engeller,
 > (2) o engellerden birinin nasıl kaldırıldığı — mapping göçü, (3) sıradaki adım.
@@ -12,7 +13,7 @@
 
 | Yol | Engel | Durum |
 |---|---|---|
-| **ModDevGradle / NeoGradle** | Mapping duvarı: 143 dosyada 156 Yarn sınıf adı | **Engel kaldırıldı** — kaynak artık Mojang adlarında. Yol açık, **denenmedi** |
+| **ModDevGradle / NeoGradle** | Mapping duvarı: 143 dosyada 156 Yarn sınıf adı | **Engel kaldırıldı** — kaynak Mojang adlarında, araç zinciri kurulu. Kalan: platform katmanı |
 | **Architectury Loom** | Upstream remap çakışması: `InGameHud.renderHotbar` | **Artık ilgisiz** — Yarn'ı korumaya ihtiyaç yok |
 | **Stonecutter dalları** | Dal başına ayrı `src/` ağacı → 206 dosya loader başına kopya | Elendi, portun amacını bozuyor |
 
@@ -352,26 +353,116 @@ sözcüklerle çakıştığı için elendi. Stonecutter pasif dalları hariç.
 bir hata listesi değil. `client/CandyDoppelRenderer.java` tek başına üçte birini
 taşıyor — temizliğe oradan başlanmalı.
 
-## Sıradaki adım: NeoForge, ModDevGradle ile
+## NeoForge, ModDevGradle ile — araç zinciri kuruldu, port bitmedi
 
-Mapping duvarı yıkıldığı için sıra **ModDevGradle/NeoGradle**'da. Yeniden
-kullanılabilir doğrulanmış gerçekler:
+> Durum: **NeoForge düğümleri Gradle'da var ve Minecraft+NeoForge classpath'i
+> çözülüyor. NeoForge hâlâ jar ÜRETMİYOR.** Kalan iş 101 dosyanın platform
+> katmanına taşınması.
 
-- NeoForge **Java 21** ile çalışıyor (`21.11.48` ve `21.7.25-beta` bayt kodunun
-  tamamı major 65).
-- Sürüm eşlemesi: 1.21.7 → `21.7.25-beta`, 1.21.11 → `21.11.48` (kararlı).
-- Mixin'ler `neoforge.mods.toml` içinde `[[mixins]]` ile bildiriliyor;
-  `candy.mixins.json` olduğu gibi yeniden kullanılabilir.
+### Düğüm yapısı — dal yok, dört düğüm
 
-Kapsam dışı tutulanlar ve gerekçeleri:
+| Düğüm dizini | MC | loader | NeoForge |
+|---|---|---|---|
+| `versions/1.21.7` | 1.21.7 | fabric | — |
+| `versions/1.21.11` | 1.21.11 | fabric | — |
+| `versions/1.21.7-neoforge` | 1.21.7 | neoforge | `21.7.25-beta` |
+| `versions/1.21.11-neoforge` | 1.21.11 | neoforge | `21.11.48` |
 
-- **Architectury Loom'a dönülmeyecek.** Kırıklığı artık ilgisiz.
-- **Stonecutter dalları kullanılmayacak** — dal başına ayrı `src/` ağacı, 206 dosya
-  loader başına kopya.
-- **Forge (LexForge) bu turda yok.** NeoForge yeşile dönmeden açılmayacak; ayrıca
-  1.21+ modlu ekosistem fiilen NeoForge'ta olduğundan Forge'un gerçekten istenip
-  istenmediği bir ürün kararı, teknik zorunluluk değil.
-- **26.x düğümü bu turda yok.** Engeli kalktı, ama ayrı bir iş.
+`vers(<düğüm adı>, <MC sürümü>)` ile düğüm dizini adı sürümden ayrıldı; böylece
+`replacements` kurallarının `current.parsed >= '1.21.9'` eşiği NeoForge
+düğümlerinde de aynen çalışıyor.
+
+**Stonecutter dalı (branch) kullanılmadı** — dal başına ayrı `src/` ağacı üretilir,
+yani 206 dosya loader başına kopyalanırdı. Dört düğüm **tek** `src/main/java`
+ağacını paylaşıyor.
+
+**Tek merkez `build.gradle`** iki loader'ı da çeviriyor: eklentiler `apply false`
+ile classpath'e alınıp düğümün `loader` özelliğine göre uygulanıyor. İkinci bir
+build betiği **bilinçli olarak yok** — `replacements` listesi tek yerde kalmak
+zorunda, iki kopya arasındaki herhangi bir fark aktif düğüm değiştiğinde
+paylaşılan `src/` ağacını yarım çevrilmiş bırakırdı.
+
+Araçlar: **ModDevGradle 2.0.148** (Java 17 bytecode → JDK 21'de çalışır, plugin
+portal'dan çözülüyor). `stonecutter.constants.match(loader, 'fabric', 'neoforge')`
+eklendi, yani kaynakta `//? if fabric {` / `//? if neoforge {` kullanılabilir.
+
+### Platform katmanı: loader başına kaynak ağacı
+
+```
+src/main/java      206 dosya — TEK, paylaşılan
+src/fabric/java    Fabric uygulaması      } ayni paket, ayni sinif adlari,
+src/neoforge/java  NeoForge uygulamasi    } farkli govdeler
+```
+
+Her düğüm `sourceSets.main.java.srcDir "src/${loader}/java"` ile yalnızca kendi
+loader'ının ağacını derliyor. **Tasarım kuralı: platform sınıfları, Candy'nin
+kaynağının zaten kullandığı çağrı biçimini birebir korur** — ör. `SunucuTick`
+sınıfı `END_SERVER_TICK.register(X::onTick)` biçimini aynen sunuyor. Böylece 101
+dosyada yalnızca **import satırı** değişecek, gövdeler değişmeyecek.
+
+> **Dikkat:** bu iki ağaçta `//?` direktifi ve replacement **koşmuyor**. Oradaki
+> kod iki MC sürümünde de aynı derlenen sembolleri kullanmak zorunda.
+
+Doğrulanan iki bilinmeyen (derleyiciyle, tahminle değil):
+
+- Stonecutter'ın üretilmiş ağacı ile ek `srcDir` **birlikte çalışıyor** — Fabric
+  iki düğümde de yeşil, platform sınıfı jar'da.
+- MDG'nin classpath'i **NeoForge'u da veriyor** — `net.neoforged.bus.api.SubscribeEvent`,
+  `net.neoforged.fml.common.EventBusSubscriber`,
+  `net.neoforged.neoforge.event.tick.ServerTickEvent.Post` hepsi çözülüyor, 0 hata.
+
+### Kalan iş — ölçülmüş envanter
+
+NeoForge düğümünde `compileJava` **100 hata** veriyor ve hatalarının **hiçbiri
+`net.minecraft` değil**. Mapping göçünün kanıtı bu: Minecraft tarafı tamamen
+çözülüyor, kalan her hata `net.fabricmc.*`.
+
+`src/main/java` içinde `net.fabricmc` import eden **101 dosya**, 28 ayrı tip:
+
+| Tip | Dosya | Çağrı biçimi | NeoForge karşılığı |
+|---|---|---|---|
+| `ServerTickEvents` | **65** | 68 × `END_SERVER_TICK.register(X::onTick)` — hepsi tek kalıp | `ServerTickEvent.Post` (**yazıldı**) |
+| `PayloadTypeRegistry` | 16 | 18 × `playS2C().register(ID, CODEC)`, 8 × `playC2S()` | `RegisterPayloadHandlersEvent` + `PayloadRegistrar` |
+| `Environment` / `EnvType` | 14 | `@Environment(EnvType.CLIENT)` | `@OnlyIn(Dist.CLIENT)` — anotasyon, metotla sarılamaz → `//? if fabric` |
+| `ServerPlayNetworking` | 13 | 14 × `send`, 4 × `registerGlobalReceiver` | `PacketDistributor` / `PayloadRegistrar` |
+| `FabricLoader` | 8 | `getConfigDir` ×5, `isModLoaded` ×2, `getGameDir`, `getAllMods`, `getModContainer` | `FMLPaths`, `ModList` |
+| `ServerPlayConnectionEvents` | 7 | join/disconnect | `PlayerEvent.PlayerLoggedIn/Out` |
+| `ServerLivingEntityEvents` | 5 | — | `LivingDeathEvent` vb. |
+| `ClientPlayNetworking` | 5 | 9 × `registerGlobalReceiver`, 4 × `send`, 4 × `canSend` | aynı payload kaydı |
+| `ClientPlayConnectionEvents` | 4 | — | `ClientPlayerNetworkEvent` |
+| `AttackEntityCallback` | 3 | — | `AttackEntityEvent` |
+| diğer 18 tip | 1–2'şer | — | mod bus olayları |
+| `ModInitializer` / `ClientModInitializer` | 2 | 4 giriş noktası | `@Mod` sınıfı + `Dist` ayrımı |
+
+**İyi haber, ölçülmüş:** 101 dosyanın **60'ı** yalnızca üç şeye ihtiyaç duyuyor
+(`ServerTickEvents` + `Environment` + `FabricLoader`), 44'ü yalnızca
+`ServerTickEvents`'e. Yani uzun kuyruk üç küçük platform parçasıyla kapanıyor.
+
+**Payload sınıfları hiç değişmeyecek** — zaten vanilla `CustomPacketPayload` +
+`StreamCodec` kullanıyorlar (Fabric'in değil Minecraft'ın tipleri). NeoForge'un
+`PayloadRegistrar`'ı tam bu ikiliyi alıyor. Tek fark *kayıt yeri*: Fabric'te statik
+`register()` çağrısı, NeoForge'da `RegisterPayloadHandlersEvent` içinde — platform
+sınıfı kayıtları kuyruğa alıp olay geldiğinde boşaltarak biçim uyumunu koruyabilir.
+
+**Mixin'ler:** her iki loader da SpongePowered Mixin kullanıyor, `candy.mixins.json`
+olduğu gibi yeniden kullanılabilir; NeoForge'da `neoforge.mods.toml` içinde
+`[[mixins]]` ile bildiriliyor. Fabric'te Loom hedefleri intermediary'ye remap
+ediyor, NeoForge'da remap yok (Mojang adları zaten çalışma zamanı adları) — yani
+**aynı kaynak iki tarafta da doğru hedefi tutuyor.**
+
+### Sıradaki adımlar (sırayla, her adımda Fabric yeşil)
+
+1. **Uzun kuyruk** — `SunucuTick`'in yanına `Platform` (FabricLoader karşılığı) ve
+   `@Environment` için `//? if fabric` direktifleri; 60 dosyanın import satırları.
+2. **Ağ katmanı** — `CandyAg` platform sınıfı: payload kaydı, `send`, `canSend`,
+   `registerGlobalReceiver`. 16 + 13 + 5 dosya.
+3. **Olay katmanı** — kalan 18 tip, her biri 1–2 dosya.
+4. **Giriş noktası** — `@Mod` sınıfı + `META-INF/neoforge.mods.toml` (mixin
+   bildirimi dahil). `processResources` toml'u da genişletiyor (yazıldı).
+5. **Jar** — `./gradlew :1.21.7-neoforge:build`, sonra 1.21.11.
+6. **Ancak jar üretince** `README.md` ve `BUILD.md` tablolarına NeoForge yazılır.
+
+**Forge (LexForge) bu turda yok** — NeoForge yeşile dönmeden açılmayacak.
 
 ## Bu göçte ne değişti, ne değişmedi
 

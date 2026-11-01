@@ -150,16 +150,30 @@ Modrinth'e yüklemek istersen: https://docs.modrinth.com/docs/tutorials/publishi
 
 ## Çok sürümlü yapı (Stonecutter 0.9.8)
 
-Proje artık tek sürümlü değil. Kaynak `src/` altında paylaşılıyor; her Minecraft
-sürümü `versions/<sürüm>/` altında bir Gradle düğümü.
+Proje artık tek sürümlü değil. Kaynak `src/` altında paylaşılıyor; her
+Minecraft+loader bileşimi `versions/<düğüm>/` altında bir Gradle düğümü. **Dal
+(branch) yok, yalnızca düğüm** — dal başına ayrı `src/` ağacı üretilirdi.
 
 | Dosya | İş |
 |---|---|
-| `settings.gradle` | Stonecutter eklentisi + düğüm listesi (`versions("1.21.7", "1.21.11")`) |
+| `settings.gradle` | Stonecutter eklentisi + düğüm listesi (4 düğüm: 2 Fabric, 2 NeoForge) |
 | `stonecutter.gradle` | Aktif düğüm (`stonecutter.active`) |
-| `build.gradle` | MERKEZ betik — her düğüm için bir kez çalışır |
-| `versions/<sürüm>/gradle.properties` | O sürümün mc/loader/fapi değerleri (`yarn_mappings` ölü) |
+| `build.gradle` | MERKEZ betik — her düğüm için bir kez çalışır, iki loader'ı da çevirir |
+| `versions/<düğüm>/gradle.properties` | O düğümün mc/loader/fapi veya neoforge değerleri (`yarn_mappings` ölü) |
 | `gradle.properties` | Sürümden bağımsız: mod_version, maven_group |
+| `src/main/java` | **Paylaşılan** 206 dosya — dört düğümün hepsi bunu derler |
+| `src/fabric/java`, `src/neoforge/java` | Loader'a özel ince platform katmanı; düğüm yalnızca kendi loader'ının ağacını derler |
+
+Düğümün loader'ı `versions/<düğüm>/gradle.properties` içindeki `loader` anahtarıyla
+seçiliyor. `build.gradle` eklentileri `apply false` ile classpath'e alıp o anahtara
+göre uyguluyor (`fabric-loom` ya da `net.neoforged.moddev`). İkinci bir build betiği
+**bilinçli olarak yok**: `replacements` listesi tek yerde kalmak zorunda, iki kopya
+arasındaki herhangi bir fark aktif düğüm değiştiğinde paylaşılan `src/` ağacını
+yarım çevrilmiş bırakırdı.
+
+`stonecutter.constants.match(loader, 'fabric', 'neoforge')` sayesinde kaynakta
+`//? if fabric {` / `//? if neoforge {` de kullanılabilir — sürüm direktifleriyle
+aynı kurallara tabi (javadoc koymayın).
 
 Running Stonecutter 0.9.8
 Warning: Stonecutter is used with Groovy buildscripts
@@ -385,13 +399,19 @@ düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeni
 
 ## Loader desteği
 
-Şu an yalnızca **Fabric** — 1.21.7 ve 1.21.11.
+Şu an jar üreten **yalnızca Fabric** — 1.21.7 ve 1.21.11.
 
 | Loader | 1.21.7 | 1.21.11 |
 |---|---|---|
 | Fabric | ✅ jar üretiyor | ✅ jar üretiyor |
-| NeoForge | ❌ yok | ❌ yok |
+| NeoForge | 🚧 düğüm var, jar yok | 🚧 düğüm var, jar yok |
 | Forge | ❌ yok | ❌ yok |
+
+NeoForge düğümleri (`versions/1.21.7-neoforge`, `versions/1.21.11-neoforge`)
+Gradle'da var ve Minecraft+NeoForge classpath'i çözülüyor, ama **derlenmiyor**:
+`src/main/java` içindeki 101 dosya hâlâ `net.fabricmc.*` import ediyor. Platform
+katmanı (`src/fabric/java`, `src/neoforge/java`) kuruldu ama henüz yalnızca sunucu
+tick kancasını kapsıyor. Envanter ve sıradaki adımlar: [MULTILOADER.md](MULTILOADER.md).
 
 NeoForge portu bir kez denendi ve engele çarptı; **o engelin yarısı artık kalktı:**
 
