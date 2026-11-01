@@ -19,6 +19,14 @@ version = "${property('mod_version')}+${mc}"
 group = property('maven_group')
 base { archivesName = property('archives_base_name') }
 
+// LOADER'A OZEL KAYNAK AGACI. Paylasilan src/main/java (206 dosya) TEK; bunun yaninda
+// her loader kendi platform katmanini kendi agacinda tutuyor. Ayni paket + ayni sinif
+// adlari, farkli govdeler — cagri yerleri iki tarafta da ayni kodu yaziyor.
+// Stonecutter DALI DEGIL: 206 dosya kopyalanmiyor, yalnizca ince katman ikiye ayriliyor.
+// Bu agaclarda //? direktifi ve replacement YOK; iki MC surumunde de ayni derlenen
+// sembolleri kullanmak zorundalar.
+sourceSets.main.java.srcDir rootProject.file("src/${loader}/java")
+
 repositories {
     mavenCentral()
     maven { url = 'https://maven.fabricmc.net/' }
