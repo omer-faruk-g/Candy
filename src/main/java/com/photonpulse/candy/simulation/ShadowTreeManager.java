@@ -41,7 +41,7 @@ public class ShadowTreeManager {
     }
 
     public static void sunucuBaslat(MinecraftServer server) {
-        Path worldPath = server.getSavePath(net.minecraft.util.WorldSavePath.ROOT);
+        Path worldPath = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
         klasor = worldPath.resolve("candy");
         try {
             Files.createDirectories(klasor);
@@ -138,7 +138,7 @@ public class ShadowTreeManager {
     private static void onTick(MinecraftServer server) {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI == 0) {
-            long simdi = server.getOverworld().getTime();
+            long simdi = server.overworld().getGameTime();
             for (Map.Entry<UUID, ShadowTree> e : cache.entrySet()) {
                 UUID uid = e.getKey();
                 ShadowTree st = e.getValue();

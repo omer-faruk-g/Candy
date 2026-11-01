@@ -5,18 +5,17 @@ import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.AbstractHorseEntity;
-import net.minecraft.entity.passive.CatEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.passive.WolfEntity;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Box;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.Cat;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.animal.wolf.Wolf;
+import net.minecraft.world.phys.AABB;
 import java.util.Random;
 
 /**
@@ -44,9 +43,9 @@ public class PetOlumu {
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) {
                 if (DEBUG) Candy.LOG.info("[Candy] PetOlumu SKIP: {} kurulum tamamlanmadı",
@@ -63,16 +62,16 @@ public class PetOlumu {
             double ihtimal = tp.badEndingAktif ? Math.min(1.0, IHTIMAL * 2) : IHTIMAL;
             if (RNG.nextDouble() >= ihtimal) continue;
 
-            ServerWorld world = (ServerWorld) player.getWorld();
-            Box kutu = new Box(player.getBlockPos()).expand(YARICAP);
+            ServerLevel world = (ServerLevel) player.level();
+            AABB kutu = new AABB(player.blockPosition()).inflate(YARICAP);
 
             // Tamed pet'ler (köpek/kedi/papağan)
-            var petler = world.getEntitiesByClass(TameableEntity.class, kutu,
-                t -> t.isTamed() && t.isAlive() && t.isOwner(player));
+            var petler = world.getEntitiesOfClass(TamableAnimal.class, kutu,
+                t -> t.isTame() && t.isAlive() && t.isOwnedBy(player));
             // Tamed atlar (at/eşek/katır/lama) — TameableEntity değil, ayrı sorgu
-            var atlar = world.getEntitiesByClass(AbstractHorseEntity.class, kutu,
-                h -> h.isTame() && h.isAlive() && h.getOwnerReference() != null
-                     && player.getUuid().equals(h.getOwnerReference().getUuid()));
+            var atlar = world.getEntitiesOfClass(AbstractHorse.class, kutu,
+                h -> h.isTamed() && h.isAlive() && h.getOwnerReference() != null
+                     && player.getUUID().equals(h.getOwnerReference().getUUID()));
 
             if (petler.isEmpty() && atlar.isEmpty()) {
                 if (DEBUG) Candy.LOG.info("[Candy] PetOlumu SKIP: {} 32 blok içinde tamed pet yok",
@@ -86,8 +85,8 @@ public class PetOlumu {
             java.util.List<Entity> kopekler = new java.util.ArrayList<>();
             java.util.List<Entity> kediler = new java.util.ArrayList<>();
             for (var p : petler) {
-                if (p instanceof WolfEntity) kopekler.add(p);
-                else if (p instanceof CatEntity) kediler.add(p);
+                if (p instanceof Wolf) kopekler.add(p);
+                else if (p instanceof Cat) kediler.add(p);
             }
             if (!kopekler.isEmpty()) kurban = enCokBaglanilan(tp, kopekler);
             else if (!kediler.isEmpty()) kurban = enCokBaglanilan(tp, kediler);
@@ -100,13 +99,13 @@ public class PetOlumu {
 
             String ad = kurban.hasCustomName()
                 ? kurban.getCustomName().getString()
-                : kurban.getType().getName().getString();
+                : kurban.getType().getDescription().getString();
 
             kurban.discard(); // sessiz kill — drop yok, death event yok
 
-            player.sendMessage(
-                Text.translatable("candy.pet.kayip", ad)
-                    .formatted(Formatting.DARK_RED, Formatting.ITALIC),
+            player.displayClientMessage(
+                Component.translatable("candy.pet.kayip", ad)
+                    .withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC),
                 false);
 
             tp.candyOzguven = Math.min(100, tp.candyOzguven + 20);
@@ -122,7 +121,7 @@ public class PetOlumu {
         Entity enSik = adaylar.get(0);
         double max = -1;
         for (Entity e : adaylar) {
-            double w = tp.baglanmalar.getOrDefault(e.getUuidAsString(), 0.0);
+            double w = tp.baglanmalar.getOrDefault(e.getStringUUID(), 0.0);
             if (w > max) { max = w; enSik = e; }
         }
         return enSik;

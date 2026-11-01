@@ -18,12 +18,12 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${property('minecraft_version')}"
-    // Yarn 1.21.11'de duruyor; 26.x eklendiğinde Mojang mapping'e düşer.
-    if (stonecutter.current.parsed >= '26') {
-        mappings loom.officialMojangMappings()
-    } else {
-        mappings "net.fabricmc:yarn:${property('yarn_mappings')}:v2"
-    }
+    // Mojang resmî adları — TÜM düğümlerde. Yarn eşlemeleri 1.21.11'de durduğu için
+    // Yarn'da kalmak 26.x hattını kalıcı olarak kapatıyordu; kaynak Mojang adlarına
+    // göçtü (bkz. MULTILOADER.md "Mapping göçü"). Yarn artık hiçbir düğümde kullanılmıyor,
+    // ama versions/<sürüm>/gradle.properties içindeki yarn_mappings anahtarı
+    // doğrulama/karşılaştırma için korundu.
+    mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${property('loader_version')}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
     // Gson zaten Minecraft ile geliyor, ayrıca eklemiyoruz
@@ -99,23 +99,42 @@ tasks.register('yazCp') {
 // Dolayisiyla belirsiz adlar aliciya capalanir ("player.getPos()"), ciplak birakilmaz.
 // Yeni bir entity degiskeni eklenirse buraya kurali da eklemek gerekir; eksikse
 // 1.21.11 derlemesi o satirda yuksek sesle patlar, sessiz kalmaz.
+// Kurallar Mojang adlarina gore yeniden yazildi. Yarn'daki iki kural BURADA YOK ve
+// olmamasi dogru: Entity.getWorld/getPos ikilisi Yarn'da 1.21.9'da yeniden adlandirilmisti,
+// Mojang ise iki surumde de level()/position() diyor — yani o iki kural Yarn'in kendi
+// yeniden adlandirmasiydi, Minecraft'in degil. Mojang tarafi onlari ucuruyor.
+//
+// Karsiliginda Mojang'in Yarn'in sakladigi yeniden adlandirmalari var: ResourceLocation
+// -> Identifier (70 kullanim) ve PlayerRenderState -> AvatarRenderState. Yarn iki surumde
+// de Identifier/PlayerEntityRenderState dedigi icin bunlar eski kural listesinde yoktu.
+//
+// Liste tahminle degil, OLCUMLE cikarildi: iki dugumun Mercury ile gocurulmus agaclari
+// (migrateMappings, 1.21.7 ve 1.21.11) birebir karsilastirildi; asagidakiler iki agac
+// arasinda farklilasan butun sembollerdir.
 stonecutter {
     replacements.string(current.parsed >= '1.21.9') {
-        replace '.getWorld()', '.getEntityWorld()'
-        replace 'net.minecraft.client.util.SkinTextures', 'net.minecraft.entity.player.SkinTextures'
-        // NOT: '.getSkinTextures()' icin kural YOK. Ad yalnizca
-        // AbstractClientPlayerEntity'de getSkin'e dondu; PlayerListEntry ve
-        // DefaultSkinHelper iki surumde de getSkinTextures tasiyor. Tek ayrilan cagri
-        // (MeYuz) //? if directive'i ile cozuldu — bkz. client/MeYuz.java.
+        // Sinif yeniden adlandirmalari. Candy'de ayni adi tasiyan kendi sinifi yok,
+        // mixin method= dizgilerinde de gecmiyorlar (dogrulandi), o yuzden ciplak.
+        replace 'ResourceLocation', 'Identifier'
+        replace 'PlayerRenderState', 'AvatarRenderState'
+        // ResourceKey.location() -> identifier(). 'location' cok yaygin bir ad, bu yuzden
+        // ciplak DEGIL; uc gercek alicinin hepsi capalandi.
+        replace '.dimension().location()', '.dimension().identifier()'
+        replace 'key.location()', 'key.identifier()'
+        replace 'worldKey.location()', 'worldKey.identifier()'
         // authlib 7: GameProfile record oldu. getGameProfile() ile capalandi ki ayni adi
         // tasiyan baska siniflar (Entity.getName gibi) etkilenmesin.
         replace '.getGameProfile().getName()', '.getGameProfile().name()'
         replace '.getGameProfile().getProperties()', '.getGameProfile().properties()'
-        // Entity.getPos -> getEntityPos. Chunk.getPos iki surumde de ayni kaldigi icin
-        // ciplak '.getPos()' DEGIL, entity alicilarina capalanmis desenler:
-        replace 'player.getPos()', 'player.getEntityPos()'
-        replace 'oyuncu.getPos()', 'oyuncu.getEntityPos()'
-        replace 'mob.getPos()', 'mob.getEntityPos()'
-        replace 'this.getPos()', 'this.getEntityPos()'
+        // Mixin hedef dizgileri (@Inject method = "..."). Ikisi de src/ icinde tek kullanim.
+        replace 'getGameInformation', 'getLeftText'
+        replace 'setupFog', 'applyFog'
+        // Paket tasimalari. Hepsi tam nitelikli, her biri src/ icinde tek kullanim.
+        replace 'net.minecraft.client.model.PlayerModel', 'net.minecraft.client.model.player.PlayerModel'
+        replace 'net.minecraft.client.resources.PlayerSkin', 'net.minecraft.world.entity.player.PlayerSkin'
+        replace 'net.minecraft.world.entity.animal.Cat', 'net.minecraft.world.entity.animal.feline.Cat'
+        replace 'net.minecraft.world.entity.animal.horse.AbstractHorse', 'net.minecraft.world.entity.animal.equine.AbstractHorse'
+        replace 'net.minecraft.world.entity.monster.Spider', 'net.minecraft.world.entity.monster.spider.Spider'
+        replace 'net.minecraft.world.entity.npc.Villager', 'net.minecraft.world.entity.npc.villager.Villager'
     }
 }

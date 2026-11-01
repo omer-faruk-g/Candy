@@ -44,7 +44,7 @@ public class Discontent {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
         for (Map.Entry<UUID, TruePersonality> e : PersonalityManager.tumOyuncular().entrySet()) {
             UUID uid = e.getKey();
             TruePersonality tp = e.getValue();

@@ -6,11 +6,10 @@ import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -42,8 +41,8 @@ public class FakeMesajlar {
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             if (RNG.nextDouble() > JOIN_FAKE_IHTIMAL) return;
-            long hedef = server.getOverworld().getTime() + JOIN_GECIKME_TICK;
-            bekleyenJoin.put(handler.player.getUuid(), hedef);
+            long hedef = server.overworld().getGameTime() + JOIN_GECIKME_TICK;
+            bekleyenJoin.put(handler.player.getUUID(), hedef);
         });
 
         Candy.LOG.info("[Candy] FakeMesajlar aktif — sahte join/leave");
@@ -62,12 +61,12 @@ public class FakeMesajlar {
 
     private static void onTick(MinecraftServer server) {
         tickSayaci++;
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
         // Bekleyen sahte-join'leri işle
         bekleyenJoin.entrySet().removeIf(e -> {
             if (simdi < e.getValue()) return false;
-            ServerPlayerEntity p = server.getPlayerManager().getPlayer(e.getKey());
+            ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
             if (p != null && !p.isRemoved()) fakeJoinMesajGoster(p);
             return true;
         });
@@ -75,12 +74,12 @@ public class FakeMesajlar {
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
         // Periyodik fake mesajlar
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.korkuSkoru < MIN_KORKU) continue;
 
-            Long son = sonMesajTick.get(player.getUuid());
+            Long son = sonMesajTick.get(player.getUUID());
             double agresivlik = Psikoloji.agresivlikCarpani(tp);
             long cooldown = (long) (OYUNCU_COOLDOWN_TICK / agresivlik);
             if (son != null && simdi - son < cooldown) continue;
@@ -88,21 +87,21 @@ public class FakeMesajlar {
 
             if (RNG.nextBoolean()) fakeLeaveMesajGoster(player);
             else fakeJoinMesajGoster(player);
-            sonMesajTick.put(player.getUuid(), simdi);
+            sonMesajTick.put(player.getUUID(), simdi);
         }
     }
 
-    private static void fakeJoinMesajGoster(ServerPlayerEntity player) {
-        Text mesaj = Text.translatable("multiplayer.player.joined", "Candy")
-            .formatted(Formatting.YELLOW);
-        player.sendMessage(mesaj, false);
+    private static void fakeJoinMesajGoster(ServerPlayer player) {
+        Component mesaj = Component.translatable("multiplayer.player.joined", "Candy")
+            .withStyle(ChatFormatting.YELLOW);
+        player.displayClientMessage(mesaj, false);
         Candy.LOG.info("[Candy] fake join: {}", player.getName().getString());
     }
 
-    private static void fakeLeaveMesajGoster(ServerPlayerEntity player) {
-        Text mesaj = Text.translatable("multiplayer.player.left", "Candy")
-            .formatted(Formatting.YELLOW);
-        player.sendMessage(mesaj, false);
+    private static void fakeLeaveMesajGoster(ServerPlayer player) {
+        Component mesaj = Component.translatable("multiplayer.player.left", "Candy")
+            .withStyle(ChatFormatting.YELLOW);
+        player.displayClientMessage(mesaj, false);
         Candy.LOG.info("[Candy] fake leave: {}", player.getName().getString());
     }
 }

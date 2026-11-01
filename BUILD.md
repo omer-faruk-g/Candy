@@ -42,7 +42,8 @@ Kod sende, build GitHub'da. Sonuç: hazır JAR.
 ### Ön gereksinimler
 
 - **Java 21+** — https://adoptium.net/temurin/releases/ (Temurin 21)
-- **İnternet bağlantısı** (ilk build ~500 MB indirir: Gradle, Yarn, Fabric API, Minecraft assets)
+- **İnternet bağlantısı** (ilk build ~500 MB indirir: Gradle, Mojang mapping'leri, Fabric API,
+  Minecraft assets)
 
 ### Java'yı kontrol et
 
@@ -105,10 +106,10 @@ Java 21 kurulu değil veya PATH'te değil. Temurin'i kur, yeniden dene.
 İnternet bağlantısı sorunu veya Fabric Maven'a erişim yok. VPN varsa kapat, tekrar dene.
 
 ### `Yarn mapping version not found`
-`gradle.properties` içindeki `yarn_mappings` değeri güncel değil.
-- https://fabricmc.net/develop/ → 1.21.7 için son build numarasını al
-- `gradle.properties`'te güncelle
-- Tekrar build et
+**Artık çıkmaz.** Build Yarn kullanmıyor; Mojang'ın resmî mapping'lerine geçti
+(`loom.officialMojangMappings()`). Bu hata görünüyorsa elinde göçten önceki bir
+checkout var. `versions/<sürüm>/gradle.properties` içindeki `yarn_mappings` anahtarı
+ölü config — doğrulama/karşılaştırma için duruyor, build okumuyor.
 
 ### `Unsupported class file major version`
 Java 21+ olmalı. Java 17 veya altını kullanıyorsan güncelle.
@@ -157,7 +158,7 @@ sürümü `versions/<sürüm>/` altında bir Gradle düğümü.
 | `settings.gradle` | Stonecutter eklentisi + düğüm listesi (`versions("1.21.7", "1.21.11")`) |
 | `stonecutter.gradle` | Aktif düğüm (`stonecutter.active`) |
 | `build.gradle` | MERKEZ betik — her düğüm için bir kez çalışır |
-| `versions/<sürüm>/gradle.properties` | O sürümün mc/yarn/loader/fapi değerleri |
+| `versions/<sürüm>/gradle.properties` | O sürümün mc/loader/fapi değerleri (`yarn_mappings` ölü) |
 | `gradle.properties` | Sürümden bağımsız: mod_version, maven_group |
 
 Running Stonecutter 0.9.8
@@ -300,18 +301,45 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 ### Sürüm durumu
 
 - **1.21.7** — yeşil, jar üretiyor.
-- **1.21.11** — yeşil, jar üretiyor. 196 → 42 → 0.
-- **26.x — yok.** Yarn mapping'leri 1.21.11'de duruyor; 26.x Mojang official mapping
-  istiyor, yani 204 sınıftaki her MC sembolünün yeniden adlandırılması. Build işi değil.
+- **1.21.11** — yeşil, jar üretiyor.
+- **26.x — hâlâ yok, ama engel kalktı.** 26.x Mojang resmî mapping istiyordu; kaynak
+  artık Mojang adlarını taşıyor, yani düğüm eklemek **sıradan sürüm işi** oldu
+  (yeni `versions/<sürüm>/`, API farklarını kapat). Bu, ad göçü değil.
+
+### Mapping: Mojang resmî adları (Yarn değil)
+
+Build **her düğümde** `loom.officialMojangMappings()` kullanıyor. Yarn hiçbir yerde
+kullanılmıyor. Gerekçe ve göçün nasıl yapıldığı: [MULTILOADER.md](MULTILOADER.md).
+
+Pratikte bilmen gerekenler:
+
+- Kaynaktaki MC adları Mojang adlarıdır: `Level`, `ServerPlayer`, `Gui`,
+  `BuiltInRegistries`, `Entity.level()`, `Entity.position()`.
+- Jar hâlâ **intermediary**'ye remap ediliyor (Fabric'in çalışma zamanı bunu ister);
+  `remapJar` mixin anotasyonlarını da çeviriyor, refmap dosyası yok ve gerekmiyor.
+- Göç `./gradlew :<düğüm>:migrateMappings --mappings "net.minecraft:mappings:<sürüm>"`
+  ile yapıldı — Loom'un kendi task'ı, Mercury (Eclipse JDT) tabanlı, tip duyarlı.
+  Tek bilinen sınırı: **kütüphane metodunu ezen bildirimleri** yeniden adlandırmıyor
+  (gövdedeki `super.x()` çağrısını çeviriyor ama `public void x(` imzasını bırakıyor).
+  Göçte bu 10 bildirimi elle kapattı; `@Override` taşıdıkları için derleyici hepsini
+  yakaladı.
 
 ### Sürüm ayrımı iki mekanizmayla yapılıyor
 
 **1. `build.gradle` → `replacements`** — düz ad değişiklikleri için.
 
 Bu düz metin değişimidir, **alıcı tipini bilmez**. Bir ad iki tarafta da geçerliyse
-(`Chunk.getPos` ile `Entity.getPos` gibi) çıplak desen yanlış sınıfları da vurur —
-ilk denemede 4 hata tam bundan çıktı. Bu yüzden belirsiz adlar alıcıya çapalanır
-(`player.getPos()`), çıplak bırakılmaz.
+çıplak desen yanlış sınıfları da vurur. Bu yüzden belirsiz adlar alıcıya çapalanır
+(`key.location()`, `.dimension().location()`), çıplak bırakılmaz; `ResourceLocation`
+gibi Candy'de tek anlamı olan adlar çıplak kalır.
+
+Kural listesi Mojang adlarına göre yeniden yazıldı ve **ölçümle** çıkarıldı: iki
+düğümün `migrateMappings` ile göçürülmüş ağaçları birebir karşılaştırıldı, listeye
+yalnızca gerçekten farklılaşan semboller girdi. Yarn'dan gelen `Entity.getWorld` /
+`getPos` kuralları **silindi** — onlar Yarn'ın kendi yeniden adlandırmasıydı, Mojang
+iki sürümde de `level()` / `position()` diyor. Karşılığında Yarn'ın sakladığı iki
+gerçek yeniden adlandırma eklendi: `ResourceLocation` → `Identifier` ve
+`PlayerRenderState` → `AvatarRenderState`.
 
 Yönü ters çevirmek çözüm **değil**: aktif düğüm `src/`'yi yerinde derler, replacement
 orada hiç koşmaz. Yani `src/` her zaman **aktif sürümün** adlarını taşımak zorunda.
@@ -365,14 +393,15 @@ düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeni
 | NeoForge | ❌ yok | ❌ yok |
 | Forge | ❌ yok | ❌ yok |
 
-NeoForge portu **denendi ve engele çarptı.** İki yol da ölçüldü:
+NeoForge portu bir kez denendi ve engele çarptı; **o engelin yarısı artık kalktı:**
 
-- **ModDevGradle/NeoGradle** — NeoForge Mojang resmî adlarına derlenmiş, Candy'nin
-  kaynağı Yarn adlarını taşıyor (143 dosya, 156 ayrı sınıf adı). Build işi değil,
-  kaynak göçü işi.
-- **Architectury Loom** (Yarn adlarını koruyan tek yol) — kurulum çalıştı, NeoForge
-  kurulumu 10 MCP adımını ve access transformer'ları geçti, sonra Minecraft'ı Yarn'a
-  remap ederken upstream çakışmasında durdu (`InGameHud.renderHotbar`). **1.21.7 ve
-  1.21.11'de aynı.** arch-loom 1.17 en yeni hat olduğu için sürüm yükseltme çıkışı yok.
+- **ModDevGradle/NeoGradle** — NeoForge Mojang resmî adlarına derleniyor, Candy'nin
+  kaynağı o zaman Yarn adlarını taşıyordu (143 dosya, 156 ayrı sınıf adı). **Bu neden
+  ortadan kalktı:** kaynak Mojang adlarına göçtü. Yol açık ama **henüz denenmedi** —
+  tabloya ✅ yazmak için NeoForge'un gerçekten jar üretmesi gerekiyor.
+- **Architectury Loom** (Yarn adlarını koruyan tek yoldu) — kurulum çalıştı, sonra
+  Minecraft'ı Yarn'a remap ederken upstream çakışmasında durdu
+  (`InGameHud.renderHotbar`, 1.21.7 ve 1.21.11'de aynı). **Artık ilgisiz:** Yarn'ı
+  korumaya ihtiyaç yok.
 
 Ayrıntı, doğrulama yöntemi ve sıradaki adımlar: [MULTILOADER.md](MULTILOADER.md).

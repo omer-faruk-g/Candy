@@ -2,14 +2,13 @@ package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -51,49 +50,49 @@ public class GlitchFlicker {
     }
 
     private static void onTick(MinecraftServer server) {
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
         // Restore kuyruğu
         var iter = yedekler.entrySet().iterator();
         while (iter.hasNext()) {
             var e = iter.next();
             if (simdi < e.getValue().restoreTick) continue;
-            for (ServerWorld w : server.getWorlds()) {
-                if (!w.getRegistryKey().getValue().toString().equals(e.getValue().worldKey)) continue;
+            for (ServerLevel w : server.getAllLevels()) {
+                if (!w.dimension().location().toString().equals(e.getValue().worldKey)) continue;
                 BlockPos p = e.getValue().pos;
                 // Orijinal blok geri koy (sadece bizim yerleştirdiğimiz glitch değişmediyse)
-                w.setBlockState(p, e.getValue().orijinal, 3);
+                w.setBlock(p, e.getValue().orijinal, 3);
                 break;
             }
             iter.remove();
         }
 
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            var worldKey = player.getWorld().getRegistryKey();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            var worldKey = player.level().dimension();
             if (!worldKey.equals(CandyDimensions.MIRROR)) continue;
 
-            ServerWorld world = (ServerWorld) player.getWorld();
+            ServerLevel world = (ServerLevel) player.level();
             int adet = MIN_BLOK + RNG.nextInt(MAX_BLOK - MIN_BLOK + 1);
             for (int i = 0; i < adet; i++) {
                 int dx = RNG.nextInt(YARICAP * 2 + 1) - YARICAP;
                 int dy = RNG.nextInt(9) - 4;
                 int dz = RNG.nextInt(YARICAP * 2 + 1) - YARICAP;
-                BlockPos hedef = player.getBlockPos().add(dx, dy, dz);
+                BlockPos hedef = player.blockPosition().offset(dx, dy, dz);
                 BlockState orijinal = world.getBlockState(hedef);
 
                 if (orijinal.isAir()) continue;
-                if (orijinal.getBlock().getHardness() < 0) continue; // bedrock
+                if (orijinal.getBlock().defaultDestroyTime() < 0) continue; // bedrock
                 if (yedekler.containsKey(hedef.asLong())) continue;
                 // Block-entity (chest/furnace/sign vb.) glitch'lenirse içerik/veri kaybolur — atla
                 if (world.getBlockEntity(hedef) != null) continue;
 
                 Block yanlis = YANLIS_BLOKLAR[RNG.nextInt(YANLIS_BLOKLAR.length)];
-                world.setBlockState(hedef, yanlis.getDefaultState(), 3);
+                world.setBlock(hedef, yanlis.defaultBlockState(), 3);
                 yedekler.put(hedef.asLong(), new Yedek(
-                    worldKey.getValue().toString(),
-                    hedef.toImmutable(),
+                    worldKey.location().toString(),
+                    hedef.immutable(),
                     orijinal,
                     simdi + GERI_YUKLE_TICK
                 ));
@@ -110,10 +109,10 @@ public class GlitchFlicker {
         if (server != null) {
             int geri = 0;
             for (var e : yedekler.values()) {
-                for (ServerWorld w : server.getWorlds()) {
-                    if (!w.getRegistryKey().getValue().toString().equals(e.worldKey())) continue;
+                for (ServerLevel w : server.getAllLevels()) {
+                    if (!w.dimension().location().toString().equals(e.worldKey())) continue;
                     try {
-                        w.setBlockState(e.pos(), e.orijinal(), 3);
+                        w.setBlock(e.pos(), e.orijinal(), 3);
                         geri++;
                     } catch (Throwable ignored) {}
                     break;

@@ -4,9 +4,8 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
-import net.minecraft.network.message.SignedMessage;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.network.chat.PlayerChatMessage;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Locale;
 
 /**
@@ -50,11 +49,11 @@ public class CandyChatOkur {
         Candy.LOG.info("[Candy] CandyChatOkur aktif — chat analiz, cevaplar tabelalardan");
     }
 
-    private static void analiz(SignedMessage msg, ServerPlayerEntity sender) {
+    private static void analiz(PlayerChatMessage msg, ServerPlayer sender) {
         TruePersonality tp = PersonalityManager.get(sender);
         if (!tp.kurulumTamam) return;
 
-        final String ham = msg.getSignedContent();
+        final String ham = msg.signedContent();
         String metin = ham.toLowerCase(Locale.ROOT);
         if (metin.isEmpty()) return;
 
@@ -96,16 +95,16 @@ public class CandyChatOkur {
         // ── v3.2 (idea 9) Dil Modeli — oyuncunun kendi kelimelerini öğren ──
         dilOgren(tp, metin);
         // Nadiren, zengin kelime dağarcığı varsa Candy senin kelimeni geri söyler
-        long simdi = sender.getWorld().getTime();
+        long simdi = sender.level().getGameTime();
         if (tp.ogrenilenKelimeler.size() >= 6 && simdi - tp.sonDilKullanimi > 3600
                 && tp.bossOldurulmeTick == 0 && Math.random() < 0.10) {
             String kelime = enSikKelime(tp);
             if (kelime != null) {
                 tp.sonDilKullanimi = simdi;
-                sender.sendMessage(net.minecraft.text.Text.translatable(
+                sender.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                         "candy.dil." + (int) (Math.random() * 2), kelime)
-                    .formatted(net.minecraft.util.Formatting.DARK_GRAY,
-                               net.minecraft.util.Formatting.ITALIC), false);
+                    .withStyle(net.minecraft.ChatFormatting.DARK_GRAY,
+                               net.minecraft.ChatFormatting.ITALIC), false);
                 Candy.LOG.info("[Candy] Dil modeli[{}] senin kelimen → '{}'",
                     sender.getName().getString(), kelime);
             }

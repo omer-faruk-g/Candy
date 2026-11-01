@@ -5,14 +5,13 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyEntities;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.state.BlockState;
 import java.util.List;
 
 /**
@@ -70,13 +69,13 @@ public final class ArkadasYonetici {
         if (++sayac < ARALIK) return;
         sayac = 0;
         try {
-            int oyuncuSayisi = server.getPlayerManager().getCurrentPlayerCount();
+            int oyuncuSayisi = server.getPlayerList().getPlayerCount();
             if (oyuncuSayisi == 0) return;
 
             // Çok oyunculu: Candy'nin asıl aracı güveni bozmak.
             if (oyuncuSayisi > 1) ArkadasFisilti.dene(server);
 
-            for (ServerWorld world : server.getWorlds()) {
+            for (ServerLevel world : server.getAllLevels()) {
                 dunyaIcin(world, oyuncuSayisi);
             }
         } catch (Throwable t) {
@@ -84,9 +83,9 @@ public final class ArkadasYonetici {
         }
     }
 
-    private static void dunyaIcin(ServerWorld world, int oyuncuSayisi) {
+    private static void dunyaIcin(ServerLevel world, int oyuncuSayisi) {
         List<? extends ArkadasEntity> mevcut =
-            world.getEntitiesByType(CandyEntities.ARKADAS, e -> true);
+            world.getEntities(CandyEntities.ARKADAS, e -> true);
 
         if (!mevcut.isEmpty()) {
             gorevGuncelle(world, mevcut.get(0));
@@ -97,12 +96,12 @@ public final class ArkadasYonetici {
 
         if (ArkadasKaydi.olduMu(world)) return;
 
-        List<ServerPlayerEntity> oyuncular = world.getPlayers();
+        List<ServerPlayer> oyuncular = world.players();
         if (oyuncular.isEmpty()) return;
 
-        ServerPlayerEntity hedef = null;
+        ServerPlayer hedef = null;
         double enYuksekOfke = 0.0;
-        for (ServerPlayerEntity p : oyuncular) {
+        for (ServerPlayer p : oyuncular) {
             TruePersonality tp = PersonalityManager.get(p);
             if (tp == null) continue;
             if (tp.perdeKademe < MIN_KADEME) continue;
@@ -116,22 +115,22 @@ public final class ArkadasYonetici {
         if (hedef == null) return;
         if (Math.random() >= SPAWN_IHTIMAL) return;
 
-        BlockPos konum = spawnKonumu(world, hedef.getBlockPos());
+        BlockPos konum = spawnKonumu(world, hedef.blockPosition());
         if (konum == null) return;
 
         ArkadasEntity a = CandyEntities.ARKADAS.create(
-            (net.minecraft.world.World) world, net.minecraft.entity.SpawnReason.EVENT);
+            (net.minecraft.world.level.Level) world, net.minecraft.world.entity.EntitySpawnReason.EVENT);
         if (a == null) return;
-        a.refreshPositionAndAngles(konum.getX() + 0.5, konum.getY(), konum.getZ() + 0.5,
+        a.snapTo(konum.getX() + 0.5, konum.getY(), konum.getZ() + 0.5,
             world.getRandom().nextFloat() * 360f, 0f);
-        world.spawnEntity(a);
+        world.addFreshEntity(a);
 
         TruePersonality tp = PersonalityManager.get(hedef);
         if (tp != null) tp.arkadasKarsilasma++;
 
         Candy.LOG.info("[Candy] Arkadaş doğdu — {} için, {} blok ötede",
             hedef.getGameProfile().getName(),
-            (int) Math.sqrt(konum.getSquaredDistance(hedef.getBlockPos())));
+            (int) Math.sqrt(konum.distSqr(hedef.blockPosition())));
     }
 
     /**
@@ -141,12 +140,12 @@ public final class ArkadasYonetici {
      * gizemi bitirir: dövüşülen şey artık bir düşman, bir bilinmez değil. Candy'nin
      * en uzun süre kullandığı görev kasıtlı olarak IZLE.</p>
      */
-    private static void gorevGuncelle(ServerWorld world, ArkadasEntity a) {
-        ServerPlayerEntity yakin = null;
+    private static void gorevGuncelle(ServerLevel world, ArkadasEntity a) {
+        ServerPlayer yakin = null;
         double enYakin = Double.MAX_VALUE;
-        for (ServerPlayerEntity p : world.getPlayers()) {
+        for (ServerPlayer p : world.players()) {
             if (p.isCreative() || p.isSpectator()) continue;
-            double d = a.squaredDistanceTo(p);
+            double d = a.distanceToSqr(p);
             if (d < enYakin) { enYakin = d; yakin = p; }
         }
         if (yakin == null) {
@@ -156,7 +155,7 @@ public final class ArkadasYonetici {
 
         TruePersonality tp = PersonalityManager.get(yakin);
         double ofke = tp == null ? 0.0 : Math.max(0.0, Math.min(1.0, tp.candyOfke));
-        boolean cokOyuncu = world.getServer().getPlayerManager().getCurrentPlayerCount() > 1;
+        boolean cokOyuncu = world.getServer().getPlayerList().getPlayerCount() > 1;
 
         ArkadasEntity.Gorev g;
         if (cokOyuncu) {
@@ -177,13 +176,13 @@ public final class ArkadasYonetici {
     }
 
     /** Oyuncudan uzakta, güvenli, yüklü bir konum. */
-    private static BlockPos spawnKonumu(ServerWorld world, BlockPos merkez) {
+    private static BlockPos spawnKonumu(ServerLevel world, BlockPos merkez) {
         for (int i = 0; i < DENEME; i++) {
             double aci = Math.random() * Math.PI * 2.0;
             double r = MIN_UZAK + Math.random() * (MAKS_UZAK - MIN_UZAK);
             int x = merkez.getX() + (int) Math.round(Math.cos(aci) * r);
             int z = merkez.getZ() + (int) Math.round(Math.sin(aci) * r);
-            if (!world.isChunkLoaded(ChunkPos.toLong(x >> 4, z >> 4))) continue;
+            if (!world.areEntitiesLoaded(ChunkPos.asLong(x >> 4, z >> 4))) continue;
 
             for (int dy = -6; dy <= 6; dy++) {
                 BlockPos p = new BlockPos(x, merkez.getY() + dy, z);
@@ -193,17 +192,17 @@ public final class ArkadasYonetici {
         return null;
     }
 
-    private static boolean uygunMu(ServerWorld world, BlockPos ayak) {
-        BlockPos bas = ayak.up();
-        BlockPos zemin = ayak.down();
+    private static boolean uygunMu(ServerLevel world, BlockPos ayak) {
+        BlockPos bas = ayak.above();
+        BlockPos zemin = ayak.below();
         BlockState sAyak = world.getBlockState(ayak);
         BlockState sBas = world.getBlockState(bas);
         BlockState sZemin = world.getBlockState(zemin);
         if (!sAyak.getCollisionShape(world, ayak).isEmpty()) return false;
         if (!sBas.getCollisionShape(world, bas).isEmpty()) return false;
-        if (!sZemin.isSolidBlock(world, zemin)) return false;
+        if (!sZemin.isRedstoneConductor(world, zemin)) return false;
         if (!sAyak.getFluidState().isEmpty()) return false;
-        if (sZemin.getFluidState().isIn(FluidTags.LAVA)) return false;
+        if (sZemin.getFluidState().is(FluidTags.LAVA)) return false;
         return true;
     }
 

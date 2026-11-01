@@ -5,7 +5,7 @@ import com.photonpulse.candy.net.AltyaziPayload;
 import com.photonpulse.candy.net.BaslikPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Altyazi (v8.2, sunucu) — altyazı kanalı ve pencere başlığı için gönderim tarafı.
@@ -47,7 +47,7 @@ public final class Altyazi {
     }
 
     /** Altyazı gönder. Metin istemcide; burada yalnızca indeks ve süre var. */
-    public static void gonder(ServerPlayerEntity player, int indeks, int sureMs) {
+    public static void gonder(ServerPlayer player, int indeks, int sureMs) {
         try {
             if (player == null) return;
             if (indeks < 0 || indeks >= ALTYAZI_SAYISI) return;
@@ -58,7 +58,7 @@ public final class Altyazi {
     }
 
     /** Pencere başlığını değiştir. */
-    public static void baslik(ServerPlayerEntity player, int indeks) {
+    public static void baslik(ServerPlayer player, int indeks) {
         try {
             if (player == null) return;
             if (indeks < 0 || indeks >= BASLIK_SAYISI) return;
@@ -74,14 +74,14 @@ public final class Altyazi {
      * <p>Terminal açılmadı; istek edilen "arka planda 0/1 yazsın" etkisinin gerçek
      * kaynağı görev çubuğundaki yazıydı ve bu kanal v8.2'den beri duruyor.</p>
      */
-    public static void baslikIkilik(ServerPlayerEntity player) {
+    public static void baslikIkilik(ServerPlayer player) {
         int kac = BASLIK_SAYISI - IKILIK_BASLIK_BAS;
         if (kac <= 0) return;
         baslik(player, IKILIK_BASLIK_BAS + (int) (Math.random() * kac));
     }
 
     /** İkilik fısıltıyı ekrana yollar (tam ekran ya da köşe). */
-    public static void ikilikEkran(ServerPlayerEntity player, int indeks,
+    public static void ikilikEkran(ServerPlayer player, int indeks,
                                    int sureMs, int kanal) {
         try {
             if (player == null) return;
@@ -96,7 +96,7 @@ public final class Altyazi {
     }
 
     /** Pencere başlığını özgün hâline döndür. */
-    public static void baslikGeriAl(ServerPlayerEntity player) {
+    public static void baslikGeriAl(ServerPlayer player) {
         try {
             if (player == null) return;
             ServerPlayNetworking.send(player, new BaslikPayload(0, true));

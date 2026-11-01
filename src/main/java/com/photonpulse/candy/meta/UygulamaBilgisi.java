@@ -4,8 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.UygulamaPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +39,7 @@ public final class UygulamaBilgisi {
             try {
                 int i = payload.indeks();
                 if (i < 0 || i >= UygulamaListesi.boyut()) return;   // liste dışı → yut
-                uygulamalar.put(context.player().getUuid(), i);
+                uygulamalar.put(context.player().getUUID(), i);
                 // Log'a İSİM değil indeks: sunucu logu paylaşılabilir bir dosya.
                 Candy.LOG.info("[Candy] Uygulama alindi [{}] #{}",
                     context.player().getName().getString(), i);
@@ -51,9 +50,9 @@ public final class UygulamaBilgisi {
     }
 
     /** Oyuncunun açık uygulamasının okunur adı, ya da null. */
-    public static String ad(ServerPlayerEntity player) {
+    public static String ad(ServerPlayer player) {
         if (player == null) return null;
-        Integer i = uygulamalar.get(player.getUuid());
+        Integer i = uygulamalar.get(player.getUUID());
         return i == null ? null : UygulamaListesi.ad(i);
     }
 

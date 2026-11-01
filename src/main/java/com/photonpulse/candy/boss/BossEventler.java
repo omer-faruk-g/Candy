@@ -7,17 +7,16 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.level.levelgen.Heightmap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -69,13 +68,13 @@ public class BossEventler {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        long simdi = server.overworld().getGameTime();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.korkuSkoru < MIN_KORKU) continue;
 
-            Long son = sonBossTick.get(player.getUuid());
+            Long son = sonBossTick.get(player.getUUID());
             double agresivlik = Psikoloji.agresivlikCarpani(tp);
             // Kötü psikolojide cooldown kısalır
             long cooldown = (long) (OYUNCU_COOLDOWN_TICK / agresivlik);
@@ -92,66 +91,66 @@ public class BossEventler {
                 default -> fisiltiTetikle(player, tp);
             };
             if (basarili) {
-                sonBossTick.put(player.getUuid(), simdi);
+                sonBossTick.put(player.getUUID(), simdi);
                 com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "patron");
             }
         }
     }
 
     // ─── BEKCI: sabit gözlemci ───
-    private static boolean bekciSpawn(ServerPlayerEntity player, TruePersonality tp) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+    private static boolean bekciSpawn(ServerPlayer player, TruePersonality tp) {
+        ServerLevel world = (ServerLevel) player.level();
         BlockPos hedef = uzakKonum(world, player, 18, 22);
         if (hedef == null) return false;
 
-        var spawned = CandyEntities.DOPPEL.spawn(world, hedef, SpawnReason.MOB_SUMMONED);
+        var spawned = CandyEntities.DOPPEL.spawn(world, hedef, EntitySpawnReason.MOB_SUMMONED);
         if (!(spawned instanceof CandyDoppelEntity klon)) return false;
 
-        klon.setOwnerUuid(player.getUuid());
-        klon.addCommandTag(CandyDoppelEntity.TAG_BEKCI);
-        klon.addCommandTag("candy_clone");   // GriefSystem uyumluluğu
+        klon.setOwnerUuid(player.getUUID());
+        klon.addTag(CandyDoppelEntity.TAG_BEKCI);
+        klon.addTag("candy_clone");   // GriefSystem uyumluluğu
         klon.setInvulnerable(true);           // ekstra güvenlik
-        klon.setPersistent();
+        klon.setPersistenceRequired();
 
-        tp.sonMudahaleTick = world.getTime();
+        tp.sonMudahaleTick = world.getGameTime();
         Candy.LOG.info("[Candy] BOSS: Bekci → {} için 20 blok ötede", player.getName().getString());
         return true;
     }
 
     // ─── YANSIMA: mesafeli ayna ───
-    private static boolean yansimaSpawn(ServerPlayerEntity player, TruePersonality tp) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+    private static boolean yansimaSpawn(ServerPlayer player, TruePersonality tp) {
+        ServerLevel world = (ServerLevel) player.level();
         BlockPos hedef = uzakKonum(world, player, 12, 16);
         if (hedef == null) return false;
 
-        var spawned = CandyEntities.DOPPEL.spawn(world, hedef, SpawnReason.MOB_SUMMONED);
+        var spawned = CandyEntities.DOPPEL.spawn(world, hedef, EntitySpawnReason.MOB_SUMMONED);
         if (!(spawned instanceof CandyDoppelEntity klon)) return false;
 
-        klon.setOwnerUuid(player.getUuid());
-        klon.addCommandTag(CandyDoppelEntity.TAG_YANSIMA);
-        klon.addCommandTag("candy_clone");
-        klon.setPersistent();
+        klon.setOwnerUuid(player.getUUID());
+        klon.addTag(CandyDoppelEntity.TAG_YANSIMA);
+        klon.addTag("candy_clone");
+        klon.setPersistenceRequired();
 
-        tp.sonMudahaleTick = world.getTime();
+        tp.sonMudahaleTick = world.getGameTime();
         Candy.LOG.info("[Candy] BOSS: Yansıma → {} için 15 blok ötede", player.getName().getString());
         return true;
     }
 
     // 1.21.7'de SoundEvents sabitleri karma — bazı SoundEvent, bazı RegistryEntry<SoundEvent>.
     private static SoundEvent se(Object o) {
-        if (o instanceof RegistryEntry<?> re) return (SoundEvent) re.value();
+        if (o instanceof Holder<?> re) return (SoundEvent) re.value();
         return (SoundEvent) o;
     }
 
     // ─── FISILTI: sadece ses, hiçbir şey görünmez ───
-    private static boolean fisiltiTetikle(ServerPlayerEntity player, TruePersonality tp) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+    private static boolean fisiltiTetikle(ServerPlayer player, TruePersonality tp) {
+        ServerLevel world = (ServerLevel) player.level();
         // 4 farklı yönden warden/enderman sesleri
         SoundEvent[] sesler = {
-            se(SoundEvents.ENTITY_WARDEN_HEARTBEAT),
-            se(SoundEvents.ENTITY_ENDERMAN_STARE),
+            se(SoundEvents.WARDEN_HEARTBEAT),
+            se(SoundEvents.ENDERMAN_STARE),
             se(SoundEvents.AMBIENT_CAVE),
-            se(SoundEvents.ENTITY_ENDERMAN_AMBIENT)
+            se(SoundEvents.ENDERMAN_AMBIENT)
         };
         for (int i = 0; i < 4; i++) {
             double angle = (Math.PI / 2) * i + RNG.nextDouble() * 0.5;
@@ -159,17 +158,17 @@ public class BossEventler {
             double x = player.getX() + Math.cos(angle) * mesafe;
             double z = player.getZ() + Math.sin(angle) * mesafe;
             double y = player.getY() + RNG.nextDouble() * 2 - 1;
-            world.playSound(null, x, y, z, sesler[i], SoundCategory.HOSTILE,
+            world.playSound(null, x, y, z, sesler[i], SoundSource.HOSTILE,
                 0.9f, 0.5f + RNG.nextFloat() * 0.5f);
         }
-        tp.sonMudahaleTick = world.getTime();
+        tp.sonMudahaleTick = world.getGameTime();
         Candy.LOG.info("[Candy] BOSS: Fısıltı → {} çevresinde", player.getName().getString());
         return true;
     }
 
     // ─── Konum yardımcısı ───
-    private static BlockPos uzakKonum(ServerWorld world, ServerPlayerEntity player, int minMes, int maxMes) {
-        BlockPos merkez = player.getBlockPos();
+    private static BlockPos uzakKonum(ServerLevel world, ServerPlayer player, int minMes, int maxMes) {
+        BlockPos merkez = player.blockPosition();
         for (int deneme = 0; deneme < 15; deneme++) {
             double angle = RNG.nextDouble() * Math.PI * 2;
             double mesafe = minMes + RNG.nextDouble() * (maxMes - minMes);
@@ -184,16 +183,16 @@ public class BossEventler {
                     if (uygun(world, p)) return p;
                 }
             }
-            int topY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+            int topY = world.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
             BlockPos p = new BlockPos(x, topY, z);
             if (uygun(world, p)) return p;
         }
         return null;
     }
 
-    private static boolean uygun(ServerWorld world, BlockPos p) {
+    private static boolean uygun(ServerLevel world, BlockPos p) {
         return world.getBlockState(p).isAir()
-            && world.getBlockState(p.up()).isAir()
-            && world.getBlockState(p.down()).isSolidBlock(world, p.down());
+            && world.getBlockState(p.above()).isAir()
+            && world.getBlockState(p.below()).isRedstoneConductor(world, p.below());
     }
 }

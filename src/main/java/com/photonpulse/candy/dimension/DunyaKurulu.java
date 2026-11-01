@@ -10,11 +10,10 @@ import com.photonpulse.candy.beyin.Lob;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.UUID;
 
 /**
@@ -68,13 +67,13 @@ public final class DunyaKurulu {
     private static void onTick(MinecraftServer server) {
         tick++;
         if (tick % KONTROL != 0) return;
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (tp == null || !tp.kurulumTamam) continue;
-                UUID id = player.getUuid();
+                UUID id = player.getUUID();
 
                 // 1) Bir kurul dünyasındaysa: süre dolduysa geri dön
                 if (tp.kurulDunyaId != null && !tp.kurulDunyaId.isEmpty()) {
@@ -104,8 +103,8 @@ public final class DunyaKurulu {
                     DunyaGecisi.gir(server, player, tp, secilen);
                     // Nadir, teknik-olmayan sızıntı (isteğe bağlı his)
                     if (Math.random() < 0.5) {
-                        player.sendMessage(Text.translatable("candy.dunya." + secilen.id)
-                            .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+                        player.displayClientMessage(Component.translatable("candy.dunya." + secilen.id)
+                            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
                     }
                 }
             } catch (Throwable t) {

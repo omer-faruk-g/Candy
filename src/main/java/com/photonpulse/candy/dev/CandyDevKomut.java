@@ -14,13 +14,13 @@ import com.photonpulse.candy.entity.CandyEntities;
 import com.photonpulse.candy.sifre.IkilikFisilti;
 import com.photonpulse.candy.sifre.TuzakYayini;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntitySpawnReason;
 
 /**
  * CandyDevKomut — <b>yalnızca test</b> için {@code /candy} komutu.
@@ -58,58 +58,58 @@ public final class CandyDevKomut {
         if (!DEBUG) return;   // normal oyunda komut HİÇ kaydedilmiyor
 
         CommandRegistrationCallback.EVENT.register((dispatcher, access, env) ->
-            dispatcher.register(CommandManager.literal("candy")
+            dispatcher.register(Commands.literal("candy")
                 .executes(c -> durum(c.getSource()))
-                .then(CommandManager.literal("durum")
+                .then(Commands.literal("durum")
                     .executes(c -> durum(c.getSource())))
-                .then(CommandManager.literal("perde")
-                    .then(CommandManager.argument("kademe",
+                .then(Commands.literal("perde")
+                    .then(Commands.argument("kademe",
                             IntegerArgumentType.integer(0, Perde.MAKS_KADEME))
                         .executes(c -> perde(c.getSource(),
                             IntegerArgumentType.getInteger(c, "kademe")))))
-                .then(CommandManager.literal("ofke")
-                    .then(CommandManager.argument("deger",
+                .then(Commands.literal("ofke")
+                    .then(Commands.argument("deger",
                             DoubleArgumentType.doubleArg(0.0, 1.0))
                         .executes(c -> ofke(c.getSource(),
                             DoubleArgumentType.getDouble(c, "deger")))))
-                .then(CommandManager.literal("tuzak")
+                .then(Commands.literal("tuzak")
                     .executes(c -> tuzak(c.getSource())))
-                .then(CommandManager.literal("ikilik")
+                .then(Commands.literal("ikilik")
                     .executes(c -> ikilik(c.getSource())))
-                .then(CommandManager.literal("arkadas")
+                .then(Commands.literal("arkadas")
                     .executes(c -> arkadas(c.getSource())))));
 
         Candy.LOG.warn("[Candy] DEV KOMUTU AKTIF — /candy (yalnizca -Dcandy.debug=true)");
     }
 
     // ─── durum: "niye hicbir sey olmuyor" sorusunun cevabi ───
-    private static int durum(ServerCommandSource src) {
-        ServerPlayerEntity p = src.getPlayer();
-        if (p == null) { src.sendError(Text.literal("oyuncu gerekli")); return 0; }
+    private static int durum(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("oyuncu gerekli")); return 0; }
         TruePersonality tp = PersonalityManager.get(p);
-        if (tp == null) { src.sendError(Text.literal("profil yok")); return 0; }
+        if (tp == null) { src.sendFailure(Component.literal("profil yok")); return 0; }
 
-        Kurul kurul = BeyinMotoru.kurul(p.getUuid());
+        Kurul kurul = BeyinMotoru.kurul(p.getUUID());
         double kal = Perde.kalibrasyon(kurul);
-        ServerWorld w = (ServerWorld) p.getWorld();
+        ServerLevel w = (ServerLevel) p.level();
 
-        yaz(src, "── Candy durumu ──", Formatting.GOLD);
+        yaz(src, "── Candy durumu ──", ChatFormatting.GOLD);
         yaz(src, String.format("perde kademe : %d / %d", tp.perdeKademe, Perde.MAKS_KADEME),
-            Formatting.WHITE);
+            ChatFormatting.WHITE);
         yaz(src, String.format("kalibrasyon  : %.3f  (esikler 0.56 / 0.64 / 0.72)", kal),
-            Formatting.WHITE);
+            ChatFormatting.WHITE);
         yaz(src, String.format("ofke %.2f | ozguven %.1f | paranoya %.1f | meta %.1f",
             tp.candyOfke, tp.candyOzguven, tp.paranoyaSkoru, tp.metaFarkindalik),
-            Formatting.WHITE);
+            ChatFormatting.WHITE);
         yaz(src, String.format("oynanan      : %.1f dk", tp.toplamOynananTick / 1200.0),
-            Formatting.WHITE);
+            ChatFormatting.WHITE);
         yaz(src, String.format("tuzak        : %d gonderildi / %d cozuldu (ilgi %.2f)",
-            tp.tuzakGonderilen, tp.tuzakCozulen, tp.tuzakIlgisi), Formatting.WHITE);
+            tp.tuzakGonderilen, tp.tuzakCozulen, tp.tuzakIlgisi), ChatFormatting.WHITE);
         yaz(src, String.format("arkadas      : yas %.2f | karsilasma %d | oldurdu %d | dunyada olu: %s",
             tp.arkadasYasi, tp.arkadasKarsilasma, tp.arkadasOldurdu,
-            ArkadasKaydi.olduMu(w) ? "EVET" : "hayir"), Formatting.WHITE);
+            ArkadasKaydi.olduMu(w) ? "EVET" : "hayir"), ChatFormatting.WHITE);
 
-        yaz(src, "── v8.3 kapilari ──", Formatting.GOLD);
+        yaz(src, "── v8.3 kapilari ──", ChatFormatting.GOLD);
         kapi(src, "C1 mob koordinasyon", tp.perdeKademe >= 1 && tp.candyOfke >= 0.18,
             "kademe>=1 & ofke>=0.18");
         kapi(src, "C2 tuzak yayini    ", tp.perdeKademe >= 1,
@@ -124,75 +124,75 @@ public final class CandyDevKomut {
         return 1;
     }
 
-    private static void kapi(ServerCommandSource src, String ad, boolean acik, String sart) {
-        src.sendFeedback(() -> Text.literal(
+    private static void kapi(CommandSourceStack src, String ad, boolean acik, String sart) {
+        src.sendSuccess(() -> Component.literal(
             (acik ? "  [ACIK]  " : "  [KAPALI] ") + ad + "  " + sart)
-            .formatted(acik ? Formatting.GREEN : Formatting.DARK_GRAY), false);
+            .withStyle(acik ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY), false);
     }
 
-    private static void yaz(ServerCommandSource src, String s, Formatting f) {
-        src.sendFeedback(() -> Text.literal(s).formatted(f), false);
+    private static void yaz(CommandSourceStack src, String s, ChatFormatting f) {
+        src.sendSuccess(() -> Component.literal(s).withStyle(f), false);
     }
 
     // ─── kapi acma ───
-    private static int perde(ServerCommandSource src, int kademe) {
-        ServerPlayerEntity p = src.getPlayer();
+    private static int perde(CommandSourceStack src, int kademe) {
+        ServerPlayer p = src.getPlayer();
         if (p == null) return 0;
         TruePersonality tp = PersonalityManager.get(p);
         if (tp == null) return 0;
         tp.perdeKademe = kademe;   // Perde yalnizca ARTIRIYOR, bu deger kalici
-        yaz(src, "perde kademe -> " + kademe, Formatting.GREEN);
+        yaz(src, "perde kademe -> " + kademe, ChatFormatting.GREEN);
         return 1;
     }
 
-    private static int ofke(ServerCommandSource src, double deger) {
-        ServerPlayerEntity p = src.getPlayer();
+    private static int ofke(CommandSourceStack src, double deger) {
+        ServerPlayer p = src.getPlayer();
         if (p == null) return 0;
         TruePersonality tp = PersonalityManager.get(p);
         if (tp == null) return 0;
         tp.candyOfke = deger;
-        yaz(src, String.format("candyOfke -> %.2f", deger), Formatting.GREEN);
+        yaz(src, String.format("candyOfke -> %.2f", deger), ChatFormatting.GREEN);
         return 1;
     }
 
     // ─── mekanikleri kendi yolundan tetikle ───
-    private static int tuzak(ServerCommandSource src) {
+    private static int tuzak(CommandSourceStack src) {
         boolean ok = TuzakYayini.yayinla(src.getServer());
         yaz(src, ok ? "tuzak yayinlandi" : "tuzak yayinlanamadi (oyuncu yok?)",
-            ok ? Formatting.GREEN : Formatting.RED);
+            ok ? ChatFormatting.GREEN : ChatFormatting.RED);
         return ok ? 1 : 0;
     }
 
-    private static int ikilik(ServerCommandSource src) {
-        ServerPlayerEntity p = src.getPlayer();
+    private static int ikilik(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
         if (p == null) return 0;
         String duz = IkilikFisilti.fisildat(p, PersonalityManager.get(p));
         yaz(src, duz == null ? "fisilti gonderilemedi" : "fisilti: \"" + duz + "\"",
-            duz == null ? Formatting.RED : Formatting.GREEN);
+            duz == null ? ChatFormatting.RED : ChatFormatting.GREEN);
         return duz == null ? 0 : 1;
     }
 
-    private static int arkadas(ServerCommandSource src) {
-        ServerPlayerEntity p = src.getPlayer();
+    private static int arkadas(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
         if (p == null) return 0;
-        ServerWorld w = (ServerWorld) p.getWorld();
+        ServerLevel w = (ServerLevel) p.level();
 
         if (ArkadasKaydi.olduMu(w)) {
             yaz(src, "Arkadas bu dunyada OLDURULMUS — geri gelmiyor. "
-                + "Yeni dunya gerekiyor (kalici olum calisiyor demektir).", Formatting.RED);
+                + "Yeni dunya gerekiyor (kalici olum calisiyor demektir).", ChatFormatting.RED);
             return 0;
         }
         ArkadasEntity a = CandyEntities.ARKADAS.create(
-            (net.minecraft.world.World) w, SpawnReason.EVENT);
-        if (a == null) { src.sendError(Text.literal("olusturulamadi")); return 0; }
+            (net.minecraft.world.level.Level) w, EntitySpawnReason.EVENT);
+        if (a == null) { src.sendFailure(Component.literal("olusturulamadi")); return 0; }
 
         // 8 blok once: hemen gorunsun ama uzerine dogmasin.
-        double yon = Math.toRadians(p.getYaw());
-        a.refreshPositionAndAngles(
+        double yon = Math.toRadians(p.getYRot());
+        a.snapTo(
             p.getX() - Math.sin(yon) * 8.0, p.getY(), p.getZ() + Math.cos(yon) * 8.0,
-            p.getYaw() + 180f, 0f);
-        w.spawnEntity(a);
-        yaz(src, "Arkadas dogdu (8 blok onde)", Formatting.GREEN);
+            p.getYRot() + 180f, 0f);
+        w.addFreshEntity(a);
+        yaz(src, "Arkadas dogdu (8 blok onde)", ChatFormatting.GREEN);
         return 1;
     }
 }

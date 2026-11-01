@@ -1,7 +1,5 @@
 package com.photonpulse.candy.mixin.client;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.DebugHud;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -9,26 +7,28 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.DebugScreenOverlay;
 
 /**
  * DebugHudMixin (v3.0 Faz 1.1) — F3 spoof.
  *
- * getLeftText() → çıktıyı tara. "candy:mirror" veya "candy:anti_mirror" içeren satırlar
+ * getGameInformation() → çıktıyı tara. "candy:mirror" veya "candy:anti_mirror" içeren satırlar
  * "minecraft:overworld" ile değiştirilir. Ayrıca Y koordinatı Mirror'da -250000 gösterilir.
  */
-@Mixin(DebugHud.class)
+@Mixin(DebugScreenOverlay.class)
 public class DebugHudMixin {
 
-    @Inject(method = "getLeftText", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getGameInformation", at = @At("RETURN"), cancellable = true)
     private void candy$f3Spoof(CallbackInfoReturnable<List<String>> cir) {
         try {
             List<String> original = cir.getReturnValue();
             if (original == null || original.isEmpty()) return;
 
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc == null || mc.world == null) return;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.level == null) return;
 
-            String dimId = mc.world.getRegistryKey().getValue().toString();
+            String dimId = mc.level.dimension().location().toString();
             boolean mirror = dimId.equals("candy:mirror");
             boolean antiMirror = dimId.equals("candy:anti_mirror");
             boolean ayna = dimId.equals("candy:ayna");

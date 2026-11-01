@@ -5,14 +5,13 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -42,7 +41,7 @@ public class SesTaklit {
     // Player sesleri — jenerik pool. Gerçek recording yerine sabit ses seti.
     // Karışık düzen — footstep + swing + eat + hurt = "biri" hissi.
     private static SoundEvent se(Object o) {
-        if (o instanceof RegistryEntry<?> re) return (SoundEvent) re.value();
+        if (o instanceof Holder<?> re) return (SoundEvent) re.value();
         return (SoundEvent) o;
     }
 
@@ -51,16 +50,16 @@ public class SesTaklit {
     public static void register() {
         // Static init sırasında SoundEvents hazır olmayabilir, register'da doldur.
         PLAYER_SESLERI = new SoundEvent[]{
-            se(SoundEvents.BLOCK_GRASS_STEP),        // footstep on grass
-            se(SoundEvents.BLOCK_STONE_STEP),        // footstep on stone
-            se(SoundEvents.BLOCK_GRAVEL_STEP),       // footstep on gravel
-            se(SoundEvents.ENTITY_PLAYER_ATTACK_STRONG),
-            se(SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP),
-            se(SoundEvents.ENTITY_PLAYER_BURP),      // yeme
-            se(SoundEvents.ENTITY_PLAYER_HURT),      // yaralanma
-            se(SoundEvents.ENTITY_PLAYER_BREATH),    // nefes
-            se(SoundEvents.ENTITY_ITEM_PICKUP),
-            se(SoundEvents.ENTITY_PLAYER_SMALL_FALL)
+            se(SoundEvents.GRASS_STEP),        // footstep on grass
+            se(SoundEvents.STONE_STEP),        // footstep on stone
+            se(SoundEvents.GRAVEL_STEP),       // footstep on gravel
+            se(SoundEvents.PLAYER_ATTACK_STRONG),
+            se(SoundEvents.PLAYER_ATTACK_SWEEP),
+            se(SoundEvents.PLAYER_BURP),      // yeme
+            se(SoundEvents.PLAYER_HURT),      // yaralanma
+            se(SoundEvents.PLAYER_BREATH),    // nefes
+            se(SoundEvents.ITEM_PICKUP),
+            se(SoundEvents.PLAYER_SMALL_FALL)
         };
 
         ServerTickEvents.END_SERVER_TICK.register(SesTaklit::onTick);
@@ -82,37 +81,37 @@ public class SesTaklit {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
         // v1.9.0: sessizlik protokolü — hiç ses çıkarma
         if (com.photonpulse.candy.sessizlik.SessizlikState.sessizlikte(simdi)) return;
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.korkuSkoru < MIN_KORKU) continue;
 
-            Long son = sonSesTick.get(player.getUuid());
+            Long son = sonSesTick.get(player.getUUID());
             double agresivlik = Psikoloji.agresivlikCarpani(tp);
             long cooldown = (long) (OYUNCU_COOLDOWN_TICK / agresivlik);
             if (son != null && simdi - son < cooldown) continue;
             if (RNG.nextDouble() > BASE_IHTIMAL * agresivlik) continue;
 
             sesCal(player);
-            sonSesTick.put(player.getUuid(), simdi);
+            sonSesTick.put(player.getUUID(), simdi);
         }
     }
 
     // v1.9.14: taklit başarımı — aynı sesi 2 kez peş peşe player'a çalarsa
     private static final java.util.Map<java.util.UUID, String> sonSesId = new java.util.HashMap<>();
 
-    private static void sesCal(ServerPlayerEntity player) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+    private static void sesCal(ServerPlayer player) {
+        ServerLevel world = (ServerLevel) player.level();
         SoundEvent ses = PLAYER_SESLERI[RNG.nextInt(PLAYER_SESLERI.length)];
-        String sesId = ses.id().toString();
-        String onceki = sonSesId.get(player.getUuid());
+        String sesId = ses.location().toString();
+        String onceki = sonSesId.get(player.getUUID());
         if (onceki != null && onceki.equals(sesId)) {
             com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "taklit");
         }
-        sonSesId.put(player.getUuid(), sesId);
+        sonSesId.put(player.getUUID(), sesId);
 
         // 8-16 blok ötesinde, rastgele yön
         double angle = RNG.nextDouble() * Math.PI * 2;
@@ -121,9 +120,9 @@ public class SesTaklit {
         double z = player.getZ() + Math.sin(angle) * mesafe;
         double y = player.getY() + (RNG.nextDouble() - 0.5) * 3;
 
-        world.playSound(null, x, y, z, ses, SoundCategory.PLAYERS,
+        world.playSound(null, x, y, z, ses, SoundSource.PLAYERS,
             0.7f, 0.9f + RNG.nextFloat() * 0.2f);
         Candy.LOG.info("[Candy] SesTaklit: {} çevresinde player sesi ({}) @{},{},{}",
-            player.getName().getString(), ses.id(), (int) x, (int) y, (int) z);
+            player.getName().getString(), ses.location(), (int) x, (int) y, (int) z);
     }
 }

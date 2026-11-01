@@ -1,10 +1,10 @@
 package com.photonpulse.candy.basarim;
 
 import com.photonpulse.candy.Candy;
-import net.minecraft.advancement.AdvancementEntry;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * CandyBasarimlar (v1.9.2) — merkezi advancement tetikleyici.
@@ -15,18 +15,18 @@ import net.minecraft.util.Identifier;
  */
 public class CandyBasarimlar {
 
-    public static void tetikle(ServerPlayerEntity player, String kod) {
+    public static void tetikle(ServerPlayer player, String kod) {
         try {
             if (player == null) return;
-            MinecraftServer server = player.getWorld().getServer();
+            MinecraftServer server = player.level().getServer();
             if (server == null) return;
-            AdvancementEntry adv = server.getAdvancementLoader()
-                .get(Identifier.of("candy", kod));
+            AdvancementHolder adv = server.getAdvancements()
+                .get(ResourceLocation.fromNamespaceAndPath("candy", kod));
             if (adv == null) return;
-            var progress = player.getAdvancementTracker().getProgress(adv);
+            var progress = player.getAdvancements().getOrStartProgress(adv);
             if (progress.isDone()) return;
-            for (String criterion : progress.getUnobtainedCriteria()) {
-                player.getAdvancementTracker().grantCriterion(adv, criterion);
+            for (String criterion : progress.getRemainingCriteria()) {
+                player.getAdvancements().award(adv, criterion);
             }
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] basarim tetikleme hata ({}): {}", kod, t.getMessage());

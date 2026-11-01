@@ -2,9 +2,9 @@ package com.photonpulse.candy.mixin.client;
 
 import com.photonpulse.candy.client.CandyMixinConfig;
 import com.photonpulse.candy.client.IntensityState;
-import net.minecraft.client.render.Camera;
-import net.minecraft.entity.Entity;
-import net.minecraft.world.BlockView;
+import net.minecraft.client.Camera;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.BlockGetter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,12 +20,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Camera.class)
 public class CameraMixin {
 
-    @Shadow private float yaw;
-    @Shadow private float pitch;
+    @Shadow private float yRot;
+    @Shadow private float xRot;
     @Shadow protected void setRotation(float yaw, float pitch) {}
 
-    @Inject(method = "update", at = @At("TAIL"))
-    private void candy$shake(BlockView area, Entity focused, boolean thirdPerson,
+    @Inject(method = "setup", at = @At("TAIL"))
+    private void candy$shake(BlockGetter area, Entity focused, boolean thirdPerson,
                              boolean inverseView, float tickDelta, CallbackInfo ci) {
         try {
             if (!CandyMixinConfig.cameraShake) return;
@@ -37,7 +37,7 @@ public class CameraMixin {
             float dYaw = (float) (Math.sin(t * 6.3) * siddet * 0.6);
             float dPitch = (float) (Math.cos(t * 7.7) * siddet * 0.4);
 
-            setRotation(this.yaw + dYaw, this.pitch + dPitch);
+            setRotation(this.yRot + dYaw, this.xRot + dPitch);
         } catch (Throwable ignored) {}
     }
 }

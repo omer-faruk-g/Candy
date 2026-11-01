@@ -3,33 +3,32 @@ package com.photonpulse.candy.boss;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.LookAroundGoal;
-import net.minecraft.entity.ai.goal.LookAtEntityGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.boss.BossBar;
-import net.minecraft.entity.boss.ServerBossBar;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 /**
  * TrueRealCandyEntity (v3.1) — Candy'nin gerçek hali. 8 fazlı boss.
@@ -46,15 +45,15 @@ import java.util.UUID;
  *
  * Blok/chunk silme SINIRLI ve GÜVENLİ tutulur (lag/grief engeli).
  */
-public class TrueRealCandyEntity extends HostileEntity {
+public class TrueRealCandyEntity extends Monster {
 
-    private static final TrackedData<String> OWNER_UUID_STR =
-        DataTracker.registerData(TrueRealCandyEntity.class, TrackedDataHandlerRegistry.STRING);
-    private static final TrackedData<Integer> FAZ =
-        DataTracker.registerData(TrueRealCandyEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final EntityDataAccessor<String> OWNER_UUID_STR =
+        SynchedEntityData.defineId(TrueRealCandyEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Integer> FAZ =
+        SynchedEntityData.defineId(TrueRealCandyEntity.class, EntityDataSerializers.INT);
 
-    private final ServerBossBar bossBar = new ServerBossBar(
-        Text.translatable("candy.boss.isim"), BossBar.Color.PURPLE, BossBar.Style.NOTCHED_20);
+    private final ServerBossEvent bossBar = new ServerBossEvent(
+        Component.translatable("candy.boss.isim"), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.NOTCHED_20);
 
     // Faz zamanlayıcıları
     private int klonTimer = 0;
@@ -68,74 +67,74 @@ public class TrueRealCandyEntity extends HostileEntity {
     private static final int COUNTDOWN_BASLANGIC = 6000; // 300 sn
     private static final String KLON_ETIKETI = "candy_clone";
 
-    public TrueRealCandyEntity(EntityType<? extends HostileEntity> type, World world) {
+    public TrueRealCandyEntity(EntityType<? extends Monster> type, Level world) {
         super(type, world);
-        this.setPersistent();
+        this.setPersistenceRequired();
     }
 
-    public static DefaultAttributeContainer.Builder createBossAttributes() {
-        return HostileEntity.createHostileAttributes()
-            .add(EntityAttributes.MAX_HEALTH, 500.0)
-            .add(EntityAttributes.ATTACK_DAMAGE, 8.0)
-            .add(EntityAttributes.MOVEMENT_SPEED, 0.30)
-            .add(EntityAttributes.FOLLOW_RANGE, 64.0)
-            .add(EntityAttributes.KNOCKBACK_RESISTANCE, 1.0);
-    }
-
-    @Override
-    protected void initDataTracker(DataTracker.Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(OWNER_UUID_STR, "");
-        builder.add(FAZ, 1);
+    public static AttributeSupplier.Builder createBossAttributes() {
+        return Monster.createMonsterAttributes()
+            .add(Attributes.MAX_HEALTH, 500.0)
+            .add(Attributes.ATTACK_DAMAGE, 8.0)
+            .add(Attributes.MOVEMENT_SPEED, 0.30)
+            .add(Attributes.FOLLOW_RANGE, 64.0)
+            .add(Attributes.KNOCKBACK_RESISTANCE, 1.0);
     }
 
     @Override
-    protected void initGoals() {
-        this.goalSelector.add(1, new MeleeAttackGoal(this, 1.0, true));
-        this.goalSelector.add(2, new WanderAroundFarGoal(this, 0.7));
-        this.goalSelector.add(3, new LookAtEntityGoal(this, PlayerEntity.class, 24.0f));
-        this.goalSelector.add(4, new LookAroundGoal(this));
-        this.targetSelector.add(1, new net.minecraft.entity.ai.goal.ActiveTargetGoal<>(
-            this, PlayerEntity.class, 10, true, false,
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(OWNER_UUID_STR, "");
+        builder.define(FAZ, 1);
+    }
+
+    @Override
+    protected void registerGoals() {
+        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0, true));
+        this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.7));
+        this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 24.0f));
+        this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
+        this.targetSelector.addGoal(1, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(
+            this, Player.class, 10, true, false,
             (entity, world) -> {
                 Optional<UUID> owner = getOwnerUuid();
-                return owner.isPresent() && owner.get().equals(entity.getUuid());
+                return owner.isPresent() && owner.get().equals(entity.getUUID());
             }));
     }
 
     public void setOwnerUuid(UUID uuid) {
-        this.dataTracker.set(OWNER_UUID_STR, uuid != null ? uuid.toString() : "");
+        this.entityData.set(OWNER_UUID_STR, uuid != null ? uuid.toString() : "");
     }
 
     public Optional<UUID> getOwnerUuid() {
-        String s = this.dataTracker.get(OWNER_UUID_STR);
+        String s = this.entityData.get(OWNER_UUID_STR);
         if (s == null || s.isEmpty()) return Optional.empty();
         try { return Optional.of(UUID.fromString(s)); }
         catch (IllegalArgumentException e) { return Optional.empty(); }
     }
 
-    public int getFaz() { return this.dataTracker.get(FAZ); }
-    private void setFaz(int f) { this.dataTracker.set(FAZ, f); }
+    public int getFaz() { return this.entityData.get(FAZ); }
+    private void setFaz(int f) { this.entityData.set(FAZ, f); }
 
-    private ServerPlayerEntity owner(ServerWorld world) {
+    private ServerPlayer owner(ServerLevel world) {
         var opt = getOwnerUuid();
         if (opt.isEmpty()) return null;
-        return world.getServer().getPlayerManager().getPlayer(opt.get());
+        return world.getServer().getPlayerList().getPlayer(opt.get());
     }
 
     @Override
-    protected void writeCustomData(WriteView view) {
-        super.writeCustomData(view);
-        String s = this.dataTracker.get(OWNER_UUID_STR);
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        String s = this.entityData.get(OWNER_UUID_STR);
         if (s != null && !s.isEmpty()) view.putString("OwnerUuid", s);
         view.putInt("Faz", getFaz());
     }
 
     @Override
-    protected void readCustomData(ReadView view) {
-        super.readCustomData(view);
-        view.getOptionalString("OwnerUuid").ifPresent(s -> this.dataTracker.set(OWNER_UUID_STR, s));
-        view.getOptionalInt("Faz").ifPresent(this::setFaz);
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        view.getString("OwnerUuid").ifPresent(s -> this.entityData.set(OWNER_UUID_STR, s));
+        view.getInt("Faz").ifPresent(this::setFaz);
         // Faz 8'de reload → countdown sıfır olup anında Bad Ending TETİKLENMESİN.
         // Timer'ı yeniden başlat (cömert davran).
         if (getFaz() == 8) countdownTick = COUNTDOWN_BASLANGIC;
@@ -143,32 +142,32 @@ public class TrueRealCandyEntity extends HostileEntity {
 
     // ─── BossBar player yönetimi ───
     @Override
-    public void onStartedTrackingBy(ServerPlayerEntity player) {
-        super.onStartedTrackingBy(player);
+    public void startSeenByPlayer(ServerPlayer player) {
+        super.startSeenByPlayer(player);
         bossBar.addPlayer(player);
     }
 
     @Override
-    public void onStoppedTrackingBy(ServerPlayerEntity player) {
-        super.onStoppedTrackingBy(player);
+    public void stopSeenByPlayer(ServerPlayer player) {
+        super.stopSeenByPlayer(player);
         bossBar.removePlayer(player);
     }
 
     // ─── Ana döngü ───
     @Override
-    protected void mobTick(ServerWorld world) {
-        super.mobTick(world);
+    protected void customServerAiStep(ServerLevel world) {
+        super.customServerAiStep(world);
 
         // Owner set edilmemişse (ör. /summon ile) en yakın oyuncuyu owner yap
         if (getOwnerUuid().isEmpty()) {
-            var yakin = world.getClosestPlayer(this, 48.0);
-            if (yakin instanceof ServerPlayerEntity sp) setOwnerUuid(sp.getUuid());
+            var yakin = world.getNearestPlayer(this, 48.0);
+            if (yakin instanceof ServerPlayer sp) setOwnerUuid(sp.getUUID());
         }
 
         // BossBar güncelle
-        bossBar.setPercent(Math.max(0f, this.getHealth() / this.getMaxHealth()));
+        bossBar.setProgress(Math.max(0f, this.getHealth() / this.getMaxHealth()));
 
-        if (fazGecisFreeze > 0) { fazGecisFreeze--; this.setVelocity(0, 0, 0); return; }
+        if (fazGecisFreeze > 0) { fazGecisFreeze--; this.setDeltaMovement(0, 0, 0); return; }
 
         int faz = getFaz();
         try {
@@ -209,21 +208,21 @@ public class TrueRealCandyEntity extends HostileEntity {
         setFaz(yeniFaz);
         fazGecisFreeze = 40; // 2 sn cutscene
         klonTimer = 0; blokTimer = 0; faz4Timer = 0;
-        ServerWorld world = (ServerWorld) this.getWorld();
-        ServerPlayerEntity p = owner(world);
+        ServerLevel world = (ServerLevel) this.level();
+        ServerPlayer p = owner(world);
         // Cutscene: kahkaha + mesaj
         try {
-            world.playSound(null, this.getBlockPos(),
-                com.photonpulse.candy.audio.CandySounds.LAUGH, SoundCategory.HOSTILE, 1.2f, 0.8f);
+            world.playSound(null, this.blockPosition(),
+                com.photonpulse.candy.audio.CandySounds.LAUGH, SoundSource.HOSTILE, 1.2f, 0.8f);
         } catch (Throwable ignored) {}
         if (p != null) {
             String key = "candy.boss.gecis." + yeniFaz;
-            p.sendMessage(Text.translatable(key)
-                .formatted(net.minecraft.util.Formatting.DARK_RED,
-                           net.minecraft.util.Formatting.BOLD), false);
+            p.displayClientMessage(Component.translatable(key)
+                .withStyle(net.minecraft.ChatFormatting.DARK_RED,
+                           net.minecraft.ChatFormatting.BOLD), false);
         }
-        bossBar.setName(Text.translatable("candy.boss.isim")
-            .append(Text.literal(" [" + yeniFaz + "/8]")));
+        bossBar.setName(Component.translatable("candy.boss.isim")
+            .append(Component.literal(" [" + yeniFaz + "/8]")));
 
         // Faz özel giriş işleri
         if (yeniFaz == 3) girisFaz3(world);
@@ -233,7 +232,7 @@ public class TrueRealCandyEntity extends HostileEntity {
     }
 
     // ─── Faz 1: klon dalgaları ───
-    private void faz1(ServerWorld world) {
+    private void faz1(ServerLevel world) {
         if (++klonTimer < 100) return; // 5 sn
         klonTimer = 0;
         int adet = 1 + this.random.nextInt(5);
@@ -241,16 +240,16 @@ public class TrueRealCandyEntity extends HostileEntity {
     }
 
     // ─── Faz 2: dikey blok silme + klon ───
-    private void faz2(ServerWorld world) {
+    private void faz2(ServerLevel world) {
         if (++klonTimer >= 100) { klonTimer = 0; klonDalgasi(world, 1 + this.random.nextInt(3)); }
         if (++blokTimer >= 60) { blokTimer = 0; dikeyBlokSil(world); }
     }
 
     // ─── Faz 3: invulnerable + elit klon ───
-    private void girisFaz3(ServerWorld world) {
+    private void girisFaz3(ServerLevel world) {
         elitKlonId = eliteKlonSpawn(world);
     }
-    private void faz3(ServerWorld world) {
+    private void faz3(ServerLevel world) {
         // Elit klon öldü mü kontrol
         if (elitKlonId != null) {
             var ent = world.getEntity(elitKlonId);
@@ -268,45 +267,45 @@ public class TrueRealCandyEntity extends HostileEntity {
     }
 
     // ─── Faz 4: pasif nefes 15 sn ───
-    private void faz4(ServerWorld world) {
-        this.setVelocity(0, 0, 0);
+    private void faz4(ServerLevel world) {
+        this.setDeltaMovement(0, 0, 0);
         if (++faz4Timer >= 300) { faz4Timer = 0; fazGec(5); }
     }
 
     // ─── Faz 5: BUFF 750 ───
-    private void girisFaz5(ServerWorld world) {
-        var inst = this.getAttributeInstance(EntityAttributes.MAX_HEALTH);
+    private void girisFaz5(ServerLevel world) {
+        var inst = this.getAttribute(Attributes.MAX_HEALTH);
         if (inst != null) inst.setBaseValue(750.0);
         this.setHealth(750f);
         // Faz 5 anında faz 6'ya geç (buff bir "giriş" fazı)
     }
-    private void faz5(ServerWorld world) {
+    private void faz5(ServerLevel world) {
         fazGec(6);
     }
 
     // ─── Faz 6: Faz1 + Faz2 birleşik ───
-    private void faz6(ServerWorld world) {
+    private void faz6(ServerLevel world) {
         if (++klonTimer >= 100) { klonTimer = 0; klonDalgasi(world, 1 + this.random.nextInt(5)); }
         if (++blokTimer >= 50) { blokTimer = 0; dikeyBlokSil(world); }
     }
 
     // ─── Faz 7: chunk silme (kendi altı dahil, önce kaçar) ───
-    private void faz7(ServerWorld world) {
+    private void faz7(ServerLevel world) {
         if (++klonTimer >= 120) { klonTimer = 0; klonDalgasi(world, 1 + this.random.nextInt(3)); }
         if (++blokTimer >= 120) { blokTimer = 0; chunkSil(world); }
     }
 
     // ─── Faz 8: countdown + Gizemli Kitap ───
-    private void girisFaz8(ServerWorld world) {
-        var inst = this.getAttributeInstance(EntityAttributes.MAX_HEALTH);
+    private void girisFaz8(ServerLevel world) {
+        var inst = this.getAttribute(Attributes.MAX_HEALTH);
         if (inst != null) inst.setBaseValue(50.0);
         this.setHealth(50f);
         countdownTick = COUNTDOWN_BASLANGIC;
     }
-    private void faz8(ServerWorld world) {
-        this.setVelocity(0, 0, 0);
+    private void faz8(ServerLevel world) {
+        this.setDeltaMovement(0, 0, 0);
         countdownTick--;
-        ServerPlayerEntity p = owner(world);
+        ServerPlayer p = owner(world);
         // Countdown sync — her saniye
         if (p != null && countdownTick % 20 == 0) {
             int saniye = Math.max(0, countdownTick / 20);
@@ -318,46 +317,46 @@ public class TrueRealCandyEntity extends HostileEntity {
     }
 
     // ─── WIN — Gizemli Kitap ile öldürülür (BossManager çağırır) ───
-    public boolean gizemliKitapKullanildi(ServerPlayerEntity player) {
+    public boolean gizemliKitapKullanildi(ServerPlayer player) {
         if (getFaz() != 8) {
-            player.sendMessage(Text.translatable("candy.boss.vakti_degil")
-                .formatted(net.minecraft.util.Formatting.DARK_GRAY), false);
+            player.displayClientMessage(Component.translatable("candy.boss.vakti_degil")
+                .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
             return false;
         }
         bossOldu = true;
-        ServerWorld world = (ServerWorld) this.getWorld();
+        ServerLevel world = (ServerLevel) this.level();
         BossCountdown.gonder(player, -1); // temizle
         this.setHealth(0f);
         this.kill(world);
         return true;
     }
 
-    private void badEnding(ServerWorld world) {
-        ServerPlayerEntity p = owner(world);
+    private void badEnding(ServerLevel world) {
+        ServerPlayer p = owner(world);
         if (p != null) {
             BossManager.badEnding(p);
             BossCountdown.gonder(p, -1);
         }
-        bossBar.clearPlayers();
+        bossBar.removeAllPlayers();
         this.discard();
     }
 
     @Override
-    public boolean damage(ServerWorld world, net.minecraft.entity.damage.DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel world, net.minecraft.world.damagesource.DamageSource source, float amount) {
         int faz = getFaz();
         // Faz 3, 4, 8 invulnerable (klon/kitap ile ilerlenir)
         if (faz == 3 || faz == 4 || faz == 8) return false;
-        return super.damage(world, source, amount);
+        return super.hurtServer(world, source, amount);
     }
 
     @Override
-    public void onDeath(net.minecraft.entity.damage.DamageSource source) {
-        super.onDeath(source);
-        bossBar.clearPlayers();
-        if (this.getWorld() instanceof ServerWorld world) {
+    public void die(net.minecraft.world.damagesource.DamageSource source) {
+        super.die(source);
+        bossBar.removeAllPlayers();
+        if (this.level() instanceof ServerLevel world) {
             klonlariTemizle(world);
             if (bossOldu) {
-                ServerPlayerEntity p = owner(world);
+                ServerPlayer p = owner(world);
                 if (p != null) BossManager.win(p);
             }
         }
@@ -365,31 +364,31 @@ public class TrueRealCandyEntity extends HostileEntity {
 
     @Override
     public void remove(RemovalReason reason) {
-        bossBar.clearPlayers();
-        if (this.getWorld() instanceof ServerWorld world) klonlariTemizle(world);
+        bossBar.removeAllPlayers();
+        if (this.level() instanceof ServerLevel world) klonlariTemizle(world);
         super.remove(reason);
     }
 
     /** Boss'un spawn ettiği klonları temizle — Mirror'da swarm kalmasın. */
-    private void klonlariTemizle(ServerWorld world) {
+    private void klonlariTemizle(ServerLevel world) {
         try {
-            var kutu = new net.minecraft.util.math.Box(this.getBlockPos()).expand(64);
-            world.getEntitiesByClass(CandyDoppelEntity.class, kutu,
-                e -> e.getCommandTags().contains(KLON_ETIKETI))
-                .forEach(net.minecraft.entity.Entity::discard);
+            var kutu = new net.minecraft.world.phys.AABB(this.blockPosition()).inflate(64);
+            world.getEntitiesOfClass(CandyDoppelEntity.class, kutu,
+                e -> e.getTags().contains(KLON_ETIKETI))
+                .forEach(net.minecraft.world.entity.Entity::discard);
         } catch (Throwable ignored) {}
     }
 
     /** Yakındaki boss-klonu sayısı — cap için. */
-    private int yakinKlonSayisi(ServerWorld world) {
-        var kutu = new net.minecraft.util.math.Box(this.getBlockPos()).expand(32);
-        return world.getEntitiesByClass(CandyDoppelEntity.class, kutu,
-            e -> e.isAlive() && e.getCommandTags().contains(KLON_ETIKETI)).size();
+    private int yakinKlonSayisi(ServerLevel world) {
+        var kutu = new net.minecraft.world.phys.AABB(this.blockPosition()).inflate(32);
+        return world.getEntitiesOfClass(CandyDoppelEntity.class, kutu,
+            e -> e.isAlive() && e.getTags().contains(KLON_ETIKETI)).size();
     }
 
     // ═══════════ Yardımcılar ═══════════
 
-    private void klonDalgasi(ServerWorld world, int adet) {
+    private void klonDalgasi(ServerLevel world, int adet) {
         var ownerOpt = getOwnerUuid();
         if (ownerOpt.isEmpty()) return;
         // Cap — 25'ten fazla klon varken yenisini spawn etme (lag/grief engeli)
@@ -397,37 +396,37 @@ public class TrueRealCandyEntity extends HostileEntity {
         for (int i = 0; i < adet; i++) {
             double a = this.random.nextDouble() * Math.PI * 2;
             double d = 4 + this.random.nextDouble() * 6;
-            BlockPos pos = BlockPos.ofFloored(this.getX() + Math.cos(a) * d,
+            BlockPos pos = BlockPos.containing(this.getX() + Math.cos(a) * d,
                 this.getY(), this.getZ() + Math.sin(a) * d);
-            var spawned = CandyEntities.DOPPEL.spawn(world, pos, SpawnReason.MOB_SUMMONED);
+            var spawned = CandyEntities.DOPPEL.spawn(world, pos, EntitySpawnReason.MOB_SUMMONED);
             if (spawned instanceof CandyDoppelEntity klon) {
                 klon.setOwnerUuid(ownerOpt.get());
-                klon.addCommandTag(KLON_ETIKETI);
+                klon.addTag(KLON_ETIKETI);
             }
         }
     }
 
-    private UUID eliteKlonSpawn(ServerWorld world) {
+    private UUID eliteKlonSpawn(ServerLevel world) {
         var ownerOpt = getOwnerUuid();
         if (ownerOpt.isEmpty()) return null;
-        BlockPos pos = this.getBlockPos().offset(this.getHorizontalFacing(), 3);
-        var spawned = CandyEntities.DOPPEL.spawn(world, pos, SpawnReason.MOB_SUMMONED);
+        BlockPos pos = this.blockPosition().relative(this.getDirection(), 3);
+        var spawned = CandyEntities.DOPPEL.spawn(world, pos, EntitySpawnReason.MOB_SUMMONED);
         if (spawned instanceof CandyDoppelEntity klon) {
             klon.setOwnerUuid(ownerOpt.get());
-            klon.addCommandTag(KLON_ETIKETI);
-            klon.addCommandTag(CandyDoppelEntity.TAG_EVRIMLI);
-            var hpInst = klon.getAttributeInstance(EntityAttributes.MAX_HEALTH);
+            klon.addTag(KLON_ETIKETI);
+            klon.addTag(CandyDoppelEntity.TAG_EVRIMLI);
+            var hpInst = klon.getAttribute(Attributes.MAX_HEALTH);
             if (hpInst != null) hpInst.setBaseValue(50.0);
             klon.setHealth(50f);
-            var dmgInst = klon.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE);
+            var dmgInst = klon.getAttribute(Attributes.ATTACK_DAMAGE);
             if (dmgInst != null) dmgInst.setBaseValue(4.0);
-            return klon.getUuid();
+            return klon.getUUID();
         }
         return null;
     }
 
     /** Dikey blok silme — Candy'nin ALTI HARİÇ rastgele bir kolonu min_y'ye kadar sil (sınırlı). */
-    private void dikeyBlokSil(ServerWorld world) {
+    private void dikeyBlokSil(ServerLevel world) {
         int cx = this.getBlockX(), cz = this.getBlockZ();
         int rx, rz, deneme = 0;
         do {
@@ -437,34 +436,34 @@ public class TrueRealCandyEntity extends HostileEntity {
         } while (rx == cx && rz == cz && deneme < 5);
 
         int ust = this.getBlockY() + 6;
-        int alt = Math.max(world.getBottomY(), this.getBlockY() - 40); // en fazla 46 blok
+        int alt = Math.max(world.getMinY(), this.getBlockY() - 40); // en fazla 46 blok
         for (int y = ust; y >= alt; y--) {
             BlockPos p = new BlockPos(rx, y, rz);
             if (!world.getBlockState(p).isAir()) {
-                world.setBlockState(p, Blocks.AIR.getDefaultState(), 3);
+                world.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
             }
         }
     }
 
     /** Chunk silme — kendi chunk'ı dahil, ama önce güvenli yere kaçar. Sınırlı Y bandı. */
-    private void chunkSil(ServerWorld world) {
+    private void chunkSil(ServerLevel world) {
         // Önce kaç — 8 blok rastgele yön
         double a = this.random.nextDouble() * Math.PI * 2;
-        BlockPos kacis = BlockPos.ofFloored(this.getX() + Math.cos(a) * 12,
+        BlockPos kacis = BlockPos.containing(this.getX() + Math.cos(a) * 12,
             this.getY(), this.getZ() + Math.sin(a) * 12);
-        this.requestTeleport(kacis.getX() + 0.5, kacis.getY(), kacis.getZ() + 0.5);
+        this.teleportTo(kacis.getX() + 0.5, kacis.getY(), kacis.getZ() + 0.5);
 
         // Eski chunk'ı sil (player Y ± 12 bandı — full-height değil, lag/grief sınırı)
         int chunkX = (this.getBlockX() >> 4) << 4;
         int chunkZ = (this.getBlockZ() >> 4) << 4;
-        int yMin = Math.max(world.getBottomY(), this.getBlockY() - 12);
+        int yMin = Math.max(world.getMinY(), this.getBlockY() - 12);
         int yMax = this.getBlockY() + 12;
         for (int dx = 0; dx < 16; dx++) {
             for (int dz = 0; dz < 16; dz++) {
                 for (int y = yMin; y <= yMax; y++) {
                     BlockPos p = new BlockPos(chunkX + dx, y, chunkZ + dz);
                     if (!world.getBlockState(p).isAir()) {
-                        world.setBlockState(p, Blocks.AIR.getDefaultState(), 3);
+                        world.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }

@@ -5,14 +5,13 @@ import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import java.util.Random;
 
 /**
@@ -36,11 +35,11 @@ public class AntiMirrorLottery {
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            ServerWorld world = (ServerWorld) player.getWorld();
-            if (!world.getRegistryKey().equals(CandyDimensions.ANTI_MIRROR)) continue;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            ServerLevel world = (ServerLevel) player.level();
+            if (!world.dimension().equals(CandyDimensions.ANTI_MIRROR)) continue;
 
             TruePersonality tp = PersonalityManager.get(player);
 
@@ -69,16 +68,16 @@ public class AntiMirrorLottery {
             if (lottery == 50) {
                 // Ölüm — custom damage type
                 try {
-                    var registry = world.getRegistryManager()
-                        .getOrThrow(RegistryKeys.DAMAGE_TYPE);
-                    RegistryEntry<net.minecraft.entity.damage.DamageType> entry;
+                    var registry = world.registryAccess()
+                        .lookupOrThrow(Registries.DAMAGE_TYPE);
+                    Holder<net.minecraft.world.damagesource.DamageType> entry;
                     // v3.0 anti_mirror_lottery damage type
-                    var id = Identifier.of("candy", "anti_mirror_lottery");
-                    var maybe = registry.getEntry(id);
+                    var id = ResourceLocation.fromNamespaceAndPath("candy", "anti_mirror_lottery");
+                    var maybe = registry.get(id);
                     entry = maybe.orElse(
-                        registry.getEntry(Identifier.of("candy", "kalp_krizi")).orElseThrow());
+                        registry.get(ResourceLocation.fromNamespaceAndPath("candy", "kalp_krizi")).orElseThrow());
                     DamageSource source = new DamageSource(entry);
-                    player.damage(world, source, 1000f);
+                    player.hurtServer(world, source, 1000f);
                 } catch (Throwable t) {
                     player.setHealth(0.0f);
                 }

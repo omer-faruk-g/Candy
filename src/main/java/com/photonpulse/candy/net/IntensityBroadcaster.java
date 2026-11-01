@@ -7,7 +7,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * IntensityBroadcaster — server her saniye oyuncularına korku/agresivlik değerini yollar.
@@ -28,8 +28,8 @@ public class IntensityBroadcaster {
         }
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % 20 != 0) return;
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            if (server.getTickCount() % 20 != 0) return;
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 double agr = Psikoloji.agresivlikCarpani(tp);

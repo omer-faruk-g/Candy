@@ -6,17 +6,16 @@ import com.photonpulse.candy.entity.CandyDoppelEntity;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.minecraft.item.BlockItem;
-import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -45,27 +44,27 @@ public class IcDusunce {
     private static final Map<UUID, Long> sonKirmaTick = new HashMap<>();
     private static final Map<UUID, Integer> kirmaSayac = new HashMap<>();
     private static final Map<UUID, Long> sonKoymaTick = new HashMap<>();
-    private static final Map<UUID, Vec3d> oncekiPoz = new HashMap<>();
+    private static final Map<UUID, Vec3> oncekiPoz = new HashMap<>();
 
     private static int tick = 0;
 
     public static void register() {
         // Blok kırma → mining sinyali
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, be) -> {
-            if (player instanceof ServerPlayerEntity) {
-                UUID id = player.getUuid();
-                sonKirmaTick.put(id, world.getTime());
+            if (player instanceof ServerPlayer) {
+                UUID id = player.getUUID();
+                sonKirmaTick.put(id, world.getGameTime());
                 kirmaSayac.merge(id, 1, Integer::sum);
             }
         });
 
         // Blok koyma (BlockItem kullanımı) → building sinyali
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
-            if (player instanceof ServerPlayerEntity
-                && player.getStackInHand(hand).getItem() instanceof BlockItem) {
-                sonKoymaTick.put(player.getUuid(), world.getTime());
+            if (player instanceof ServerPlayer
+                && player.getItemInHand(hand).getItem() instanceof BlockItem) {
+                sonKoymaTick.put(player.getUUID(), world.getGameTime());
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
 
         ServerTickEvents.END_SERVER_TICK.register(IcDusunce::onTick);
@@ -75,18 +74,18 @@ public class IcDusunce {
     private static void onTick(MinecraftServer server) {
         tick++;
         if (tick % ARALIK != 0) return;
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
-                UUID id = player.getUuid();
-                ServerWorld world = (ServerWorld) player.getWorld();
+                UUID id = player.getUUID();
+                ServerLevel world = (ServerLevel) player.level();
 
                 // Hareket
-                Vec3d simdiPoz = player.getPos();
-                Vec3d onceki = oncekiPoz.get(id);
+                Vec3 simdiPoz = player.position();
+                Vec3 onceki = oncekiPoz.get(id);
                 double hiz = onceki == null ? 0 : simdiPoz.distanceTo(onceki);
                 oncekiPoz.put(id, simdiPoz);
 
@@ -95,7 +94,7 @@ public class IcDusunce {
                     && kirmaSayac.getOrDefault(id, 0) >= 3;
                 boolean koyuyor = simdi - sonKoymaTick.getOrDefault(id, -9999L) < 40;
                 boolean yeralti = player.getBlockY() < 50;
-                boolean kazma = player.getMainHandStack().isIn(ItemTags.PICKAXES);
+                boolean kazma = player.getMainHandItem().is(ItemTags.PICKAXES);
                 boolean klonYakin = klonYakinMi(world, player);
                 boolean sprint = player.isSprinting() && hiz > 0.15;
                 boolean sicakNoktada = sicakNoktadaMi(tp, player);
@@ -222,7 +221,7 @@ public class IcDusunce {
     }
 
     /** (8) Kendini modelleme + (10) yalan söyleyen kanaat. */
-    private static void bilissel(ServerPlayerEntity player, TruePersonality tp, long simdi) {
+    private static void bilissel(ServerPlayer player, TruePersonality tp, long simdi) {
         if (tp.bossOldurulmeTick > 0) return; // WIN sessizliği
 
         // (8) Seni tanıdıkça (kehanetGuveni) Candy kendi doğasını sorgular
@@ -231,8 +230,8 @@ public class IcDusunce {
         if (tp.candyOzFarkindalik > 40 && simdi - tp.sonOzDusunce > OZ_COOLDOWN
                 && RNG.nextDouble() < 0.05) {
             tp.sonOzDusunce = simdi;
-            player.sendMessage(Text.translatable("candy.ozdusunce." + RNG.nextInt(OZ_SORU_SAYI))
-                .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+            player.displayClientMessage(Component.translatable("candy.ozdusunce." + RNG.nextInt(OZ_SORU_SAYI))
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
             Candy.LOG.info("[Candy] Kendini modelleme[{}] özfarkındalık={}",
                 player.getName().getString(), String.format("%.0f", tp.candyOzFarkindalik));
             return; // aynı cycle'da yalan söyleme
@@ -243,8 +242,8 @@ public class IcDusunce {
                 && !tp.hipotezAgirliklari.isEmpty()) {
             tp.sonYalanTick = simdi;
             String yalan = enDusukHipotez(tp);
-            player.sendMessage(Text.translatable("candy.yalan." + yalan)
-                .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+            player.displayClientMessage(Component.translatable("candy.yalan." + yalan)
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
             CandyBasarimlar.tetikle(player, "yalanci");
             Candy.LOG.info("[Candy] Yalan[{}] gerçek={} → yalan={}",
                 player.getName().getString(), tp.baskinHipotez(), yalan);
@@ -252,12 +251,12 @@ public class IcDusunce {
     }
 
     /** Dış sistemlerin (ZihinselProva) Candy'ye soru fısıldatması için public API. */
-    public static void soruSor(ServerPlayerEntity player) {
+    public static void soruSor(ServerPlayer player) {
         felsefiSoru(player, PersonalityManager.get(player));
     }
 
     /** Niyete göre felsefi soru fısılt — Candy'nin iç sesi sızıyor. */
-    private static void felsefiSoru(ServerPlayerEntity player, TruePersonality tp) {
+    private static void felsefiSoru(ServerPlayer player, TruePersonality tp) {
         String niyet = tp.aktifNiyet;
         String key;
         boolean koordinatli = false;
@@ -272,15 +271,15 @@ public class IcDusunce {
             default -> { key = "candy.icses.koordinat"; koordinatli = true; }
         }
 
-        Text mesaj;
+        Component mesaj;
         if (koordinatli) {
             String koord = player.getBlockX() + " " + player.getBlockZ();
-            mesaj = Text.translatable(key, koord);
+            mesaj = Component.translatable(key, koord);
         } else {
-            mesaj = Text.translatable(key);
+            mesaj = Component.translatable(key);
         }
         // Candy'nin iç sesi — isimsiz, koyu gri italik (bir düşünce, konuşma değil)
-        player.sendMessage(mesaj.copy().formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+        player.displayClientMessage(mesaj.copy().withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
         Candy.LOG.info("[Candy] IcSes[{}] niyet={} → {}",
             player.getName().getString(), niyet, key);
     }
@@ -293,12 +292,12 @@ public class IcDusunce {
         return enSik;
     }
 
-    private static boolean klonYakinMi(ServerWorld world, ServerPlayerEntity player) {
-        Box box = new Box(player.getBlockPos()).expand(20);
-        return !world.getEntitiesByClass(CandyDoppelEntity.class, box, e -> e.isAlive()).isEmpty();
+    private static boolean klonYakinMi(ServerLevel world, ServerPlayer player) {
+        AABB box = new AABB(player.blockPosition()).inflate(20);
+        return !world.getEntitiesOfClass(CandyDoppelEntity.class, box, e -> e.isAlive()).isEmpty();
     }
 
-    private static boolean sicakNoktadaMi(TruePersonality tp, ServerPlayerEntity player) {
+    private static boolean sicakNoktadaMi(TruePersonality tp, ServerPlayer player) {
         int px = player.getBlockX(), pz = player.getBlockZ();
         for (int[] n : tp.sicakNoktalar) {
             int dx = n[0] - px, dz = n[2] - pz;

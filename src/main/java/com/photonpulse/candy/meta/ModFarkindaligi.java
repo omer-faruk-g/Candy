@@ -6,10 +6,9 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sign.SignSystem;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -65,10 +64,10 @@ public class ModFarkindaligi {
 
     private static void onTick(MinecraftServer server) {
         if (MOD_ADLARI.isEmpty()) return;
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.bossOldurulmeTick > 0) continue; // WIN 30dk sessizlik
@@ -77,7 +76,7 @@ public class ModFarkindaligi {
 
             String mod = MOD_ADLARI.get(RNG.nextInt(MOD_ADLARI.size()));
             String key = "candy.mod.soru." + (1 + RNG.nextInt(SORU_SAYISI));
-            Text soru = Text.translatable(key, mod);
+            Component soru = Component.translatable(key, mod);
 
             if (SignSystem.candyTabelaYerlestir(player, soru)) {
                 tp.sonModSorusuTick = simdi;

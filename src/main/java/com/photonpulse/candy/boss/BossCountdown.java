@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.BossCountdownPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * BossCountdown — Faz 8 geri sayımını client'a S2C ile yollar.
@@ -20,7 +20,7 @@ public class BossCountdown {
     }
 
     /** saniye >= 0 göster, -1 gizle. */
-    public static void gonder(ServerPlayerEntity player, int saniye) {
+    public static void gonder(ServerPlayer player, int saniye) {
         try {
             ServerPlayNetworking.send(player, new BossCountdownPayload(saniye));
         } catch (Throwable ignored) {}

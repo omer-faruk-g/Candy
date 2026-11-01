@@ -5,8 +5,7 @@ import com.photonpulse.candy.clone.CloneManager;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -30,25 +29,25 @@ public class KalpHizi {
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % 20 != 0) return; // saniyede bir
+            if (server.getTickCount() % 20 != 0) return; // saniyede bir
 
-            long simdi = server.getOverworld().getTime();
+            long simdi = server.overworld().getGameTime();
 
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 if (player.isCreative() || player.isSpectator()) continue;
-                if (player.isDead()) continue;
+                if (player.isDeadOrDying()) continue;
 
                 if (player.getHealth() > HP_ESIK) continue;
                 if (tp.korkuSkoru < KORKU_ESIK) continue;
 
-                Long son = sonTetiklenme.get(player.getUuid());
+                Long son = sonTetiklenme.get(player.getUUID());
                 if (son != null && simdi - son < COOLDOWN_TICK) continue;
 
                 boolean spawn = CloneManager.zorlaKlonSpawn(player, tp);
                 if (spawn) {
-                    sonTetiklenme.put(player.getUuid(), simdi);
+                    sonTetiklenme.put(player.getUUID(), simdi);
                     Candy.LOG.info("[Candy] KalpHizi[{}] — HP={}, klon spawn",
                         player.getName().getString(),
                         String.format("%.1f", player.getHealth()));

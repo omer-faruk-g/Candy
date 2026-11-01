@@ -8,16 +8,15 @@ import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -51,7 +50,7 @@ public class TotemIptali {
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (kickKuyrugu.isEmpty()) return;
-            long simdi = server.getOverworld().getTime();
+            long simdi = server.overworld().getGameTime();
             var iter = kickKuyrugu.entrySet().iterator();
             while (iter.hasNext()) {
                 var e = iter.next();
@@ -61,17 +60,17 @@ public class TotemIptali {
                 // Spawn edilen Candy'yi discard et (leak engelle)
                 UUID candyId = spawnlananCandy.remove(playerId);
                 if (candyId != null) {
-                    for (ServerWorld w : server.getWorlds()) {
+                    for (ServerLevel w : server.getAllLevels()) {
                         var c = w.getEntity(candyId);
                         if (c != null) { c.discard(); break; }
                     }
                 }
 
-                ServerPlayerEntity player = server.getPlayerManager().getPlayer(playerId);
-                if (player != null && player.networkHandler != null) {
-                    player.networkHandler.disconnect(
-                        Text.translatable("candy.totem.kick_mesaj")
-                            .formatted(Formatting.DARK_RED));
+                ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+                if (player != null && player.connection != null) {
+                    player.connection.disconnect(
+                        Component.translatable("candy.totem.kick_mesaj")
+                            .withStyle(ChatFormatting.DARK_RED));
                 }
                 iter.remove();
             }
@@ -88,10 +87,10 @@ public class TotemIptali {
             server.execute(() -> {
                 if (player.isRemoved()) return;
                 player.setHealth(1.0f);
-                player.getHungerManager().setFoodLevel(0);
-                player.sendMessage(
-                    Text.translatable("candy.totem.rejoin_mesaj")
-                        .formatted(Formatting.DARK_RED, Formatting.ITALIC),
+                player.getFoodData().setFoodLevel(0);
+                player.displayClientMessage(
+                    Component.translatable("candy.totem.rejoin_mesaj")
+                        .withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC),
                     false);
             });
         });
@@ -99,61 +98,61 @@ public class TotemIptali {
         Candy.LOG.info("[Candy] TotemIptali aktif (v3.0)");
     }
 
-    public static void baslat(ServerPlayerEntity player) {
+    public static void baslat(ServerPlayer player) {
         try {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) return;
             // Zaten iptal ediliyorsa tekrar başlatma
-            if (kickKuyrugu.containsKey(player.getUuid())) return;
+            if (kickKuyrugu.containsKey(player.getUUID())) return;
 
-            ServerWorld world = (ServerWorld) player.getWorld();
+            ServerLevel world = (ServerLevel) player.level();
 
             // 1) Freeze frame — 3 sn (60 tick)
-            player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.SLOWNESS, 60, 255, false, false, false));
-            player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.BLINDNESS, 60, 0, false, false, false));
-            player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.WEAKNESS, 60, 255, false, false, false));
+            player.addEffect(new MobEffectInstance(
+                MobEffects.SLOWNESS, 60, 255, false, false, false));
+            player.addEffect(new MobEffectInstance(
+                MobEffects.BLINDNESS, 60, 0, false, false, false));
+            player.addEffect(new MobEffectInstance(
+                MobEffects.WEAKNESS, 60, 255, false, false, false));
 
             // 2) Candy spawn — 4 blok karşıda
-            double aci = Math.toRadians(player.getYaw());
-            Vec3d hedef = player.getPos().add(-Math.sin(aci) * 4, 0, Math.cos(aci) * 4);
+            double aci = Math.toRadians(player.getYRot());
+            Vec3 hedef = player.position().add(-Math.sin(aci) * 4, 0, Math.cos(aci) * 4);
             CandyDoppelEntity candy = CandyEntities.DOPPEL.create(world,
-                net.minecraft.entity.SpawnReason.MOB_SUMMONED);
+                net.minecraft.world.entity.EntitySpawnReason.MOB_SUMMONED);
             if (candy != null) {
-                candy.setPos(hedef.x, hedef.y, hedef.z);
-                candy.lookAtEntity(player, 180f, 180f);
+                candy.setPosRaw(hedef.x, hedef.y, hedef.z);
+                candy.lookAt(player, 180f, 180f);
                 candy.setSilent(true);
                 candy.setInvulnerable(true);
-                candy.setAiDisabled(true);
+                candy.setNoAi(true);
                 candy.setNoGravity(true);   // freeze sırasında yerinde kalsın
-                candy.addCommandTag("candy_totem_zeus");
-                world.spawnEntity(candy);
-                spawnlananCandy.put(player.getUuid(), candy.getUuid());
+                candy.addTag("candy_totem_zeus");
+                world.addFreshEntity(candy);
+                spawnlananCandy.put(player.getUUID(), candy.getUUID());
             }
 
             // 3) Chat mesajı
             String key = MESAJLAR[RNG.nextInt(MESAJLAR.length)];
-            world.getServer().getPlayerManager().broadcast(
-                Text.translatable(key)
-                    .formatted(Formatting.DARK_RED, Formatting.BOLD),
+            world.getServer().getPlayerList().broadcastSystemMessage(
+                Component.translatable(key)
+                    .withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD),
                 false);
 
             // 4) Envanterdeki tüm totemleri sil
             int silinen = 0;
             var envanter = player.getInventory();
-            for (int i = 0; i < envanter.size(); i++) {
-                ItemStack stack = envanter.getStack(i);
+            for (int i = 0; i < envanter.getContainerSize(); i++) {
+                ItemStack stack = envanter.getItem(i);
                 if (stack.getItem() == Items.TOTEM_OF_UNDYING) {
-                    envanter.setStack(i, ItemStack.EMPTY);
+                    envanter.setItem(i, ItemStack.EMPTY);
                     silinen += stack.getCount();
                 }
             }
 
             // 5) Kick kuyruğu — 3 sn sonra
-            long kickTick = world.getTime() + 60L;
-            kickKuyrugu.put(player.getUuid(), kickTick);
+            long kickTick = world.getGameTime() + 60L;
+            kickKuyrugu.put(player.getUUID(), kickTick);
 
             // 6) Rejoin flag
             tp.totemBekliyor = true;

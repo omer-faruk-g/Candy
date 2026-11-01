@@ -6,11 +6,10 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeGrowth;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -279,7 +278,7 @@ public class BeyinMotoru {
             if (tp == null || !tp.kurulumTamam) continue;
             Kurul k = cache.get(uid);
             if (k == null) { kurul(uid); continue; }   // hazırlığı tetikle
-            var player = server.getPlayerManager().getPlayer(uid);
+            var player = server.getPlayerList().getPlayer(uid);
             for (Beyin b : k.uyeler()) {
                 if (b == null) continue;
                 try {
@@ -377,7 +376,7 @@ public class BeyinMotoru {
         // NOT: periyodik kayıt artık onTick'te DUVAR SAATİ tabanlı (KAYIT_TICK). Gövde
         // süpürmesine bağlamak, çok üyeli kurulda üyelerin çoğunu hiç yazmıyordu.
 
-        if (govde) sizinti(b, tp, server.getPlayerManager().getPlayer(uid), sup);
+        if (govde) sizinti(b, tp, server.getPlayerList().getPlayer(uid), sup);
     }
 
     /**
@@ -404,7 +403,7 @@ public class BeyinMotoru {
      * Beynin iç durumundan nadir, kısa sızıntılar. Candy asla "nöronum/lobum" demez;
      * yalnızca SONUÇ konuşur.
      */
-    private static void sizinti(Beyin b, TruePersonality tp, ServerPlayerEntity player, long sup) {
+    private static void sizinti(Beyin b, TruePersonality tp, ServerPlayer player, long sup) {
         if (player == null || tp.bossOldurulmeTick > 0) return;
         if (sup - b.sonSizintiSupurme < 40) return;
         if (RNG.nextDouble() > 0.35) return;
@@ -432,8 +431,8 @@ public class BeyinMotoru {
         }
         if (anahtar == null) return;
         b.sonSizintiSupurme = sup;
-        Text mesaj = (arg == null) ? Text.translatable(anahtar) : Text.translatable(anahtar, arg);
-        player.sendMessage(mesaj.copy().formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+        Component mesaj = (arg == null) ? Component.translatable(anahtar) : Component.translatable(anahtar, arg);
+        player.displayClientMessage(mesaj.copy().withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
     }
 
     private static boolean korelmisVar(Beyin b) {

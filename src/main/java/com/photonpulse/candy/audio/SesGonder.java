@@ -1,10 +1,10 @@
 package com.photonpulse.candy.audio;
 
-import net.minecraft.network.packet.s2c.play.PlaySoundS2CPacket;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 
 /**
  * Tek oyuncuya ses. 1.21.9'da Entity.playSoundToPlayer kaldırıldı, bu yüzden
@@ -18,11 +18,11 @@ public final class SesGonder {
 
     private SesGonder() {}
 
-    public static void tek(ServerPlayerEntity player, SoundEvent ses,
-                           SoundCategory kategori, float siddet, float perde) {
-        if (player == null || player.networkHandler == null) return;
-        player.networkHandler.sendPacket(new PlaySoundS2CPacket(
-            Registries.SOUND_EVENT.getEntry(ses), kategori,
+    public static void tek(ServerPlayer player, SoundEvent ses,
+                           SoundSource kategori, float siddet, float perde) {
+        if (player == null || player.connection == null) return;
+        player.connection.send(new ClientboundSoundPacket(
+            BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ses), kategori,
             player.getX(), player.getY(), player.getZ(),
             siddet, perde, player.getRandom().nextLong()));
     }

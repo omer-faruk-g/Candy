@@ -6,15 +6,14 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import java.util.Random;
 import java.util.Set;
 
@@ -52,10 +51,10 @@ public class BaseSabotaji {
     public static void register() {
         // Bed konumunu takip — player uyuduğunda güncelle
         EntitySleepEvents.START_SLEEPING.register((entity, sleepPos) -> {
-            if (!(entity instanceof ServerPlayerEntity player)) return;
+            if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             tp.baseKonum = new int[]{sleepPos.getX(), sleepPos.getY(), sleepPos.getZ()};
-            tp.sonUykuTick = player.getWorld().getTime();
+            tp.sonUykuTick = player.level().getGameTime();
         });
 
         ServerTickEvents.END_SERVER_TICK.register(BaseSabotaji::onTick);
@@ -64,10 +63,10 @@ public class BaseSabotaji {
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) {
                 if (DEBUG) Candy.LOG.info("[Candy] BaseSabotaj SKIP: {} kurulum tamamlanmadı",
@@ -94,8 +93,8 @@ public class BaseSabotaji {
             }
 
             // Sabotajın gerçekleşeceği world — spawn'ın olduğu overworld
-            ServerWorld baseWorld = server.getOverworld();
-            if (!baseWorld.isChunkLoaded(base.getX() >> 4, base.getZ() >> 4)) {
+            ServerLevel baseWorld = server.overworld();
+            if (!baseWorld.hasChunk(base.getX() >> 4, base.getZ() >> 4)) {
                 if (DEBUG) Candy.LOG.info("[Candy] BaseSabotaj SKIP: {} base chunk yüklü değil",
                     player.getName().getString());
                 continue;
@@ -110,22 +109,22 @@ public class BaseSabotaji {
                 int rx = RNG.nextInt(YARICAP * 2 + 1) - YARICAP;
                 int ry = RNG.nextInt(11) - 5;
                 int rz = RNG.nextInt(YARICAP * 2 + 1) - YARICAP;
-                BlockPos hedef = base.add(rx, ry, rz);
+                BlockPos hedef = base.offset(rx, ry, rz);
                 BlockState state = baseWorld.getBlockState(hedef);
 
                 if (state.isAir()) continue;
                 if (KORUNAN_BLOKLAR.contains(state.getBlock())) continue;
-                if (state.isIn(BlockTags.SIGNS) || state.isIn(BlockTags.WALL_SIGNS)) continue;
-                if (state.isIn(BlockTags.DOORS) || state.isIn(BlockTags.TRAPDOORS)) continue;
-                if (state.isIn(BlockTags.SHULKER_BOXES)) continue;
+                if (state.is(BlockTags.SIGNS) || state.is(BlockTags.WALL_SIGNS)) continue;
+                if (state.is(BlockTags.DOORS) || state.is(BlockTags.TRAPDOORS)) continue;
+                if (state.is(BlockTags.SHULKER_BOXES)) continue;
                 // Item taşıyan block-entity (chest/furnace/hopper vb.) — item kaybı olmasın.
                 // Bed'in de block-entity'si var ama Inventory DEĞİL → bed kırılabilir kalır
                 // (spec: "bed dahil, respawn point invalidate olabilir").
-                if (baseWorld.getBlockEntity(hedef) instanceof net.minecraft.inventory.Inventory) continue;
-                if (state.getBlock().getHardness() < 0) continue; // bedrock vs
+                if (baseWorld.getBlockEntity(hedef) instanceof net.minecraft.world.Container) continue;
+                if (state.getBlock().defaultDestroyTime() < 0) continue; // bedrock vs
 
                 // Sessiz kaldır, drop yok
-                baseWorld.setBlockState(hedef, Blocks.AIR.getDefaultState(), 3);
+                baseWorld.setBlock(hedef, Blocks.AIR.defaultBlockState(), 3);
                 kirilan++;
             }
 
@@ -140,7 +139,7 @@ public class BaseSabotaji {
                 // sabotajda gidebilir) — o zaman tetiklenmesi lazım. Basitleştirme:
                 // sabotaj sırasında bed konumu blok değilse achievement tetiklenir.
                 BlockState bedYeri = baseWorld.getBlockState(base);
-                if (!bedYeri.isIn(BlockTags.BEDS)) {
+                if (!bedYeri.is(BlockTags.BEDS)) {
                     CandyBasarimlar.tetikle(player, "evim_yok");
                 }
             }

@@ -4,11 +4,10 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Locale;
 
 /**
@@ -101,13 +100,13 @@ public final class TuzakYayini {
         if (tickSayaci < ILK_GECIKME) return;
         if (sonYayin != 0L && tickSayaci - sonYayin < SOGUMA) return;
 
-        var oyuncular = server.getPlayerManager().getPlayerList();
+        var oyuncular = server.getPlayerList().getPlayers();
         if (oyuncular.isEmpty()) return;
 
         // Kapı: en az bir oyuncuda perde açılmış olmalı — Kurul kendini kanıtlamadan
         // Candy sahte şifre yaymıyor.
         boolean hakVar = false;
-        for (ServerPlayerEntity p : oyuncular) {
+        for (ServerPlayer p : oyuncular) {
             TruePersonality tp = PersonalityManager.get(p);
             if (tp != null && tp.perdeKademe >= 1) { hakVar = true; break; }
         }
@@ -120,7 +119,7 @@ public final class TuzakYayini {
     /** Yayını hemen yapar. Deney modunda {@code ZihinselProva} buradan çağırır. */
     public static boolean yayinla(MinecraftServer server) {
         if (server == null) return false;
-        var oyuncular = server.getPlayerManager().getPlayerList();
+        var oyuncular = server.getPlayerList().getPlayers();
         if (oyuncular.isEmpty()) return false;
 
         String duz = DUZ_METIN[(int) (Math.random() * DUZ_METIN.length)];
@@ -130,13 +129,13 @@ public final class TuzakYayini {
         aktifDuzMetin = duz;
         sonYayin = tickSayaci;
 
-        Text cerceve = Text.translatable("candy.tuzak.yayin")
-            .formatted(Formatting.DARK_GRAY, Formatting.ITALIC);
-        Text govde = Text.literal(ikilik).formatted(Formatting.DARK_GRAY);
+        Component cerceve = Component.translatable("candy.tuzak.yayin")
+            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);
+        Component govde = Component.literal(ikilik).withStyle(ChatFormatting.DARK_GRAY);
 
-        for (ServerPlayerEntity p : oyuncular) {
-            p.sendMessage(cerceve, false);
-            p.sendMessage(govde, false);
+        for (ServerPlayer p : oyuncular) {
+            p.displayClientMessage(cerceve, false);
+            p.displayClientMessage(govde, false);
             TruePersonality tp = PersonalityManager.get(p);
             if (tp != null) { tp.tuzakGonderilen++; tp.tuzakIlgisiGuncelle(); }
         }
@@ -155,7 +154,7 @@ public final class TuzakYayini {
      *
      * @return tuzak çözüldüyse {@code true} (çağıran başka kontrol yapmamalı)
      */
-    public static boolean kontrol(ServerPlayerEntity player, TruePersonality tp, String metin) {
+    public static boolean kontrol(ServerPlayer player, TruePersonality tp, String metin) {
         String duz = aktifDuzMetin;
         if (duz == null || metin == null || tp == null) return false;
         String n = metin.toUpperCase(Locale.ROOT).replaceAll("[^A-Z]", "");
@@ -169,8 +168,8 @@ public final class TuzakYayini {
         tp.candyOzguven = Math.max(0.0, tp.candyOzguven - 4.0);
         tp.metaFarkindalik = Math.min(100.0, tp.metaFarkindalik + 2.0);
 
-        player.sendMessage(Text.translatable("candy.tuzak.bos")
-            .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+        player.displayClientMessage(Component.translatable("candy.tuzak.bos")
+            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
 
         Candy.LOG.info("[Candy] tuzak çözüldü ({}) — hiçbir ödül verilmedi",
             player.getGameProfile().getName());

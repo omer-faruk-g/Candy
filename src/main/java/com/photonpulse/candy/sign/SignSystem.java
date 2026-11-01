@@ -11,26 +11,25 @@ import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.SignBlockEntity;
-import net.minecraft.block.entity.SignText;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.chunk.WorldChunk;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.entity.SignText;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -98,7 +97,7 @@ public class SignSystem {
      * cevabı analiz edilmiyordu. {@code sunucuKapan()} bunu kapanışta temizliyordu ama kök
      * neden tek oturum içinde de yaşıyordu.
      */
-    private record TabelaAnahtar(RegistryKey<World> dunya, BlockPos poz) {}
+    private record TabelaAnahtar(ResourceKey<Level> dunya, BlockPos poz) {}
 
     /**
      * Bir Candy tabelasının sicili.
@@ -144,12 +143,12 @@ public class SignSystem {
      * Oyuncunun yakınında uygun boş yer bulur, mesajı 4 satıra sarar, tabelayı koyar.
      * @return yerleştirildiyse true
      */
-    public static boolean candyTabelaYerlestir(ServerPlayerEntity player, Text mesaj) {
+    public static boolean candyTabelaYerlestir(ServerPlayer player, Component mesaj) {
         BlockPos hedef = yakinBosYer(player, 6, 14);
         if (hedef == null) return false;
-        Text[] satir = wrapText(mesaj, 15, 4);
-        yerlestir((ServerWorld) player.getWorld(), hedef, player, satir, true);
-        PersonalityManager.get(player).sonMudahaleTick = player.getWorld().getTime();
+        Component[] satir = wrapText(mesaj, 15, 4);
+        yerlestir((ServerLevel) player.level(), hedef, player, satir, true);
+        PersonalityManager.get(player).sonMudahaleTick = player.level().getGameTime();
         return true;
     }
 
@@ -169,13 +168,13 @@ public class SignSystem {
         tickSayaci++;
 
         if (tickSayaci % TARAMA_ARALIGI == 0) {
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 tabelalariTara(player);
             }
         }
 
         if (tickSayaci % YAZMA_ARALIGI == 0) {
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 belkiTabelaYaz(player);
             }
         }
@@ -208,11 +207,11 @@ public class SignSystem {
             TabelaAnahtar anahtar = e.getKey();
             TabelaKaydi kayit = e.getValue();
 
-            ServerWorld world = server.getWorld(anahtar.dunya());
+            ServerLevel world = server.getLevel(anahtar.dunya());
             if (world == null) continue;                 // dünya yüklü değil — kaydı tut
-            final long now = world.getTime();
+            final long now = world.getGameTime();
 
-            ServerPlayerEntity sahip = server.getPlayerManager().getPlayer(kayit.sahip);
+            ServerPlayer sahip = server.getPlayerList().getPlayer(kayit.sahip);
             if (sahip == null) {
                 // ÇEVRİMDIŞI: geçen süreyi sayaca EKLEME — başlangıcı ileri kaydır.
                 kayit.konulduTick += Math.max(0L, now - kayit.sonGorulduTick);
@@ -223,7 +222,7 @@ public class SignSystem {
 
             if (now - kayit.konulduTick < OMUR_TICK) continue;   // süre dolmadı
 
-            if (!world.isPosLoaded(anahtar.poz())) {
+            if (!world.isLoaded(anahtar.poz())) {
                 // Oyuncu çevrimiçi ama tabelanın chunk'ı yüklü değil: dokunmadan uzaklaşmış.
                 if (!kayit.ihmalSayildi) {
                     ihmalIsle(sahip);
@@ -249,12 +248,12 @@ public class SignSystem {
      * Tabelayı sessizce değil, <i>hissedilir</i> biçimde kaldırır: duman + boğuk tahta sesi.
      * Candy'nin cümlesinin kaybolması bir olay olmalı, fark edilmeyen bir temizlik değil.
      */
-    private static void yokEt(ServerWorld world, BlockPos pos) {
+    private static void yokEt(ServerLevel world, BlockPos pos) {
         double x = pos.getX() + 0.5, y = pos.getY() + 0.5, z = pos.getZ() + 0.5;
         try {
-            world.spawnParticles(ParticleTypes.SMOKE, x, y, z, 8, 0.15, 0.2, 0.15, 0.01);
-            world.playSound(null, x, y, z, SoundEvents.BLOCK_WOOD_BREAK,
-                SoundCategory.BLOCKS, 0.35f, 0.55f);
+            world.sendParticles(ParticleTypes.SMOKE, x, y, z, 8, 0.15, 0.2, 0.15, 0.01);
+            world.playSound(null, x, y, z, SoundEvents.WOOD_BREAK,
+                SoundSource.BLOCKS, 0.35f, 0.55f);
         } catch (Throwable ignored) {}
         world.removeBlock(pos, false);
     }
@@ -266,7 +265,7 @@ public class SignSystem {
      * ve {@code Hakem}'in keşif eşiğini ölçekler. Sonuç: Candy daha sert değil, daha
      * tahmin edilemez olur. 40 ihmalde doyar.</p>
      */
-    private static void ihmalIsle(ServerPlayerEntity sahip) {
+    private static void ihmalIsle(ServerPlayer sahip) {
         TruePersonality tp = PersonalityManager.get(sahip);
         tp.ihmalSayisi++;
         tp.candyOfke = Math.min(1.0, tp.candyOfke + 0.025);
@@ -281,9 +280,9 @@ public class SignSystem {
      * Oyuncu bir Candy tabelasıyla ETKİLEŞTİ (yazıyı silip yeniden yazdı) → tabela yok olur
      * ve öfke bir tık geri çekilir. Konuşmaya başlayınca Candy sakinleşir.
      */
-    private static void etkilesimdenYokEt(ServerWorld world, BlockPos pos, TruePersonality tp) {
+    private static void etkilesimdenYokEt(ServerLevel world, BlockPos pos, TruePersonality tp) {
         tp.ofkeAzalt(0.05);   // v8.3: Arkadaş yası tabanının altına inmez
-        if (world.isPosLoaded(pos) && world.getBlockEntity(pos) instanceof SignBlockEntity) {
+        if (world.isLoaded(pos) && world.getBlockEntity(pos) instanceof SignBlockEntity) {
             yokEt(world, pos);
         }
     }
@@ -293,16 +292,16 @@ public class SignSystem {
      * Eğer oyuncu bir tabelaya yazı yazdıysa (ve Candy tarafından yerleştirilmiş bir
      * "soru tabelasının" hemen yanında/üstündeyse) cevap olarak analiz edilir.
      */
-    private static void tabelalariTara(ServerPlayerEntity player) {
-        ServerWorld world = (ServerWorld) player.getWorld();
-        BlockPos merkez = player.getBlockPos();
+    private static void tabelalariTara(ServerPlayer player) {
+        ServerLevel world = (ServerLevel) player.level();
+        BlockPos merkez = player.blockPosition();
         TruePersonality tp = PersonalityManager.get(player);
-        RegistryKey<World> dunya = world.getRegistryKey();
+        ResourceKey<Level> dunya = world.dimension();
         Map<TabelaAnahtar, Long> okunmus =
-            okunmusTabelalar.computeIfAbsent(player.getUuid(), k -> new HashMap<>());
+            okunmusTabelalar.computeIfAbsent(player.getUUID(), k -> new HashMap<>());
 
         // Eski kayıtları buda — sonsuz büyümesin
-        long unutEsigi = world.getTime() - OKUNMUS_UNUT_TICK;
+        long unutEsigi = world.getGameTime() - OKUNMUS_UNUT_TICK;
         okunmus.entrySet().removeIf(e -> e.getValue() < unutEsigi);
 
         topla(world, merkez);
@@ -325,7 +324,7 @@ public class SignSystem {
      * çünkü inceleme sırasında blok silinebiliyor ve chunk'ın block entity map'i üzerinde
      * gezerken silmek {@code ConcurrentModificationException} atardı.</p>
      */
-    private static void topla(ServerWorld world, BlockPos merkez) {
+    private static void topla(ServerLevel world, BlockPos merkez) {
         adaylar.clear();
         final int R = 12;
         final int xMin = merkez.getX() - R, xMax = merkez.getX() + R;
@@ -334,29 +333,29 @@ public class SignSystem {
 
         for (int cx = xMin >> 4; cx <= (xMax >> 4); cx++) {
             for (int cz = zMin >> 4; cz <= (zMax >> 4); cz++) {
-                Chunk c = world.getChunk(cx, cz, ChunkStatus.FULL, false);
-                if (!(c instanceof WorldChunk wc)) continue;
+                ChunkAccess c = world.getChunk(cx, cz, ChunkStatus.FULL, false);
+                if (!(c instanceof LevelChunk wc)) continue;
                 for (Map.Entry<BlockPos, BlockEntity> e : wc.getBlockEntities().entrySet()) {
                     if (!(e.getValue() instanceof SignBlockEntity)) continue;
                     BlockPos p = e.getKey();
                     if (p.getX() < xMin || p.getX() > xMax) continue;
                     if (p.getZ() < zMin || p.getZ() > zMax) continue;
                     if (p.getY() < yMin || p.getY() > yMax) continue;
-                    adaylar.add(p.toImmutable());
+                    adaylar.add(p.immutable());
                 }
             }
         }
     }
 
     /** Tek bir tabelayı inceler: Candy'nin mi, cevap mı, etkileşim mi? */
-    private static void tabelaIncele(ServerPlayerEntity player, TruePersonality tp,
-                                     ServerWorld world, RegistryKey<World> dunya,
+    private static void tabelaIncele(ServerPlayer player, TruePersonality tp,
+                                     ServerLevel world, ResourceKey<Level> dunya,
                                      BlockPos p, Map<TabelaAnahtar, Long> okunmus) {
         if (!(world.getBlockEntity(p) instanceof SignBlockEntity sign)) return;
         final TabelaAnahtar anahtar = new TabelaAnahtar(dunya, p);
 
         // Kısa cooldown (3 sn) — cevap algılama gecikmesini engelle
-        final long now = world.getTime();
+        final long now = world.getGameTime();
         Long lastRead = okunmus.get(anahtar);
         if (lastRead != null && now - lastRead < 60) return;
 
@@ -370,7 +369,7 @@ public class SignSystem {
 
         // Cevap zaten analiz edildiyse tekrar okuma
         Set<TabelaAnahtar> analiz = analizEdilen.computeIfAbsent(
-            player.getUuid(), k -> new HashSet<>());
+            player.getUUID(), k -> new HashSet<>());
         if (analiz.contains(anahtar)) {
             okunmus.put(anahtar, now);
             return;
@@ -387,7 +386,7 @@ public class SignSystem {
                 for (TabelaAnahtar ca : candyTabelalari.keySet()) {
                     // Dünya kontrolü ŞART: başka dünyadaki aynı koordinat "yakın" değildir.
                     if (!ca.dunya().equals(dunya)) continue;
-                    if (ca.poz().getSquaredDistance(p) <= 25) {   // 5 blok
+                    if (ca.poz().distSqr(p) <= 25) {   // 5 blok
                         yakinCandy = ca;
                         break;
                     }
@@ -442,7 +441,7 @@ public class SignSystem {
      * Rastgele bir olasılıkla, oyuncunun görmediği bir yere tabela yerleştir.
      * Candy sabırlı — sık yerleştirmiyor.
      */
-    private static void belkiTabelaYaz(ServerPlayerEntity player) {
+    private static void belkiTabelaYaz(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
 
         // Kurulum tamamlanmadıysa kurulum sorusu koy
@@ -450,7 +449,7 @@ public class SignSystem {
             String soru = SignTemplates.siradakiKurulumSorusu(tp);
             if (soru == null) {
                 tp.kurulumTamam = true;
-                tp.kurulumTamamTick = player.getWorld().getTime();
+                tp.kurulumTamamTick = player.level().getGameTime();
                 com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "denek");
                 Candy.LOG.info("[Candy] {} için kurulum tamamlandı", player.getName().getString());
                 return;
@@ -458,12 +457,12 @@ public class SignSystem {
             BlockPos hedef = yakinBosYer(player, 4, 8);
             if (hedef != null) {
                 // Soruyu 3 satıra wrap, son satırda hint. Uzun sorular otomatik böl.
-                Text[] soruSatir = wrapText(Text.translatable(soru), 15, 3);
-                yerlestir((ServerWorld) player.getWorld(), hedef, player, new Text[]{
+                Component[] soruSatir = wrapText(Component.translatable(soru), 15, 3);
+                yerlestir((ServerLevel) player.level(), hedef, player, new Component[]{
                     soruSatir[0], soruSatir[1], soruSatir[2],
-                    Text.translatable(SignTemplates.CEVAPLA_HINT)
+                    Component.translatable(SignTemplates.CEVAPLA_HINT)
                 }, true);
-                tp.sonMudahaleTick = player.getWorld().getTime();
+                tp.sonMudahaleTick = player.level().getGameTime();
                 Candy.LOG.info("[Candy] kurulum sorusu yerleştirildi: {}", soru);
             }
             return;
@@ -476,23 +475,23 @@ public class SignSystem {
 
         // %15 ihtimalle ShadowTree'nin baskın etkileşim dalından — Candy "diğer üsluptan" konuşur
         TreeNode baskin;
-        ShadowTree shadow = ShadowTreeManager.getIfExists(player.getUuid());
+        ShadowTree shadow = ShadowTreeManager.getIfExists(player.getUUID());
         if (shadow != null && RNG.nextDouble() < 0.15) {
             baskin = shadow.tree.baskinAlt(TreeBranch.ETKILESIM);
         } else {
-            baskin = TreeGrowth.get(player.getUuid()).baskinAlt(TreeBranch.ETKILESIM);
+            baskin = TreeGrowth.get(player.getUUID()).baskinAlt(TreeBranch.ETKILESIM);
         }
 
-        Text metin = RNG.nextDouble() < 0.4
+        Component metin = RNG.nextDouble() < 0.4
             ? SignTemplates.kisiselAtif(tp, baskin)
             : SignTemplates.gozlemUret(tp, baskin);
 
         BlockPos hedef = yakinBosYer(player, 8, 16);
         if (hedef != null) {
             // Tüm 4 satıra wrap
-            Text[] satir = wrapText(metin, 15, 4);
-            yerlestir((ServerWorld) player.getWorld(), hedef, player, satir, true);
-            tp.sonMudahaleTick = player.getWorld().getTime();
+            Component[] satir = wrapText(metin, 15, 4);
+            yerlestir((ServerLevel) player.level(), hedef, player, satir, true);
+            tp.sonMudahaleTick = player.level().getGameTime();
         }
     }
 
@@ -501,9 +500,9 @@ public class SignSystem {
      * Önce oyuncunun Y'sinde ve ±3 Y'de dener (mağara/yeraltı için). Bulamazsa topY'e düşer.
      * Böylece kullanıcı yeraltındayken tabelalar yerüstüne yerleşmez, hep göremediği yerde kalmaz.
      */
-    private static BlockPos yakinBosYer(ServerPlayerEntity player, int minMesafe, int maxMesafe) {
-        ServerWorld world = (ServerWorld) player.getWorld();
-        BlockPos merkez = player.getBlockPos();
+    private static BlockPos yakinBosYer(ServerPlayer player, int minMesafe, int maxMesafe) {
+        ServerLevel world = (ServerLevel) player.level();
+        BlockPos merkez = player.blockPosition();
         for (int deneme = 0; deneme < 20; deneme++) {
             double angle = RNG.nextDouble() * Math.PI * 2;
             double mesafe = minMesafe + RNG.nextDouble() * (maxMesafe - minMesafe);
@@ -524,7 +523,7 @@ public class SignSystem {
             }
 
             // 3) Son çare: yüzey Y'si (yerüstü açık alan için)
-            int topY = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, x, z);
+            int topY = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
             if (topY != y) {   // Zaten denediysek atla
                 p = new BlockPos(x, topY, z);
                 if (uygunTabelaYeri(world, p)) return p;
@@ -533,27 +532,27 @@ public class SignSystem {
         return null;
     }
 
-    private static boolean uygunTabelaYeri(ServerWorld world, BlockPos p) {
+    private static boolean uygunTabelaYeri(ServerLevel world, BlockPos p) {
         return world.getBlockState(p).isAir()
-            && world.getBlockState(p.down()).isSolidBlock(world, p.down());
+            && world.getBlockState(p.below()).isRedstoneConductor(world, p.below());
     }
 
     /**
      * Oyuncunun cevabına Candy'nin reaksiyonu — 3-6 blok yakına tabela yerleştir.
      * Reaksiyon null dönerse sessiz kalır.
      */
-    private static void reaksiyonYerlestir(ServerPlayerEntity player, TruePersonality tp, String cevap) {
-        Text reaksiyon = DialogReaksiyon.reaksiyonUret(cevap, tp);
+    private static void reaksiyonYerlestir(ServerPlayer player, TruePersonality tp, String cevap) {
+        Component reaksiyon = DialogReaksiyon.reaksiyonUret(cevap, tp);
         if (reaksiyon == null) return;
         BlockPos hedef = yakinBosYer(player, 3, 6);
         if (hedef == null) return;
         // 4 satıra wrap — reaksiyon uzunsa alt satırlara aksın
-        Text[] satir = wrapText(reaksiyon, 15, 4);
-        yerlestir((ServerWorld) player.getWorld(), hedef, player, satir, true);
-        tp.sonMudahaleTick = player.getWorld().getTime();
+        Component[] satir = wrapText(reaksiyon, 15, 4);
+        yerlestir((ServerLevel) player.level(), hedef, player, satir, true);
+        tp.sonMudahaleTick = player.level().getGameTime();
         Candy.LOG.info("[Candy] diyalog reaksiyonu: {}", reaksiyon.getString());
         // v1.9.14: yalanci başarımı — Candy "yalan söylüyorsun" tarzı bir reaction verdiyse
-        String key = reaksiyon.getContent() instanceof net.minecraft.text.TranslatableTextContent tc
+        String key = reaksiyon.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc
             ? tc.getKey() : "";
         if (key.startsWith("candy.reaction.no.")) {
             com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "yalanci");
@@ -568,10 +567,10 @@ public class SignSystem {
      * NOT: getString() server dil dosyasından resolve eder (fallback en_us). MP mixed language
      * senaryoda tüm oyuncular server-language görür. Single-player'da player'ın dili kullanılır.
      */
-    private static Text[] wrapText(Text src, int maxLineChars, int maxLines) {
+    private static Component[] wrapText(Component src, int maxLineChars, int maxLines) {
         String raw = src.getString();
         String[] words = raw.split("\\s+");
-        List<Text> lines = new ArrayList<>();
+        List<Component> lines = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         for (String word : words) {
             if (word.isEmpty()) continue;
@@ -580,39 +579,39 @@ public class SignSystem {
             } else if (current.length() + 1 + word.length() <= maxLineChars) {
                 current.append(' ').append(word);
             } else {
-                lines.add(Text.literal(current.toString()));
+                lines.add(Component.literal(current.toString()));
                 if (lines.size() >= maxLines) { current.setLength(0); break; }
                 current = new StringBuilder(word);
             }
         }
         if (current.length() > 0 && lines.size() < maxLines) {
-            lines.add(Text.literal(current.toString()));
+            lines.add(Component.literal(current.toString()));
         }
-        while (lines.size() < maxLines) lines.add(Text.empty());
-        return lines.toArray(new Text[0]);
+        while (lines.size() < maxLines) lines.add(Component.empty());
+        return lines.toArray(new Component[0]);
     }
 
     /**
      * Belirtilen konuma özel meşe tabelası yerleştir. Tabela player'a doğru döner
      * — böylece oyuncu tabela metnini hep görür (backface değil).
      */
-    private static void yerlestir(ServerWorld world, BlockPos pos, ServerPlayerEntity player,
-                                  Text[] satirlar, boolean candyMi) {
+    private static void yerlestir(ServerLevel world, BlockPos pos, ServerPlayer player,
+                                  Component[] satirlar, boolean candyMi) {
         // Rotation: 0=güney, 4=batı, 8=kuzey, 12=doğu (16 adım tam tur)
         double dx = player.getX() - (pos.getX() + 0.5);
         double dz = player.getZ() - (pos.getZ() + 0.5);
         double angle = Math.atan2(-dx, dz);
         int rotation = ((int) Math.round(angle * 8.0 / Math.PI) + 16) & 15;
 
-        BlockState state = Blocks.OAK_SIGN.getDefaultState()
-            .with(Properties.ROTATION, rotation);
-        world.setBlockState(pos, state);
+        BlockState state = Blocks.OAK_SIGN.defaultBlockState()
+            .setValue(BlockStateProperties.ROTATION_16, rotation);
+        world.setBlockAndUpdate(pos, state);
         BlockEntity be = world.getBlockEntity(pos);
         if (!(be instanceof SignBlockEntity sign)) return;
 
         SignText metin = new SignText();
         for (int i = 0; i < Math.min(4, satirlar.length); i++) {
-            metin = metin.withMessage(i, satirlar[i]);
+            metin = metin.setMessage(i, satirlar[i]);
         }
         sign.setText(metin, true);
         // Waxed olmadığından emin ol — oyuncu sağ tıklayıp edit UI'sını açabilsin.
@@ -624,12 +623,12 @@ public class SignSystem {
                 if (it.hasNext()) { it.next(); it.remove(); }
             }
             candyTabelalari.put(
-                new TabelaAnahtar(world.getRegistryKey(), pos.toImmutable()),
-                new TabelaKaydi(player.getUuid(), metinBirlestir(satirlar), world.getTime()));
+                new TabelaAnahtar(world.dimension(), pos.immutable()),
+                new TabelaKaydi(player.getUUID(), metinBirlestir(satirlar), world.getGameTime()));
         }
 
-        sign.markDirty();
-        world.updateListeners(pos, sign.getCachedState(), sign.getCachedState(), 3);
+        sign.setChanged();
+        world.sendBlockUpdated(pos, sign.getBlockState(), sign.getBlockState(), 3);
     }
 
     /**
@@ -639,7 +638,7 @@ public class SignSystem {
      * NOT: Sağ tık BACK yüzü de edit'liyor MC 1.20+'da. Sadece front okursak, arka yüzü
      * düzenleyen oyuncunun cevabı algılanmıyordu. Şimdi iki yüz de kontrol edilir.
      */
-    private static String metinBirlestir(Text[] satirlar) {
+    private static String metinBirlestir(Component[] satirlar) {
         StringBuilder sb = new StringBuilder();
         int limit = Math.min(4, satirlar.length);
         for (int i = 0; i < limit; i++) {
@@ -661,7 +660,7 @@ public class SignSystem {
     private static String yuzMetin(SignText t) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 4; i++) {
-            Text line = t.getMessage(i, false);
+            Component line = t.getMessage(i, false);
             if (line != null) {
                 if (sb.length() > 0) sb.append(' ');
                 sb.append(line.getString());

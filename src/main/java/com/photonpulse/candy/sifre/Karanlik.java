@@ -7,7 +7,7 @@ import com.photonpulse.candy.net.KaranlikPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Karanlik (v8.1) — ışık kademesini client'a yollayan sunucu tarafı.
@@ -35,7 +35,7 @@ public final class Karanlik {
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             try {
-                ServerPlayerEntity player = handler.getPlayer();
+                ServerPlayer player = handler.getPlayer();
                 TruePersonality tp = PersonalityManager.get(player);
                 if (tp.isikDusumu > 0) gonder(player, tp.isikDusumu);
             } catch (Throwable ignored) {}
@@ -45,7 +45,7 @@ public final class Karanlik {
     }
 
     /** Kademeyi oyuncunun client'ına yollar. Vanilla client'ta sessizce düşer. */
-    public static void gonder(ServerPlayerEntity player, int kademe) {
+    public static void gonder(ServerPlayer player, int kademe) {
         try {
             ServerPlayNetworking.send(player, new KaranlikPayload(kademe));
         } catch (Throwable ignored) {

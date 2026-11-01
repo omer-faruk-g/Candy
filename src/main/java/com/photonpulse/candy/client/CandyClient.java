@@ -8,10 +8,10 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.GameMenuScreen;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.network.chat.Component;
 
 /**
  * CandyClient — client-side entry.
@@ -93,27 +93,27 @@ public class CandyClient implements ClientModInitializer {
         }
 
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
-            if (screen instanceof GameMenuScreen) {
+            if (screen instanceof PauseScreen) {
                 belkiGoster(client);
             }
         });
         Candy.LOG.info("[Candy] client aktif — menü yakalayıcı + doppel renderer hazır");
     }
 
-    private static void belkiGoster(MinecraftClient client) {
+    private static void belkiGoster(Minecraft client) {
         long simdi = System.currentTimeMillis();
         if (simdi - sonGosterim < COOLDOWN_MS) return;
         sonGosterim = simdi;
 
         if (client.player == null) return;
 
-        Text mesaj = Text.translatable("candy.chat.stay")
-            .formatted(Formatting.DARK_GRAY, Formatting.ITALIC);
+        Component mesaj = Component.translatable("candy.chat.stay")
+            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);
 
         // Bir sonraki tick'te chat'e yaz — screen init sırasında yollamak sorun çıkarabilir
         client.execute(() -> {
             if (client.player != null) {
-                client.player.sendMessage(mesaj, false);
+                client.player.displayClientMessage(mesaj, false);
             }
         });
     }

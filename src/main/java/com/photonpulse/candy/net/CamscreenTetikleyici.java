@@ -6,11 +6,10 @@ import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -50,12 +49,12 @@ public class CamscreenTetikleyici {
         }
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % KONTROL_ARALIGI != 0) return;
-            long simdi = server.getOverworld().getTime();
+            if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
+            long simdi = server.overworld().getGameTime();
             // v1.9.0: sessizlik protokolü aktifse camscreen atma
             if (com.photonpulse.candy.sessizlik.SessizlikState.sessizlikte(simdi)) return;
 
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 if (player.isCreative() || player.isSpectator()) continue;
@@ -80,11 +79,11 @@ public class CamscreenTetikleyici {
                 if (tp.korkuSkoru >= 70) ihtimal *= 1.2;
                 ihtimal = Math.min(0.95, ihtimal);
 
-                Long son = sonTetik.get(player.getUuid());
+                Long son = sonTetik.get(player.getUUID());
                 if (son != null && simdi - son < cooldownTick) continue;
                 if (RNG.nextDouble() > ihtimal) continue;
 
-                sonTetik.put(player.getUuid(), simdi);
+                sonTetik.put(player.getUUID(), simdi);
 
                 // Text (1/3) vs image (2/3). Image ise 4 varyanttan uniform:
                 // smiley / neverdie / mask / sssss (denge korunur, çeşit artar)
@@ -105,10 +104,10 @@ public class CamscreenTetikleyici {
                 }
 
                 // Warden sonic boom sesi
-                ((ServerWorld) player.getWorld()).playSound(
-                    null, player.getBlockPos(),
-                    SoundEvents.ENTITY_WARDEN_SONIC_BOOM,
-                    SoundCategory.HOSTILE, 1.2f, 1.0f);
+                ((ServerLevel) player.level()).playSound(
+                    null, player.blockPosition(),
+                    SoundEvents.WARDEN_SONIC_BOOM,
+                    SoundSource.HOSTILE, 1.2f, 1.0f);
 
                 Candy.LOG.info("[Candy] CAMSCREEN[{}] kotuluk={} idx={} sure={}ms",
                     player.getName().getString(),

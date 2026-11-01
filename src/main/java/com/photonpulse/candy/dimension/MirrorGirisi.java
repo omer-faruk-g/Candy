@@ -6,14 +6,13 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.minecraft.block.Blocks;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
 import java.util.Collections;
 import java.util.Random;
 
@@ -36,23 +35,23 @@ public class MirrorGirisi {
 
     public static void register() {
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            if (!(entity instanceof ServerPlayerEntity player)) return;
+            if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) return;
 
-            ServerWorld world = (ServerWorld) player.getWorld();
+            ServerLevel world = (ServerLevel) player.level();
 
             // 1) Anti-Mirror'da ölüm → gerçek dünyaya dönüş bekle + kick (deferred)
-            if (world.getRegistryKey().equals(CandyDimensions.ANTI_MIRROR)) {
+            if (world.dimension().equals(CandyDimensions.ANTI_MIRROR)) {
                 tp.gercekDunyaDonusBekliyor = true;
-                MinecraftServer srv = player.getWorld().getServer();
+                MinecraftServer srv = player.level().getServer();
                 if (srv != null) {
                     // AFTER_DEATH event içinde anında disconnect riskli — bir sonraki tick'e ertele
                     srv.execute(() -> {
-                        if (player.networkHandler != null) {
-                            player.networkHandler.disconnect(
-                                Text.translatable("candy.mirror.anti_kick")
-                                    .formatted(Formatting.DARK_RED));
+                        if (player.connection != null) {
+                            player.connection.disconnect(
+                                Component.translatable("candy.mirror.anti_kick")
+                                    .withStyle(ChatFormatting.DARK_RED));
                         }
                     });
                 }
@@ -62,7 +61,7 @@ public class MirrorGirisi {
             }
 
             // 2) Mirror'da ölüm → Anti-Mirror'a
-            if (world.getRegistryKey().equals(CandyDimensions.MIRROR)) {
+            if (world.dimension().equals(CandyDimensions.MIRROR)) {
                 tp.mirrordaOldu = true;
                 Candy.LOG.info("[Candy] Mirror ölüm → Anti-Mirror bekletiyor: {}",
                     player.getName().getString());
@@ -70,13 +69,13 @@ public class MirrorGirisi {
             }
 
             // 3) Overworld'de Candy/klon tarafından öldürüldü → %25 Mirror
-            var attacker = source.getAttacker();
+            var attacker = source.getEntity();
             boolean candyOldurdu = attacker != null
-                && attacker.getCommandTags().contains(KLON_ETIKETI);
+                && attacker.getTags().contains(KLON_ETIKETI);
             if (candyOldurdu && RNG.nextDouble() < MIRROR_GIRIS_IHTIMAL) {
                 tp.mirrorGirisBekliyor = true;
                 // Gerçek dünya dönüş noktası — öldüğü yer
-                tp.sonMirrorGiris = player.getBlockPos().asLong();
+                tp.sonMirrorGiris = player.blockPosition().asLong();
                 Candy.LOG.info("[Candy] Overworld candy-kill → Mirror bekletiyor: {}",
                     player.getName().getString());
             }
@@ -86,20 +85,20 @@ public class MirrorGirisi {
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
             if (alive) return;
             TruePersonality tp = PersonalityManager.get(newPlayer);
-            MinecraftServer server = newPlayer.getWorld().getServer();
+            MinecraftServer server = newPlayer.level().getServer();
             if (server == null) return;
 
             // A) Gerçek dünyaya dönüş (Anti-Mirror ölümü sonrası)
             if (tp.gercekDunyaDonusBekliyor) {
                 tp.gercekDunyaDonusBekliyor = false;
-                ServerWorld overworld = server.getOverworld();
-                BlockPos donus = BlockPos.fromLong(tp.sonMirrorGiris);
+                ServerLevel overworld = server.overworld();
+                BlockPos donus = BlockPos.of(tp.sonMirrorGiris);
                 int x = donus.getX();
                 int z = donus.getZ();
-                int y = overworld.getTopY(
-                    net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, x, z);
-                newPlayer.teleport(overworld, x + 0.5, y, z + 0.5,
-                    Collections.emptySet(), newPlayer.getYaw(), 0f, false);
+                int y = overworld.getHeight(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+                newPlayer.teleportTo(overworld, x + 0.5, y, z + 0.5,
+                    Collections.emptySet(), newPlayer.getYRot(), 0f, false);
                 newPlayer.setHealth(newPlayer.getMaxHealth());
                 Candy.LOG.info("[Candy] Anti-Mirror → gerçek dünya dönüş: {} @({}, {}, {})",
                     newPlayer.getName().getString(), x, y, z);
@@ -109,12 +108,12 @@ public class MirrorGirisi {
             // B) Mirror'a git (overworld candy-kill sonrası)
             if (tp.mirrorGirisBekliyor) {
                 tp.mirrorGirisBekliyor = false;
-                ServerWorld mirror = server.getWorld(CandyDimensions.MIRROR);
+                ServerLevel mirror = server.getLevel(CandyDimensions.MIRROR);
                 if (mirror != null) {
                     mirrorTasi(newPlayer, mirror);
-                    newPlayer.sendMessage(
-                        Text.translatable("candy.mirror.giris")
-                            .formatted(Formatting.DARK_PURPLE, Formatting.ITALIC),
+                    newPlayer.displayClientMessage(
+                        Component.translatable("candy.mirror.giris")
+                            .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC),
                         false);
                     CandyBasarimlar.tetikle(newPlayer, "aynada_gordum");
                 }
@@ -124,13 +123,13 @@ public class MirrorGirisi {
             // C) Anti-Mirror'a git (Mirror'da ölüm)
             if (tp.mirrordaOldu) {
                 tp.mirrordaOldu = false;
-                ServerWorld antiMirror = server.getWorld(CandyDimensions.ANTI_MIRROR);
+                ServerLevel antiMirror = server.getLevel(CandyDimensions.ANTI_MIRROR);
                 if (antiMirror != null) {
                     antiMirrorTasi(newPlayer, antiMirror);
-                    tp.antiMirrorGirisTick = server.getOverworld().getTime();
-                    newPlayer.sendMessage(
-                        Text.translatable("candy.mirror.anti_giris")
-                            .formatted(Formatting.DARK_RED, Formatting.ITALIC),
+                    tp.antiMirrorGirisTick = server.overworld().getGameTime();
+                    newPlayer.displayClientMessage(
+                        Component.translatable("candy.mirror.anti_giris")
+                            .withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC),
                         false);
                     CandyBasarimlar.tetikle(newPlayer, "ters_yuz");
                 }
@@ -140,20 +139,20 @@ public class MirrorGirisi {
         Candy.LOG.info("[Candy] MirrorGirisi aktif (v3.0)");
     }
 
-    private static void mirrorTasi(ServerPlayerEntity player, ServerWorld mirror) {
+    private static void mirrorTasi(ServerPlayer player, ServerLevel mirror) {
         // Overworld koordinatlarını kullan (X, Z aynı, Y yüzey — overworld gen ile hep katı zemin)
         int x = player.getBlockX();
         int z = player.getBlockZ();
-        int y = mirror.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, x, z);
-        if (y <= mirror.getBottomY() + 1) y = 96; // chunk daha üretilmediyse güvenli fallback
-        player.teleport(mirror, x + 0.5, y, z + 0.5,
-            Collections.emptySet(), player.getYaw(), 0f, false);
+        int y = mirror.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+        if (y <= mirror.getMinY() + 1) y = 96; // chunk daha üretilmediyse güvenli fallback
+        player.teleportTo(mirror, x + 0.5, y, z + 0.5,
+            Collections.emptySet(), player.getYRot(), 0f, false);
         player.setHealth(player.getMaxHealth());
         Candy.LOG.info("[Candy] Mirror teleport: {} → ({}, {}, {})",
             player.getName().getString(), x, y, z);
     }
 
-    private static void antiMirrorTasi(ServerPlayerEntity player, ServerWorld antiMirror) {
+    private static void antiMirrorTasi(ServerPlayer player, ServerLevel antiMirror) {
         int x = player.getBlockX();
         int z = player.getBlockZ();
         int y = 128; // Anti-Mirror sabit yükseklik
@@ -162,13 +161,13 @@ public class MirrorGirisi {
         // Player'ın altına güvenli platform kur — void'e düşmesin, lottery ile ölsün.
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
-                antiMirror.setBlockState(new BlockPos(x + dx, y - 1, z + dz),
-                    Blocks.BLACKSTONE.getDefaultState(), 3);
+                antiMirror.setBlock(new BlockPos(x + dx, y - 1, z + dz),
+                    Blocks.BLACKSTONE.defaultBlockState(), 3);
             }
         }
 
-        player.teleport(antiMirror, x + 0.5, y, z + 0.5,
-            Collections.emptySet(), player.getYaw(), 0f, false);
+        player.teleportTo(antiMirror, x + 0.5, y, z + 0.5,
+            Collections.emptySet(), player.getYRot(), 0f, false);
         player.setHealth(player.getMaxHealth());
         Candy.LOG.info("[Candy] Anti-Mirror teleport: {} → ({}, {}, {}) + platform",
             player.getName().getString(), x, y, z);

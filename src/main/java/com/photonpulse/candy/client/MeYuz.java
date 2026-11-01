@@ -1,17 +1,17 @@
 package com.photonpulse.candy.client;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.mixin.client.SpriteContentsAccessor;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.texture.SpriteAtlasTexture;
-import net.minecraft.client.texture.SpriteContents;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.SpriteContents;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * MeYuz — "ME" dünyasının kimliği: <b>her blok senin yüzün olur</b>.
@@ -33,22 +33,22 @@ import net.minecraft.util.Identifier;
 public final class MeYuz {
 
     /** v8: Identifier olarak tutulur — toString() her istemci tick'inde String tahsisiydi. */
-    private static final Identifier ME_DUNYA = Identifier.of("candy", "me");
-    private static final Identifier SPRITE = Identifier.of(Candy.MOD_ID, "block/me");
+    private static final ResourceLocation ME_DUNYA = ResourceLocation.fromNamespaceAndPath("candy", "me");
+    private static final ResourceLocation SPRITE = ResourceLocation.fromNamespaceAndPath(Candy.MOD_ID, "block/me");
 
     private static boolean icerideydi = false;
 
     private MeYuz() {}
 
     /** CandyClient her istemci tick'inde çağırır. */
-    public static void istemciTick(MinecraftClient client) {
-        if (client == null || client.world == null || client.player == null) {
+    public static void istemciTick(Minecraft client) {
+        if (client == null || client.level == null || client.player == null) {
             icerideydi = false;
             return;
         }
         boolean meDe;
         try {
-            meDe = ME_DUNYA.equals(client.world.getRegistryKey().getValue());
+            meDe = ME_DUNYA.equals(client.level.dimension().location());
         } catch (Throwable t) { return; }
 
         if (meDe && !icerideydi) {
@@ -59,7 +59,7 @@ public final class MeYuz {
         icerideydi = meDe;
     }
 
-    private static void uygula(MinecraftClient client) {
+    private static void uygula(Minecraft client) {
         // 1.21.9'da atlas GPU yolu yeniden yazıldı: SpriteContents.upload artık sprite'ı
         // hedef dokunun (0,0) köşesine yazıyor, atlas içindeki x/y ofsetini uygulamıyor
         // (Sprite.upload de ofsetsiz delege ediyor — bytecode'dan doğrulandı). Bu numara
@@ -71,18 +71,18 @@ public final class MeYuz {
         */
         //?}
         //? if >=1.21.9 {
-        /*SpriteAtlasTexture atlas = client.getAtlasManager()
-            .getAtlasTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+        /*TextureAtlas atlas = client.getAtlasManager()
+            .getAtlasOrThrow(TextureAtlas.LOCATION_BLOCKS);
         */
         //?}
         //? if <1.21.9 {
-        SpriteAtlasTexture atlas = client.getBakedModelManager()
-            .getAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+        TextureAtlas atlas = client.getModelManager()
+            .getAtlas(TextureAtlas.LOCATION_BLOCKS);
         //?}
         if (atlas == null) return;
-        Sprite sprite = atlas.getSprite(SPRITE);
+        TextureAtlasSprite sprite = atlas.getSprite(SPRITE);
         if (sprite == null) return;
-        SpriteContents contents = sprite.getContents();
+        SpriteContents contents = sprite.contents();
         if (contents == null) return;
 
         NativeImage[] mips = ((SpriteContentsAccessor) (Object) contents).candy$mipmaps();
@@ -98,34 +98,34 @@ public final class MeYuz {
         int[] skinArgb = new int[sw * sh];
         for (int y = 0; y < sh; y++)
             for (int x = 0; x < sw; x++)
-                skinArgb[y * sw + x] = skin.getColorArgb(x, y);
+                skinArgb[y * sw + x] = skin.getPixel(x, y);
         // Her mip seviyesine yüzü ölçekleyerek yaz (uzaktan da yüz görünsün)
         for (NativeImage mip : mips) {
             if (mip != null) yuzYaz(mip, skinArgb, sw);
         }
         //? if >=1.21.9 {
-        /*sprite.upload(atlas.getGlTexture(), 0);   // erişilmez — yukarıda return var
+        /*sprite.uploadFirstFrame(atlas.getTexture(), 0);   // erişilmez — yukarıda return var
         */
         //?}
         //? if <1.21.9 {
-        contents.upload(sprite.getX(), sprite.getY(), atlas.getGlTexture());
+        contents.uploadFirstFrame(sprite.getX(), sprite.getY(), atlas.getTexture());
         //?}
         Candy.LOG.info("[Candy] ME: bloklar oyuncunun yüzüne boyandı");
     }
 
     /** Skin GPU dokusundan CPU'da okunabilen NativeImage (yoksa null). */
-    private static NativeImage skinImaji(MinecraftClient client) {
+    private static NativeImage skinImaji(Minecraft client) {
         try {
             //? if >=1.21.9 {
-            /*Identifier skinId = client.player.getSkin().body().texturePath();
+            /*ResourceLocation skinId = client.player.getSkin().body().texturePath();
             */
             //?}
             //? if <1.21.9 {
-            Identifier skinId = client.player.getSkinTextures().texture();
+            ResourceLocation skinId = client.player.getSkin().texture();
             //?}
             if (skinId == null) return null;
             AbstractTexture tex = client.getTextureManager().getTexture(skinId);
-            if (tex instanceof NativeImageBackedTexture nb) return nb.getImage();
+            if (tex instanceof DynamicTexture nb) return nb.getPixels();
         } catch (Throwable ignored) {}
         return null;
     }
@@ -137,6 +137,6 @@ public final class MeYuz {
         int[] yuz = MeYuzHesap.yuzOlustur(skinArgb, skinW, w, h);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
-                hedef.setColorArgb(x, y, yuz[y * w + x]);
+                hedef.setPixel(x, y, yuz[y * w + x]);
     }
 }

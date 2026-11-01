@@ -13,17 +13,16 @@ import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.item.ItemStack;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -70,7 +69,7 @@ public class CloneManager {
         tickSayaci++;
         if (tickSayaci % KONTROL_ARALIGI != 0) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             klonKararVer(player);
         }
     }
@@ -83,16 +82,16 @@ public class CloneManager {
      *  - Aktif klon sayısı MAKS_KLON_PER_OYUNCU'nun altında
      *  - Rastgele düşük olasılık (Candy sabırlı)
      */
-    private static void klonKararVer(ServerPlayerEntity player) {
+    private static void klonKararVer(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
 
         if (!tp.kurulumTamam) return;
         if (tp.korkuSkoru < MIN_KORKU_ESIGI) return;
 
-        List<UUID> mevcut = aktifKlonlar.computeIfAbsent(player.getUuid(), k -> new java.util.ArrayList<>());
+        List<UUID> mevcut = aktifKlonlar.computeIfAbsent(player.getUUID(), k -> new java.util.ArrayList<>());
 
         // Ölmüş / uzaklaşmış klonları temizle
-        ServerWorld world = (ServerWorld) player.getWorld();
+        ServerLevel world = (ServerLevel) player.level();
         mevcut.removeIf(uuid -> {
             var e = world.getEntity(uuid);
             return e == null || !e.isAlive();
@@ -109,8 +108,8 @@ public class CloneManager {
 
         LivingEntity klon = klonSpawn(world, hedef, tp, player);
         if (klon != null) {
-            mevcut.add(klon.getUuid());
-            tp.sonMudahaleTick = world.getTime();
+            mevcut.add(klon.getUUID());
+            tp.sonMudahaleTick = world.getGameTime();
             Candy.LOG.info("[Candy] klon spawn edildi: {} için @{}",
                 player.getName().getString(), hedef);
 
@@ -118,10 +117,10 @@ public class CloneManager {
             tp.karsilastigiKlonSayisi++;
             if (klon instanceof com.photonpulse.candy.entity.CandyDoppelEntity doppel) {
                 if (tp.karsilastigiKlonSayisi > 4) {
-                    doppel.addCommandTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_EVRIMLI);
+                    doppel.addTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_EVRIMLI);
                 }
                 if (tp.karsilastigiKlonSayisi > 3 && RNG.nextDouble() < 0.15) {
-                    doppel.addCommandTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_ELITE);
+                    doppel.addTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_ELITE);
                     eliteEkipmanUret(doppel, player);
                     Candy.LOG.info("[Candy] ELITE klon (otomatik) → {}",
                         player.getName().getString());
@@ -137,7 +136,7 @@ public class CloneManager {
      *
      * @return true: spawn başarılı; false: uygun konum bulunamadı.
      */
-    public static boolean zorlaKlonSpawn(ServerPlayerEntity player, TruePersonality tp) {
+    public static boolean zorlaKlonSpawn(ServerPlayer player, TruePersonality tp) {
         return zorlaKlonSpawn(player, tp, null);
     }
 
@@ -150,15 +149,15 @@ public class CloneManager {
      *
      * @param istenen hedef chunk içindeki bir nokta, ya da null (= oyuncunun arkası)
      */
-    public static boolean zorlaKlonSpawn(ServerPlayerEntity player, TruePersonality tp,
+    public static boolean zorlaKlonSpawn(ServerPlayer player, TruePersonality tp,
                                          BlockPos istenen) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+        ServerLevel world = (ServerLevel) player.level();
         BlockPos hedef = (istenen == null)
             ? arkaYakinKonum(player)
             : ariyorumUygunKonum(world, istenen.getX(), istenen.getZ(), istenen.getY());
         if (hedef == null) return false;
 
-        List<UUID> mevcut = aktifKlonlar.computeIfAbsent(player.getUuid(), k -> new java.util.ArrayList<>());
+        List<UUID> mevcut = aktifKlonlar.computeIfAbsent(player.getUUID(), k -> new java.util.ArrayList<>());
         // Ölmüş klonları temizle
         mevcut.removeIf(uuid -> {
             var e = world.getEntity(uuid);
@@ -168,8 +167,8 @@ public class CloneManager {
         LivingEntity klon = klonSpawn(world, hedef, tp, player);
         if (klon == null) return false;
 
-        mevcut.add(klon.getUuid());
-        tp.sonMudahaleTick = world.getTime();
+        mevcut.add(klon.getUUID());
+        tp.sonMudahaleTick = world.getGameTime();
         Candy.LOG.info("[Candy] ZORLA klon: {} için @{} (ShadowState)",
             player.getName().getString(), hedef);
         // v1.9.3: ayna başarımı — ilk klon karşılaşması
@@ -180,11 +179,11 @@ public class CloneManager {
         if (klon instanceof com.photonpulse.candy.entity.CandyDoppelEntity doppel) {
             // 5. klondan itibaren evrimli — blok kırıp koyabilir
             if (tp.karsilastigiKlonSayisi > 4) {
-                doppel.addCommandTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_EVRIMLI);
+                doppel.addTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_EVRIMLI);
             }
             // 4. klondan itibaren %15 elite — envanter tarayıp ekipman üretir
             if (tp.karsilastigiKlonSayisi > 3 && RNG.nextDouble() < 0.15) {
-                doppel.addCommandTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_ELITE);
+                doppel.addTag(com.photonpulse.candy.entity.CandyDoppelEntity.TAG_ELITE);
                 eliteEkipmanUret(doppel, player);
                 Candy.LOG.info("[Candy] ELITE klon spawn → envanter tarandı ({})",
                     player.getName().getString());
@@ -199,73 +198,73 @@ public class CloneManager {
      * Netherite > Diamond > Iron > Gold > Chainmail
      */
     private static void eliteEkipmanUret(com.photonpulse.candy.entity.CandyDoppelEntity klon,
-                                          ServerPlayerEntity player) {
+                                          ServerPlayer player) {
         var inv = player.getInventory();
         int nether = 0, diamond = 0, iron = 0, gold = 0;
-        for (int i = 0; i < inv.size(); i++) {
-            var stack = inv.getStack(i);
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            var stack = inv.getItem(i);
             if (stack.isEmpty()) continue;
             var item = stack.getItem();
             int c = stack.getCount();
-            if (item == net.minecraft.item.Items.NETHERITE_INGOT
-                || item == net.minecraft.item.Items.NETHERITE_SCRAP) nether += c;
-            else if (item == net.minecraft.item.Items.DIAMOND) diamond += c;
-            else if (item == net.minecraft.item.Items.IRON_INGOT) iron += c;
-            else if (item == net.minecraft.item.Items.GOLD_INGOT) gold += c;
+            if (item == net.minecraft.world.item.Items.NETHERITE_INGOT
+                || item == net.minecraft.world.item.Items.NETHERITE_SCRAP) nether += c;
+            else if (item == net.minecraft.world.item.Items.DIAMOND) diamond += c;
+            else if (item == net.minecraft.world.item.Items.IRON_INGOT) iron += c;
+            else if (item == net.minecraft.world.item.Items.GOLD_INGOT) gold += c;
             // Set parçalarını da say — netherite/diamond helmet vs.
-            if (item == net.minecraft.item.Items.NETHERITE_HELMET
-                || item == net.minecraft.item.Items.NETHERITE_CHESTPLATE
-                || item == net.minecraft.item.Items.NETHERITE_LEGGINGS
-                || item == net.minecraft.item.Items.NETHERITE_BOOTS) nether += 6;
-            else if (item == net.minecraft.item.Items.DIAMOND_HELMET
-                || item == net.minecraft.item.Items.DIAMOND_CHESTPLATE
-                || item == net.minecraft.item.Items.DIAMOND_LEGGINGS
-                || item == net.minecraft.item.Items.DIAMOND_BOOTS) diamond += 6;
+            if (item == net.minecraft.world.item.Items.NETHERITE_HELMET
+                || item == net.minecraft.world.item.Items.NETHERITE_CHESTPLATE
+                || item == net.minecraft.world.item.Items.NETHERITE_LEGGINGS
+                || item == net.minecraft.world.item.Items.NETHERITE_BOOTS) nether += 6;
+            else if (item == net.minecraft.world.item.Items.DIAMOND_HELMET
+                || item == net.minecraft.world.item.Items.DIAMOND_CHESTPLATE
+                || item == net.minecraft.world.item.Items.DIAMOND_LEGGINGS
+                || item == net.minecraft.world.item.Items.DIAMOND_BOOTS) diamond += 6;
         }
 
         // En iyi seti seç
-        var Items = net.minecraft.item.Items.class;
-        net.minecraft.item.Item helm, chest, leg, boot, weapon;
+        var Items = net.minecraft.world.item.Items.class;
+        net.minecraft.world.item.Item helm, chest, leg, boot, weapon;
         if (nether >= 4) {
-            helm = net.minecraft.item.Items.NETHERITE_HELMET;
-            chest = net.minecraft.item.Items.NETHERITE_CHESTPLATE;
-            leg = net.minecraft.item.Items.NETHERITE_LEGGINGS;
-            boot = net.minecraft.item.Items.NETHERITE_BOOTS;
-            weapon = net.minecraft.item.Items.NETHERITE_SWORD;
+            helm = net.minecraft.world.item.Items.NETHERITE_HELMET;
+            chest = net.minecraft.world.item.Items.NETHERITE_CHESTPLATE;
+            leg = net.minecraft.world.item.Items.NETHERITE_LEGGINGS;
+            boot = net.minecraft.world.item.Items.NETHERITE_BOOTS;
+            weapon = net.minecraft.world.item.Items.NETHERITE_SWORD;
         } else if (diamond >= 24) {
-            helm = net.minecraft.item.Items.DIAMOND_HELMET;
-            chest = net.minecraft.item.Items.DIAMOND_CHESTPLATE;
-            leg = net.minecraft.item.Items.DIAMOND_LEGGINGS;
-            boot = net.minecraft.item.Items.DIAMOND_BOOTS;
-            weapon = net.minecraft.item.Items.DIAMOND_SWORD;
+            helm = net.minecraft.world.item.Items.DIAMOND_HELMET;
+            chest = net.minecraft.world.item.Items.DIAMOND_CHESTPLATE;
+            leg = net.minecraft.world.item.Items.DIAMOND_LEGGINGS;
+            boot = net.minecraft.world.item.Items.DIAMOND_BOOTS;
+            weapon = net.minecraft.world.item.Items.DIAMOND_SWORD;
         } else if (iron >= 24) {
-            helm = net.minecraft.item.Items.IRON_HELMET;
-            chest = net.minecraft.item.Items.IRON_CHESTPLATE;
-            leg = net.minecraft.item.Items.IRON_LEGGINGS;
-            boot = net.minecraft.item.Items.IRON_BOOTS;
-            weapon = net.minecraft.item.Items.IRON_SWORD;
+            helm = net.minecraft.world.item.Items.IRON_HELMET;
+            chest = net.minecraft.world.item.Items.IRON_CHESTPLATE;
+            leg = net.minecraft.world.item.Items.IRON_LEGGINGS;
+            boot = net.minecraft.world.item.Items.IRON_BOOTS;
+            weapon = net.minecraft.world.item.Items.IRON_SWORD;
         } else if (gold >= 24) {
-            helm = net.minecraft.item.Items.GOLDEN_HELMET;
-            chest = net.minecraft.item.Items.GOLDEN_CHESTPLATE;
-            leg = net.minecraft.item.Items.GOLDEN_LEGGINGS;
-            boot = net.minecraft.item.Items.GOLDEN_BOOTS;
-            weapon = net.minecraft.item.Items.GOLDEN_SWORD;
+            helm = net.minecraft.world.item.Items.GOLDEN_HELMET;
+            chest = net.minecraft.world.item.Items.GOLDEN_CHESTPLATE;
+            leg = net.minecraft.world.item.Items.GOLDEN_LEGGINGS;
+            boot = net.minecraft.world.item.Items.GOLDEN_BOOTS;
+            weapon = net.minecraft.world.item.Items.GOLDEN_SWORD;
         } else {
-            helm = net.minecraft.item.Items.LEATHER_HELMET;
-            chest = net.minecraft.item.Items.LEATHER_CHESTPLATE;
-            leg = net.minecraft.item.Items.LEATHER_LEGGINGS;
-            boot = net.minecraft.item.Items.LEATHER_BOOTS;
-            weapon = net.minecraft.item.Items.STONE_SWORD;
+            helm = net.minecraft.world.item.Items.LEATHER_HELMET;
+            chest = net.minecraft.world.item.Items.LEATHER_CHESTPLATE;
+            leg = net.minecraft.world.item.Items.LEATHER_LEGGINGS;
+            boot = net.minecraft.world.item.Items.LEATHER_BOOTS;
+            weapon = net.minecraft.world.item.Items.STONE_SWORD;
         }
 
-        klon.equipStack(net.minecraft.entity.EquipmentSlot.HEAD, new net.minecraft.item.ItemStack(helm));
-        klon.equipStack(net.minecraft.entity.EquipmentSlot.CHEST, new net.minecraft.item.ItemStack(chest));
-        klon.equipStack(net.minecraft.entity.EquipmentSlot.LEGS, new net.minecraft.item.ItemStack(leg));
-        klon.equipStack(net.minecraft.entity.EquipmentSlot.FEET, new net.minecraft.item.ItemStack(boot));
-        klon.equipStack(net.minecraft.entity.EquipmentSlot.MAINHAND, new net.minecraft.item.ItemStack(weapon));
+        klon.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new net.minecraft.world.item.ItemStack(helm));
+        klon.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new net.minecraft.world.item.ItemStack(chest));
+        klon.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new net.minecraft.world.item.ItemStack(leg));
+        klon.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new net.minecraft.world.item.ItemStack(boot));
+        klon.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(weapon));
         // Drop chance sıfır — elite drop bırakmaz, bu şekilde farm olmaz
-        for (var slot : net.minecraft.entity.EquipmentSlot.values()) {
-            try { klon.setEquipmentDropChance(slot, 0.0f); } catch (Throwable ignored) {}
+        for (var slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+            try { klon.setDropChance(slot, 0.0f); } catch (Throwable ignored) {}
         }
     }
 
@@ -273,12 +272,12 @@ public class CloneManager {
      * Oyuncunun ARKASINDA (bakış yönünün tersi) 5-8 blok mesafede uygun konum bul.
      * Görüş açısı dışına düşsün diye ±30° koni içinde arar.
      */
-    private static BlockPos arkaYakinKonum(ServerPlayerEntity player) {
-        ServerWorld world = (ServerWorld) player.getWorld();
-        BlockPos merkez = player.getBlockPos();
+    private static BlockPos arkaYakinKonum(ServerPlayer player) {
+        ServerLevel world = (ServerLevel) player.level();
+        BlockPos merkez = player.blockPosition();
 
         // Oyuncunun yaw'ına göre "arka" yönü (radyan)
-        double bakisRad = Math.toRadians(player.getYaw());
+        double bakisRad = Math.toRadians(player.getYRot());
         // Arka = bakışın tersi = yaw + PI. Minecraft'ta yaw 0 = güney (z+), sin/cos'a göre:
         // ileri x = -sin(yaw), z = cos(yaw). Arka: x = sin(yaw), z = -cos(yaw).
         double arkaX = Math.sin(bakisRad);
@@ -306,7 +305,7 @@ public class CloneManager {
      * Verilen x,z için önce Y merkez, sonra ±3 Y aralığında uygun spawn konumu ara.
      * Bulamazsa topY dene (yerüstü fallback). Mağarada/yeraltında Y'yi oyuncuya yakın tutar.
      */
-    private static BlockPos ariyorumUygunKonum(ServerWorld world, int x, int z, int merkezY) {
+    private static BlockPos ariyorumUygunKonum(ServerLevel world, int x, int z, int merkezY) {
         for (int dy = 0; dy <= 3; dy++) {
             BlockPos p = new BlockPos(x, merkezY + dy, z);
             if (uygunKonumMu(world, p)) return p;
@@ -316,7 +315,7 @@ public class CloneManager {
             }
         }
         // Fallback: yerüstü
-        int topY = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, x, z);
+        int topY = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
         if (Math.abs(topY - merkezY) > 3) {
             BlockPos p = new BlockPos(x, topY, z);
             if (uygunKonumMu(world, p)) return p;
@@ -324,18 +323,18 @@ public class CloneManager {
         return null;
     }
 
-    private static boolean uygunKonumMu(ServerWorld world, BlockPos p) {
+    private static boolean uygunKonumMu(ServerLevel world, BlockPos p) {
         if (!world.getBlockState(p).isAir()) return false;
-        if (!world.getBlockState(p.up()).isAir()) return false;
-        return world.getBlockState(p.down()).isSolidBlock(world, p.down());
+        if (!world.getBlockState(p.above()).isAir()) return false;
+        return world.getBlockState(p.below()).isRedstoneConductor(world, p.below());
     }
 
     /**
      * Klonu spawn et. v0.7: Custom CandyDoppelEntity — Zombie/Skeleton DEĞİL.
      * Iron golem hedef almaz, 40 HP, 3 dmg, oyuncunun equipment'ini giyer.
      */
-    private static LivingEntity klonSpawn(ServerWorld world, BlockPos pos, TruePersonality tp,
-                                          ServerPlayerEntity owner) {
+    private static LivingEntity klonSpawn(ServerLevel world, BlockPos pos, TruePersonality tp,
+                                          ServerPlayer owner) {
         PersonalityTree tree = TreeGrowth.get(tp.oyuncuId);
         TreeNode tepkiBaskin = tree.baskinAlt(TreeBranch.TEPKI);
         // %20 ihtimalle ShadowTree'nin TEPKI'si
@@ -346,27 +345,27 @@ public class CloneManager {
         }
 
         // Custom CandyDoppelEntity spawn
-        Object spawned = CandyEntities.DOPPEL.spawn(world, pos, SpawnReason.MOB_SUMMONED);
+        Object spawned = CandyEntities.DOPPEL.spawn(world, pos, EntitySpawnReason.MOB_SUMMONED);
         if (!(spawned instanceof CandyDoppelEntity klon)) return null;
 
         // Owner ata — mind control + client-side skin fetch için
-        klon.setOwnerUuid(owner.getUuid());
+        klon.setOwnerUuid(owner.getUUID());
 
         // Command tag'ler (GriefSystem entegrasyonu için)
-        klon.addCommandTag(KLON_ETIKETI);
-        klon.addCommandTag(KLON_ETIKETI + "_t" + tp.toplamGozlemTick);
+        klon.addTag(KLON_ETIKETI);
+        klon.addTag(KLON_ETIKETI + "_t" + tp.toplamGozlemTick);
         if (tepkiBaskin != null) {
-            klon.addCommandTag(KLON_ETIKETI + "_dal_" + tepkiBaskin.id);
+            klon.addTag(KLON_ETIKETI + "_dal_" + tepkiBaskin.id);
         }
 
         // Oyuncunun equipment'ini kopyala — armor + main hand + off hand
         equipmentKopyala(owner, klon);
 
         // İsim — italik gri, translatable format: "[%s]" → oyuncu adı
-        klon.setCustomName(Text.translatable("candy.clone.name", owner.getName().getString())
-            .formatted(Formatting.DARK_GRAY, Formatting.ITALIC));
+        klon.setCustomName(Component.translatable("candy.clone.name", owner.getName().getString())
+            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         klon.setCustomNameVisible(true);
-        klon.setPersistent();
+        klon.setPersistenceRequired();
 
         // Zaten 40 HP full doldu — max health'e set
         klon.setHealth(klon.getMaxHealth());
@@ -379,27 +378,27 @@ public class CloneManager {
      * Main hand olarak hotbar'ın EN İYİ silahını seçer (Kılıç > Balta > Trident > yay > tool).
      * Klon canı azalırsa hotbar'daki yemeğe geçip iyileşir (CandyDoppelEntity.yemekMantigi).
      */
-    private static void equipmentKopyala(ServerPlayerEntity owner, CandyDoppelEntity klon) {
+    private static void equipmentKopyala(ServerPlayer owner, CandyDoppelEntity klon) {
         // Armor slotları
-        klon.equipStack(EquipmentSlot.HEAD, owner.getEquippedStack(EquipmentSlot.HEAD).copy());
-        klon.equipStack(EquipmentSlot.CHEST, owner.getEquippedStack(EquipmentSlot.CHEST).copy());
-        klon.equipStack(EquipmentSlot.LEGS, owner.getEquippedStack(EquipmentSlot.LEGS).copy());
-        klon.equipStack(EquipmentSlot.FEET, owner.getEquippedStack(EquipmentSlot.FEET).copy());
+        klon.setItemSlot(EquipmentSlot.HEAD, owner.getItemBySlot(EquipmentSlot.HEAD).copy());
+        klon.setItemSlot(EquipmentSlot.CHEST, owner.getItemBySlot(EquipmentSlot.CHEST).copy());
+        klon.setItemSlot(EquipmentSlot.LEGS, owner.getItemBySlot(EquipmentSlot.LEGS).copy());
+        klon.setItemSlot(EquipmentSlot.FEET, owner.getItemBySlot(EquipmentSlot.FEET).copy());
 
         // Tam hotbar snapshot (9 slot) — klonun depoHotbar'ına
         List<ItemStack> hotbar = new ArrayList<>(9);
         for (int i = 0; i < 9; i++) {
-            hotbar.add(owner.getInventory().getStack(i).copy());
+            hotbar.add(owner.getInventory().getItem(i).copy());
         }
         klon.setDepoHotbar(hotbar);
 
         // Main hand: hotbar'daki EN İYİ silahı seç. Yoksa oyuncunun elindeki.
         ItemStack enIyi = klon.enIyiSilahiSec();
-        if (enIyi.isEmpty()) enIyi = owner.getMainHandStack().copy();
-        klon.equipStack(EquipmentSlot.MAINHAND, enIyi.copy());
+        if (enIyi.isEmpty()) enIyi = owner.getMainHandItem().copy();
+        klon.setItemSlot(EquipmentSlot.MAINHAND, enIyi.copy());
 
         // Off hand
-        klon.equipStack(EquipmentSlot.OFFHAND, owner.getOffHandStack().copy());
+        klon.setItemSlot(EquipmentSlot.OFFHAND, owner.getOffhandItem().copy());
 
         // Klon eşyaları düşürmesin (öldüğünde item spam olmasın).
         EquipmentSlot[] slotlar = {
@@ -407,16 +406,16 @@ public class CloneManager {
             EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND
         };
         for (EquipmentSlot slot : slotlar) {
-            klon.setEquipmentDropChance(slot, 0.0f);
+            klon.setDropChance(slot, 0.0f);
         }
     }
 
     /**
      * Oyuncudan uzakta, ama görüş açısı dışında bir spawn konumu bul.
      */
-    private static BlockPos uygunSpawnKonumu(ServerPlayerEntity player) {
-        ServerWorld world = (ServerWorld) player.getWorld();
-        BlockPos merkez = player.getBlockPos();
+    private static BlockPos uygunSpawnKonumu(ServerPlayer player) {
+        ServerLevel world = (ServerLevel) player.level();
+        BlockPos merkez = player.blockPosition();
 
         for (int deneme = 0; deneme < 15; deneme++) {
             double angle = RNG.nextDouble() * Math.PI * 2;
@@ -430,7 +429,7 @@ public class CloneManager {
 
             // Işık seviyesi çok yüksek değilse kabul et.
             // 12 ise: mağara/gece kesin geçer, gündüz gölgeli alan geçer, açık gündüz reddedilir.
-            int isik = world.getLightLevel(p);
+            int isik = world.getMaxLocalRawBrightness(p);
             if (isik > 12) continue;
 
             return p;
@@ -442,7 +441,7 @@ public class CloneManager {
      * Bir varlık Candy'nin klonu mu?
      */
     public static boolean klonMu(LivingEntity entity) {
-        return entity.getCommandTags().contains(KLON_ETIKETI);
+        return entity.getTags().contains(KLON_ETIKETI);
     }
 
     public static void oyuncuAyrildi(UUID uuid) {

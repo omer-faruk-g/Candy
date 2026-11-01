@@ -4,15 +4,14 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -102,7 +101,7 @@ public final class MobKoordinasyon {
         if (++sayac < ARALIK) return;
         sayac = 0;
         try {
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 oyuncuIcin(player);
             }
         } catch (Throwable t) {
@@ -110,7 +109,7 @@ public final class MobKoordinasyon {
         }
     }
 
-    private static void oyuncuIcin(ServerPlayerEntity player) {
+    private static void oyuncuIcin(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
         if (tp == null) return;
         if (tp.perdeKademe < 1) return;
@@ -123,27 +122,27 @@ public final class MobKoordinasyon {
         double siddet = Math.min(1.0, ofke * 0.8 + darbe * 0.35);
         double yaricap = Math.min(MAKS_YARICAP, TABAN_YARICAP + siddet * 26.0);
 
-        if (!(player.getWorld() instanceof ServerWorld world)) return;
+        if (!(player.level() instanceof ServerLevel world)) return;
 
-        Box kutu = player.getBoundingBox().expand(yaricap, yaricap * 0.6, yaricap);
-        List<HostileEntity> moblar = world.getEntitiesByClass(
-            HostileEntity.class, kutu, m -> m.isAlive() && !m.isRemoved());
+        AABB kutu = player.getBoundingBox().inflate(yaricap, yaricap * 0.6, yaricap);
+        List<Monster> moblar = world.getEntitiesOfClass(
+            Monster.class, kutu, m -> m.isAlive() && !m.isRemoved());
         if (moblar.isEmpty()) return;
 
         int yonlendirilen = 0;
-        for (HostileEntity mob : moblar) {
+        for (Monster mob : moblar) {
             // Candy'nin kendi varlıkları koordine edilmez — onların kendi mantığı var.
             if (com.photonpulse.candy.clone.CloneManager.klonMu(mob)) continue;
             if (mob instanceof com.photonpulse.candy.arkadas.ArkadasEntity) continue;
 
             // 1 + 4: yönlendirme ve hedef kilidi (her turda yenilenir, iz kaybolmaz)
             mob.setTarget(player);
-            mob.setPersistent();
+            mob.setPersistenceRequired();
             yonlendirilen++;
 
             // 5: ateşkes — mob'lar birbirine saldırmasın
             LivingEntity hedef = mob.getTarget();
-            if (hedef != null && !(hedef instanceof ServerPlayerEntity)) {
+            if (hedef != null && !(hedef instanceof ServerPlayer)) {
                 mob.setTarget(player);
             }
 
@@ -168,8 +167,8 @@ public final class MobKoordinasyon {
      * susturduklarımız geri açılıyor — zaten sessiz olan (ör. başka bir mod ya da
      * {@code /data} ile susturulmuş) mob'a dokunulmaz.</p>
      */
-    private static void sessizlikAyarla(MobEntity mob, boolean sessizOlsun) {
-        UUID id = mob.getUuid();
+    private static void sessizlikAyarla(Mob mob, boolean sessizOlsun) {
+        UUID id = mob.getUUID();
         if (sessizOlsun) {
             if (!mob.isSilent()) {
                 mob.setSilent(true);
@@ -188,13 +187,13 @@ public final class MobKoordinasyon {
      * Eksen düşükse (hiç dönmeyen oyuncu) etki tam uygulanır. Yani ölçüm doğrudan
      * stratejiyi değiştiriyor.</p>
      */
-    private static void korNoktaHizi(ServerPlayerEntity player, MobEntity mob,
+    private static void korNoktaHizi(ServerPlayer player, Mob mob,
                                      TruePersonality tp, double siddet) {
-        Vec3d bakis = player.getRotationVec(1.0f).normalize();
-        Vec3d fark = mob.getPos().subtract(player.getPos());
+        Vec3 bakis = player.getViewVector(1.0f).normalize();
+        Vec3 fark = mob.position().subtract(player.position());
         double uzunluk = fark.length();
         if (uzunluk < 1.0e-4) return;
-        Vec3d yon = fark.multiply(1.0 / uzunluk);
+        Vec3 yon = fark.scale(1.0 / uzunluk);
 
         // Yatay düzlemde açı — dikey bakış kör noktayı belirlemiyor.
         double nokta = bakis.x * yon.x + bakis.z * yon.z;
@@ -211,9 +210,9 @@ public final class MobKoordinasyon {
             : 1.0 + (KOR_NOKTA_HIZ - 1.0) * siddet * korNoktaGucu;
 
         try {
-            mob.getNavigation().setSpeed(carpan);
-            if (mob.getNavigation().isIdle()) {
-                mob.getNavigation().startMovingTo(player, carpan);
+            mob.getNavigation().setSpeedModifier(carpan);
+            if (mob.getNavigation().isDone()) {
+                mob.getNavigation().moveTo(player, carpan);
             }
         } catch (Throwable ignored) {
             // Bazı mob'ların navigasyonu yoktur (ör. Shulker). Sessizce atla.

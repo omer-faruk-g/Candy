@@ -5,16 +5,15 @@ import com.photonpulse.candy.entity.CandyDoppelEntity;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -34,10 +33,10 @@ public class DerinAnaliz {
     private static int tick = 0;
 
     // Per-player geçici cache'ler
-    private static final Map<UUID, Vec3d> oncekiPoz = new HashMap<>();
+    private static final Map<UUID, Vec3> oncekiPoz = new HashMap<>();
     private static final Map<UUID, Float> oncekiCan = new HashMap<>();
     private static final Map<UUID, Double> oncekiKorku = new HashMap<>();
-    private static final Map<UUID, Vec3d> oncekiYon = new HashMap<>();
+    private static final Map<UUID, Vec3> oncekiYon = new HashMap<>();
     private static final Map<UUID, Float> oncekiYaw = new HashMap<>();   // v3.2 paranoya
 
     public static void register() {
@@ -45,20 +44,20 @@ public class DerinAnaliz {
 
         // Yetenek — isabetli vuruş sayacı
         AttackEntityCallback.EVENT.register((player, world, hand, target, hit) -> {
-            if (player instanceof ServerPlayerEntity sp && target instanceof LivingEntity) {
+            if (player instanceof ServerPlayer sp && target instanceof LivingEntity) {
                 PersonalityManager.get(sp).toplamVurus++;
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
 
         // Ölüm — konum + tepki takibi + yetenek
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            if (!(entity instanceof ServerPlayerEntity player)) return;
+            if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             tp.toplamOlum++;
-            BlockPos p = player.getBlockPos();
+            BlockPos p = player.blockPosition();
             tp.sonOlumKonumu = new int[]{p.getX(), p.getY(), p.getZ()};
-            tp.sonOlumTick = player.getWorld().getTime();
+            tp.sonOlumTick = player.level().getGameTime();
             tp.olumSonrasiTepki = "bilinmiyor"; // dönüşe göre tekrar belirlenecek
             // Ölüm = büyük çözülme sıçraması
             tp.cozulme = Math.min(100, tp.cozulme + 25);
@@ -69,7 +68,7 @@ public class DerinAnaliz {
             (message, sender, params) -> {
                 try {
                     TruePersonality tp = PersonalityManager.get(sender);
-                    String metin = message.getContent().getString();
+                    String metin = message.decoratedContent().getString();
                     String kucuk = metin.toLowerCase();
 
                     // (9) Steve/Alex'ten bahsediyorsa hayaletlerle ilgileniyor → güven artar
@@ -103,34 +102,34 @@ public class DerinAnaliz {
         tick++;
         if (tick % ARALIK != 0) return;
 
-        int oyuncuSayisi = server.getPlayerManager().getPlayerList().size();
+        int oyuncuSayisi = server.getPlayerList().getPlayers().size();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
-                UUID id = player.getUuid();
-                ServerWorld world = (ServerWorld) player.getWorld();
-                BlockPos pos = player.getBlockPos();
-                Vec3d simdiPoz = player.getPos();
+                UUID id = player.getUUID();
+                ServerLevel world = (ServerLevel) player.level();
+                BlockPos pos = player.blockPosition();
+                Vec3 simdiPoz = player.position();
 
-                if (tp.oturumBaslangicTick == 0) tp.oturumBaslangicTick = world.getTime();
+                if (tp.oturumBaslangicTick == 0) tp.oturumBaslangicTick = world.getGameTime();
 
                 // Hız + yön değişimi
-                Vec3d oncekiP = oncekiPoz.get(id);
+                Vec3 oncekiP = oncekiPoz.get(id);
                 double hiz = (oncekiP == null) ? 0 : simdiPoz.distanceTo(oncekiP);
-                Vec3d yon = (oncekiP == null) ? Vec3d.ZERO : simdiPoz.subtract(oncekiP);
-                Vec3d oncekiY = oncekiYon.getOrDefault(id, Vec3d.ZERO);
-                double yonDegisim = (oncekiY.lengthSquared() > 0.0001 && yon.lengthSquared() > 0.0001)
-                    ? 1.0 - (yon.normalize().dotProduct(oncekiY.normalize()))
+                Vec3 yon = (oncekiP == null) ? Vec3.ZERO : simdiPoz.subtract(oncekiP);
+                Vec3 oncekiY = oncekiYon.getOrDefault(id, Vec3.ZERO);
+                double yonDegisim = (oncekiY.lengthSqr() > 0.0001 && yon.lengthSqr() > 0.0001)
+                    ? 1.0 - (yon.normalize().dot(oncekiY.normalize()))
                     : 0.0; // 0=aynı yön, 2=tam ters
                 oncekiPoz.put(id, simdiPoz);
-                if (yon.lengthSquared() > 0.0001) oncekiYon.put(id, yon);
+                if (yon.lengthSqr() > 0.0001) oncekiYon.put(id, yon);
 
-                long timeOfDay = world.getTimeOfDay() % 24000L;
+                long timeOfDay = world.getDayTime() % 24000L;
                 boolean gece = timeOfDay > 13000L && timeOfDay < 23000L;
                 int saatDilimi = (int) (timeOfDay / 4000L); // 0-5
-                int isik = world.getLightLevel(pos);
+                int isik = world.getMaxLocalRawBrightness(pos);
                 float canOran = player.getHealth() / player.getMaxHealth();
                 boolean yeralti = player.getBlockY() < 50;
 
@@ -235,8 +234,8 @@ public class DerinAnaliz {
 
                 // ── (13) Ölüm sonrası tepki ──
                 if (tp.sonOlumKonumu != null) {
-                    long gecen = world.getTime() - tp.sonOlumTick;
-                    double dOlum = pos.getSquaredDistance(
+                    long gecen = world.getGameTime() - tp.sonOlumTick;
+                    double dOlum = pos.distToLowCornerSqr(
                         tp.sonOlumKonumu[0], tp.sonOlumKonumu[1], tp.sonOlumKonumu[2]);
                     if (gecen < 3600 && dOlum < 100) { // 3 dk içinde 10 blok yakın
                         tp.olumSonrasiTepki = "intikamci";
@@ -248,11 +247,11 @@ public class DerinAnaliz {
                 // ══ v3.2 Bilişsel Motor v4 ek boyutları ══
 
                 // ── (idea 5) Paranoya — arkana/etrafına bakma sıklığı ──
-                float yaw = player.getYaw();
+                float yaw = player.getYRot();
                 Float oncYaw = oncekiYaw.get(id);
                 oncekiYaw.put(id, yaw);
                 double yawDelta = (oncYaw == null) ? 0
-                    : Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees(yaw - oncYaw));
+                    : Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - oncYaw));
                 boolean arkayaBakti = yawDelta > 60; // ani büyük bakış dönüşü
                 if (arkayaBakti && (gece || isik <= 4 || klonYakin)) {
                     tp.paranoyaSkoru = Math.min(100, tp.paranoyaSkoru + 3.0);
@@ -282,13 +281,13 @@ public class DerinAnaliz {
                 } else {
                     tp.metaFarkindalik = Math.max(0, tp.metaFarkindalik - 0.1);
                 }
-                if (tp.metaFarkindalik > 70 && world.getTime() - tp.sonMetaYorum > 2400
+                if (tp.metaFarkindalik > 70 && world.getGameTime() - tp.sonMetaYorum > 2400
                         && tp.bossOldurulmeTick == 0 && Math.random() < 0.03) {
-                    tp.sonMetaYorum = world.getTime();
-                    player.sendMessage(net.minecraft.text.Text.translatable(
+                    tp.sonMetaYorum = world.getGameTime();
+                    player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                             "candy.meta." + (int) (Math.random() * 2))
-                        .formatted(net.minecraft.util.Formatting.DARK_GRAY,
-                                   net.minecraft.util.Formatting.ITALIC), false);
+                        .withStyle(net.minecraft.ChatFormatting.DARK_GRAY,
+                                   net.minecraft.ChatFormatting.ITALIC), false);
                     Candy.LOG.info("[Candy] Meta-farkındalık[{}] → 'seni test ediyorum' ({}%)",
                         player.getName().getString(), (int) tp.metaFarkindalik);
                 }
@@ -307,9 +306,9 @@ public class DerinAnaliz {
                     && tp.korkuSkoru > 40
                     && Math.random() < 0.02) {
                     tp.gecSaatUyarisiVerildi = true;
-                    player.sendMessage(net.minecraft.text.Text.translatable("candy.analiz.gec_saat")
-                        .formatted(net.minecraft.util.Formatting.DARK_GRAY,
-                                   net.minecraft.util.Formatting.ITALIC), false);
+                    player.displayClientMessage(net.minecraft.network.chat.Component.translatable("candy.analiz.gec_saat")
+                        .withStyle(net.minecraft.ChatFormatting.DARK_GRAY,
+                                   net.minecraft.ChatFormatting.ITALIC), false);
                 }
 
             } catch (Throwable t) {
@@ -341,14 +340,14 @@ public class DerinAnaliz {
     }
 
     /** Envanterde 5 farklı "Yırtık Sayfa (x/5)" varsa yirtik_parcalar başarımı. */
-    private static void yirtikSayfaKontrol(ServerPlayerEntity player) {
+    private static void yirtikSayfaKontrol(ServerPlayer player) {
         try {
             var bulunan = new java.util.HashSet<String>();
             var inv = player.getInventory();
-            for (int i = 0; i < inv.size(); i++) {
-                var st = inv.getStack(i);
-                if (st.isEmpty() || st.getItem() != net.minecraft.item.Items.PAPER) continue;
-                var isim = st.get(net.minecraft.component.DataComponentTypes.CUSTOM_NAME);
+            for (int i = 0; i < inv.getContainerSize(); i++) {
+                var st = inv.getItem(i);
+                if (st.isEmpty() || st.getItem() != net.minecraft.world.item.Items.PAPER) continue;
+                var isim = st.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
                 if (isim == null) continue;
                 String s = isim.getString();
                 if (s.startsWith("Yırtık Sayfa")) bulunan.add(s);
@@ -359,24 +358,24 @@ public class DerinAnaliz {
         } catch (Throwable ignored) {}
     }
 
-    private static boolean klonYakinMi(ServerWorld world, ServerPlayerEntity player, double r) {
-        Box box = new Box(player.getBlockPos()).expand(r);
-        return !world.getEntitiesByClass(CandyDoppelEntity.class, box, e -> e.isAlive()).isEmpty();
+    private static boolean klonYakinMi(ServerLevel world, ServerPlayer player, double r) {
+        AABB box = new AABB(player.blockPosition()).inflate(r);
+        return !world.getEntitiesOfClass(CandyDoppelEntity.class, box, e -> e.isAlive()).isEmpty();
     }
 
-    private static boolean hostileYakinMi(ServerWorld world, ServerPlayerEntity player, double r) {
-        Box box = new Box(player.getBlockPos()).expand(r);
-        return !world.getEntitiesByClass(HostileEntity.class, box, e -> e.isAlive()).isEmpty();
+    private static boolean hostileYakinMi(ServerLevel world, ServerPlayer player, double r) {
+        AABB box = new AABB(player.blockPosition()).inflate(r);
+        return !world.getEntitiesOfClass(Monster.class, box, e -> e.isAlive()).isEmpty();
     }
 
-    private static void baglanmaGuncelle(TruePersonality tp, ServerWorld world, ServerPlayerEntity player) {
-        Box box = new Box(player.getBlockPos()).expand(8);
+    private static void baglanmaGuncelle(TruePersonality tp, ServerLevel world, ServerPlayer player) {
+        AABB box = new AABB(player.blockPosition()).inflate(8);
         // Pet'ler (köpek/kedi/papağan)
-        var petler = world.getEntitiesByClass(
-            net.minecraft.entity.passive.TameableEntity.class, box,
-            t -> t.isTamed() && t.isOwner(player));
+        var petler = world.getEntitiesOfClass(
+            net.minecraft.world.entity.TamableAnimal.class, box,
+            t -> t.isTame() && t.isOwnedBy(player));
         for (var pet : petler) {
-            tp.baglanmalar.merge(pet.getUuidAsString(), 1.0, Double::sum);
+            tp.baglanmalar.merge(pet.getStringUUID(), 1.0, Double::sum);
             // v3.2 (idea 9) Dil Modeli — oyuncunun pet'ine verdiği isim
             var isim = pet.getCustomName();
             if (isim != null) {
@@ -388,16 +387,16 @@ public class DerinAnaliz {
             }
         }
         // Atlar
-        var atlar = world.getEntitiesByClass(
-            net.minecraft.entity.passive.AbstractHorseEntity.class, box,
-            h -> h.isTame() && h.getOwnerReference() != null
-                 && player.getUuid().equals(h.getOwnerReference().getUuid()));
+        var atlar = world.getEntitiesOfClass(
+            net.minecraft.world.entity.animal.horse.AbstractHorse.class, box,
+            h -> h.isTamed() && h.getOwnerReference() != null
+                 && player.getUUID().equals(h.getOwnerReference().getUUID()));
         for (var at : atlar) {
-            tp.baglanmalar.merge(at.getUuidAsString(), 1.0, Double::sum);
+            tp.baglanmalar.merge(at.getStringUUID(), 1.0, Double::sum);
         }
         // Base yakınlığı
         if (tp.baseKonum != null) {
-            double dBase = player.getBlockPos().getSquaredDistance(
+            double dBase = player.blockPosition().distToLowCornerSqr(
                 tp.baseKonum[0], tp.baseKonum[1], tp.baseKonum[2]);
             if (dBase < 12 * 12) tp.baglanmalar.merge("base", 1.0, Double::sum);
         }
@@ -415,20 +414,20 @@ public class DerinAnaliz {
     }
 
     /** Hayalet güveni dış-hook (HayaletOyuncular çağırır). delta +/- */
-    public static void hayaletGuvenNudge(ServerPlayerEntity player, double delta) {
+    public static void hayaletGuvenNudge(ServerPlayer player, double delta) {
         TruePersonality tp = PersonalityManager.get(player);
         tp.hayaletGuveni = Math.max(0, Math.min(100, tp.hayaletGuveni + delta));
     }
 
     /** Öğrenme hızı dış-hook — Candy numarasına adapte olduysa çağrılır. */
-    public static void ogrenmeGuncelle(ServerPlayerEntity player, boolean adapteOldu) {
+    public static void ogrenmeGuncelle(ServerPlayer player, boolean adapteOldu) {
         TruePersonality tp = PersonalityManager.get(player);
         double hedef = adapteOldu ? 100 : 0;
         tp.ogrenmeHizi = TruePersonality.kayma(tp.ogrenmeHizi, hedef, 0.1);
     }
 
     /** Tilt dış-hook — küfür/agresif chat için CandyChatOkur çağırır. */
-    public static void tiltNudge(ServerPlayerEntity player, double delta) {
+    public static void tiltNudge(ServerPlayer player, double delta) {
         TruePersonality tp = PersonalityManager.get(player);
         tp.tiltSeviyesi = Math.max(0, Math.min(100, tp.tiltSeviyesi + delta));
     }

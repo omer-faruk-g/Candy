@@ -4,19 +4,18 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.Blocks;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.World;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -40,18 +39,18 @@ public class Kan {
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % KONTROL_ARALIGI != 0) return;
-            long simdi = server.getOverworld().getTime();
+            if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
+            long simdi = server.overworld().getGameTime();
             if (simdi - sonYapim < MIN_ARA) return;
 
-            var players = server.getPlayerManager().getPlayerList();
+            var players = server.getPlayerList().getPlayers();
             if (players.isEmpty()) return;
-            ServerPlayerEntity player = players.get(RNG.nextInt(players.size()));
+            ServerPlayer player = players.get(RNG.nextInt(players.size()));
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) return;
 
-            ServerWorld world = (ServerWorld) player.getWorld();
-            if (world.getRegistryKey() != World.OVERWORLD) return;
+            ServerLevel world = (ServerLevel) player.level();
+            if (world.dimension() != Level.OVERWORLD) return;
 
             // v1.9.9: 2x2 chunk alanı — player chunk + 3 komşu (toplam 4 chunk)
             int playerChunkX = player.getBlockX() >> 4;
@@ -60,9 +59,9 @@ public class Kan {
             int chunkZ = playerChunkZ + RNG.nextInt(2);
             int mx = (chunkX << 4) + RNG.nextInt(16);
             int mz = (chunkZ << 4) + RNG.nextInt(16);
-            if (!world.isChunkLoaded(chunkX, chunkZ)) return;
+            if (!world.hasChunk(chunkX, chunkZ)) return;
 
-            int my = world.getTopY(Heightmap.Type.WORLD_SURFACE, mx, mz);
+            int my = world.getHeight(Heightmap.Types.WORLD_SURFACE, mx, mz);
             BlockPos merkez = new BlockPos(mx, my, mz);
             if (yapilanPozisyonlar.contains(merkez.asLong())) return;
 
@@ -78,21 +77,21 @@ public class Kan {
         Candy.LOG.info("[Candy] Kan generator aktif — 2x2 chunk alanı, redstone kan izi");
     }
 
-    private static void insaEt(ServerWorld world, BlockPos merkez) {
+    private static void insaEt(ServerLevel world, BlockPos merkez) {
         // 10-15 REDSTONE_WIRE saçılmış, merkezin 5 blok radius'unda
         int sayi = 10 + RNG.nextInt(6);
         int konulan = 0;
         for (int i = 0; i < sayi * 3 && konulan < sayi; i++) {
             int dx = RNG.nextInt(11) - 5;
             int dz = RNG.nextInt(11) - 5;
-            BlockPos p = merkez.add(dx, 0, dz);
+            BlockPos p = merkez.offset(dx, 0, dz);
             // Yüzey Y'sine snap et
-            int y = world.getTopY(Heightmap.Type.WORLD_SURFACE,
+            int y = world.getHeight(Heightmap.Types.WORLD_SURFACE,
                 p.getX(), p.getZ());
             BlockPos yuzey = new BlockPos(p.getX(), y, p.getZ());
             if (world.getBlockState(yuzey).isAir()
-                && world.getBlockState(yuzey.down()).isSolidBlock(world, yuzey.down())) {
-                world.setBlockState(yuzey, Blocks.REDSTONE_WIRE.getDefaultState());
+                && world.getBlockState(yuzey.below()).isRedstoneConductor(world, yuzey.below())) {
+                world.setBlockAndUpdate(yuzey, Blocks.REDSTONE_WIRE.defaultBlockState());
                 konulan++;
             }
         }
@@ -101,8 +100,8 @@ public class Kan {
         int itemSayi = 1 + RNG.nextInt(2);
         for (int i = 0; i < itemSayi; i++) {
             ItemStack kan = new ItemStack(Items.REDSTONE, 1 + RNG.nextInt(3));
-            kan.set(DataComponentTypes.CUSTOM_NAME,
-                Text.literal("Kan").formatted(Formatting.DARK_RED, Formatting.BOLD));
+            kan.set(DataComponents.CUSTOM_NAME,
+                Component.literal("Kan").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD));
             int dx = RNG.nextInt(5) - 2;
             int dz = RNG.nextInt(5) - 2;
             ItemEntity itemEntity = new ItemEntity(world,
@@ -110,8 +109,8 @@ public class Kan {
                 merkez.getY() + 0.5,
                 merkez.getZ() + dz + 0.5,
                 kan);
-            try { itemEntity.setNeverDespawn(); } catch (Throwable ignored) {}
-            world.spawnEntity(itemEntity);
+            try { itemEntity.setUnlimitedLifetime(); } catch (Throwable ignored) {}
+            world.addFreshEntity(itemEntity);
         }
     }
 

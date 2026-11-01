@@ -1,10 +1,10 @@
 package com.photonpulse.candy.net;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * S2C — Candy oyuncunun görüş ayarlarını geçici olarak değiştirir.
@@ -14,21 +14,21 @@ import net.minecraft.util.Identifier;
  *
  * Ayarlar KALICI DEĞİL: oyundan çıkışta (ve çökme sonrası ilk açılışta) geri alınır.
  */
-public record GoruntuPayload(int fov, int render, boolean geriAl) implements CustomPayload {
+public record GoruntuPayload(int fov, int render, boolean geriAl) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<GoruntuPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("candy", "goruntu"));
+    public static final CustomPacketPayload.Type<GoruntuPayload> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("candy", "goruntu"));
 
-    public static final PacketCodec<RegistryByteBuf, GoruntuPayload> CODEC =
-        PacketCodec.tuple(
-            PacketCodecs.VAR_INT, GoruntuPayload::fov,
-            PacketCodecs.VAR_INT, GoruntuPayload::render,
-            PacketCodecs.BOOLEAN, GoruntuPayload::geriAl,
+    public static final StreamCodec<RegistryFriendlyByteBuf, GoruntuPayload> CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, GoruntuPayload::fov,
+            ByteBufCodecs.VAR_INT, GoruntuPayload::render,
+            ByteBufCodecs.BOOL, GoruntuPayload::geriAl,
             GoruntuPayload::new
         );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

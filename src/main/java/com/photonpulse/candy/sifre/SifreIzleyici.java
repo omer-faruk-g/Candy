@@ -2,8 +2,8 @@ package com.photonpulse.candy.sifre;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.TruePersonality;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * SifreIzleyici (v8.1) — oyuncu şifreyi çözüp sohbete ya da tabelaya yazdı mı?
@@ -39,13 +39,13 @@ public final class SifreIzleyici {
      *
      * @param kaynak log için: "sohbet" ya da "tabela"
      */
-    public static Sonuc kontrol(ServerPlayerEntity player, TruePersonality tp,
+    public static Sonuc kontrol(ServerPlayer player, TruePersonality tp,
                                 String metin, String kaynak) {
         if (metin == null || metin.isBlank()) return Sonuc.YOK;
         SifreAyar ayar = SifreAyar.al();
         if (!ayar.acik) return Sonuc.YOK;
         if (tp.sifreVerilen == 0) return Sonuc.YOK;
-        if (!(player.getWorld() instanceof ServerWorld dunya)) return Sonuc.YOK;
+        if (!(player.level() instanceof ServerLevel dunya)) return Sonuc.YOK;
 
         final long tohum = dunya.getSeed();
         boolean tuzak = false;
@@ -72,7 +72,7 @@ public final class SifreIzleyici {
         return Sonuc.YOK;
     }
 
-    private static void cozuldu(ServerPlayerEntity player, TruePersonality tp,
+    private static void cozuldu(ServerPlayer player, TruePersonality tp,
                                 SifreAyar ayar, int indeks, String kaynak) {
         tp.sifreCozulen |= (1 << indeks);
 
@@ -89,7 +89,7 @@ public final class SifreIzleyici {
             indeks, kaynak, player.getName().getString(), tp.isikDusumu);
     }
 
-    private static void israr(ServerPlayerEntity player, TruePersonality tp, String kaynak) {
+    private static void israr(ServerPlayer player, TruePersonality tp, String kaynak) {
         // Merak var, korku yok: oyuncu kaçmıyor, deşifre etmeye çalışıyor.
         tp.candyOzguven = Math.min(100, tp.candyOzguven + 3);
         tp.korkuSkoru = Math.max(0, tp.korkuSkoru - 2);

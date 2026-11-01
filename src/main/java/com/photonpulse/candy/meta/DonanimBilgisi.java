@@ -4,8 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.DonanimPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +48,7 @@ public class DonanimBilgisi {
                     if (!t.isEmpty() && t.length() <= 64) liste.add(t);
                 }
                 if (!liste.isEmpty()) {
-                    parcalar.put(context.player().getUuid(), liste);
+                    parcalar.put(context.player().getUUID(), liste);
                     Candy.LOG.info("[Candy] Donanim alindi [{}]: {} parca",
                         context.player().getName().getString(), liste.size());
                 }
@@ -63,8 +62,8 @@ public class DonanimBilgisi {
      * Oyuncu icin rastgele bir parca adi doner. Client parca gondermisse ondan;
      * yoksa sunucu-yani fallback (OS + cekirdek sayisi).
      */
-    public static String rastgeleParca(ServerPlayerEntity player) {
-        List<String> liste = parcalar.get(player.getUuid());
+    public static String rastgeleParca(ServerPlayer player) {
+        List<String> liste = parcalar.get(player.getUUID());
         if (liste != null && !liste.isEmpty()) {
             return liste.get(RNG.nextInt(liste.size()));
         }

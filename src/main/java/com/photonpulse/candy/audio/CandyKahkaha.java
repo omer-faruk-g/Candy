@@ -6,9 +6,8 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sessizlik.SessizlikState;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -39,28 +38,28 @@ public class CandyKahkaha {
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
         if (SessizlikState.sessizlikte(simdi)) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (player.isCreative() || player.isSpectator()) continue;
             if (tp.candyOzguven < OZGUVEN_ESIK) continue;
 
-            Long son = sonKahkaha.get(player.getUuid());
+            Long son = sonKahkaha.get(player.getUUID());
             if (son != null && simdi - son < MIN_COOLDOWN) continue;
 
             // İhtimal — özgüven 60'ta %0, 100'de %40
             double ihtimal = (tp.candyOzguven - OZGUVEN_ESIK) / 100.0;
             if (RNG.nextDouble() > ihtimal) continue;
 
-            sonKahkaha.put(player.getUuid(), simdi);
+            sonKahkaha.put(player.getUUID(), simdi);
 
             try {
                 SesGonder.tek(player,
-                    CandySounds.LAUGH, SoundCategory.MASTER,
+                    CandySounds.LAUGH, SoundSource.MASTER,
                     0.9f, 1.0f);
             } catch (Throwable ignored) {}
 

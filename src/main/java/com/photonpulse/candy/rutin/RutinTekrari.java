@@ -5,10 +5,10 @@ import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.clone.CloneManager;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
  * RutinTekrari (v8.2) — Candy oyuncunun kendi rutinini ona geri oynatır.
@@ -46,11 +46,11 @@ public final class RutinTekrari {
      *
      * @return true: klon hatırlanan konuma kondu
      */
-    public static boolean oynat(ServerPlayerEntity player, TruePersonality tp) {
+    public static boolean oynat(ServerPlayer player, TruePersonality tp) {
         try {
             if (player == null || tp == null) return false;
-            ServerWorld world = (ServerWorld) player.getWorld();
-            long simdi = world.getTime();
+            ServerLevel world = (ServerLevel) player.level();
+            long simdi = world.getGameTime();
             if (tp.rutinSonTick > 0 && simdi - tp.rutinSonTick < SOGUMA_TICK) return false;
 
             long paket = RutinKaydi.enSik(tp, MIN_TEKRAR);
@@ -59,7 +59,7 @@ public final class RutinTekrari {
             // ZAMAN ŞARTI: rutin hangi saat diliminde oluştuysa o dilimde oynanır.
             // Bu şart olmadan "aynı yerde klon" sıradan bir spawn olurdu; dilim
             // tutunca oyuncu zamanlamanın da bilindiğini fark eder.
-            int simdikiDilim = (int) ((world.getTimeOfDay() % 24000L) / 4000L);
+            int simdikiDilim = (int) ((world.getDayTime() % 24000L) / 4000L);
             if (simdikiDilim != RutinKaydi.saatDilimi(paket)) return false;
 
             int cx = RutinKaydi.chunkX(paket);
@@ -74,10 +74,10 @@ public final class RutinTekrari {
             int z = (cz << 4) + 8;
             // Y: oyuncunun seviyesini dene (mağara rutini de var), olmazsa yüzey.
             int y = player.getBlockY();
-            if (!world.isChunkLoaded(net.minecraft.util.math.ChunkPos.toLong(cx, cz))) return false;
+            if (!world.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(cx, cz))) return false;
             BlockPos hedef = new BlockPos(x, y, z);
             if (!CloneManager.zorlaKlonSpawn(player, tp, hedef)) {
-                int yuzey = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+                int yuzey = world.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                 if (!CloneManager.zorlaKlonSpawn(player, tp, new BlockPos(x, yuzey, z))) {
                     return false;
                 }

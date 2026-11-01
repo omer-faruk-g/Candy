@@ -1,10 +1,10 @@
 package com.photonpulse.candy.net;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * S2C — altyazı kanalı: hangi altyazı metni, kaç milisaniye.
@@ -14,20 +14,20 @@ import net.minecraft.util.Identifier;
  * adı, ne şehir, ne uygulama adı. v8.1'de {@code UygulamaPayload} için kurulan kuralın
  * aynısı: protokol yalnızca indeks taşır.</p>
  */
-public record AltyaziPayload(int indeks, int sureMs) implements CustomPayload {
+public record AltyaziPayload(int indeks, int sureMs) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<AltyaziPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("candy", "altyazi"));
+    public static final CustomPacketPayload.Type<AltyaziPayload> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("candy", "altyazi"));
 
-    public static final PacketCodec<RegistryByteBuf, AltyaziPayload> CODEC =
-        PacketCodec.tuple(
-            PacketCodecs.VAR_INT, AltyaziPayload::indeks,
-            PacketCodecs.VAR_INT, AltyaziPayload::sureMs,
+    public static final StreamCodec<RegistryFriendlyByteBuf, AltyaziPayload> CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, AltyaziPayload::indeks,
+            ByteBufCodecs.VAR_INT, AltyaziPayload::sureMs,
             AltyaziPayload::new
         );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

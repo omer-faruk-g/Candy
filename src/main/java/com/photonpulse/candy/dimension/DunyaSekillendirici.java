@@ -2,11 +2,11 @@ package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
  * DunyaSekillendirici — 8 kurul dünyasının desenini chunk üretiminde damgalar.
@@ -25,7 +25,7 @@ public final class DunyaSekillendirici {
 
     public static void register() {
         ServerChunkEvents.CHUNK_GENERATE.register((world, chunk) -> {
-            KurulDunya d = KurulDunya.bul(world.getRegistryKey());
+            KurulDunya d = KurulDunya.bul(world.dimension());
             if (d == null) return;
             try {
                 sekillendir(world, chunk, d.sekil);
@@ -36,12 +36,12 @@ public final class DunyaSekillendirici {
         Candy.LOG.info("[Candy] DunyaSekillendirici aktif — 8 kurul dünyası şekillendiriliyor");
     }
 
-    private static void sekillendir(ServerWorld world, WorldChunk chunk, KurulDunya.Sekil sekil) {
-        final int bx = chunk.getPos().getStartX();
-        final int bz = chunk.getPos().getStartZ();
-        final int taban = world.getBottomY();
-        final int tavan = world.getTopYInclusive();
-        final BlockPos.Mutable m = new BlockPos.Mutable();
+    private static void sekillendir(ServerLevel world, LevelChunk chunk, KurulDunya.Sekil sekil) {
+        final int bx = chunk.getPos().getMinBlockX();
+        final int bz = chunk.getPos().getMinBlockZ();
+        final int taban = world.getMinY();
+        final int tavan = world.getMaxY();
+        final BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
 
         switch (sekil) {
             case SKYGRID   -> skyGrid(chunk, m, bx, bz);
@@ -58,7 +58,7 @@ public final class DunyaSekillendirici {
     // ─────────────────────────────────────────────────────────
     // SKY GRID — boşlukta asılı 3B ızgara (her eksende 4'te 1)
     // ─────────────────────────────────────────────────────────
-    private static void skyGrid(WorldChunk chunk, BlockPos.Mutable m, int bx, int bz) {
+    private static void skyGrid(LevelChunk chunk, BlockPos.MutableBlockPos m, int bx, int bz) {
         for (int lx = 0; lx < 16; lx++) {
             int wx = bx + lx;
             if ((wx & 3) != 0) continue;
@@ -76,11 +76,11 @@ public final class DunyaSekillendirici {
     private static BlockState izgaraBlok(int x, int y, int z) {
         int h = hash(x, y, z);
         int r = Math.floorMod(h, 20);
-        if (r < 10) return Blocks.STONE.getDefaultState();
-        if (r < 14) return Blocks.DIRT.getDefaultState();
-        if (r < 16) return Blocks.GRASS_BLOCK.getDefaultState();
-        if (r < 18) return Blocks.DEEPSLATE.getDefaultState();
-        return Blocks.OAK_LOG.getDefaultState();
+        if (r < 10) return Blocks.STONE.defaultBlockState();
+        if (r < 14) return Blocks.DIRT.defaultBlockState();
+        if (r < 16) return Blocks.GRASS_BLOCK.defaultBlockState();
+        if (r < 18) return Blocks.DEEPSLATE.defaultBlockState();
+        return Blocks.OAK_LOG.defaultBlockState();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -89,21 +89,21 @@ public final class DunyaSekillendirici {
     private static final int KORIDOR_TABAN = 63;   // zemin
     private static final int KORIDOR_TAVAN = 68;    // tavan (yükseklik 4)
 
-    private static void koridor(WorldChunk chunk, BlockPos.Mutable m, int bx, int bz) {
+    private static void koridor(LevelChunk chunk, BlockPos.MutableBlockPos m, int bx, int bz) {
         for (int lx = 0; lx < 16; lx++) {
             int wx = bx + lx;
             for (int lz = 0; lz < 16; lz++) {
                 int wz = bz + lz;
                 boolean koridorMu = koridorHucresi(wx, wz);
                 // Zemin her yerde
-                chunk.setBlockState(m.set(wx, KORIDOR_TABAN, wz), Blocks.SMOOTH_STONE.getDefaultState());
+                chunk.setBlockState(m.set(wx, KORIDOR_TABAN, wz), Blocks.SMOOTH_STONE.defaultBlockState());
                 if (koridorMu) {
                     // Açık koridor: tavan kapat, arası hava
-                    chunk.setBlockState(m.set(wx, KORIDOR_TAVAN + 1, wz), Blocks.SMOOTH_STONE.getDefaultState());
+                    chunk.setBlockState(m.set(wx, KORIDOR_TAVAN + 1, wz), Blocks.SMOOTH_STONE.defaultBlockState());
                 } else {
                     // Duvar: zeminden tavana kadar dolu
                     for (int y = KORIDOR_TABAN + 1; y <= KORIDOR_TAVAN + 1; y++) {
-                        chunk.setBlockState(m.set(wx, y, wz), Blocks.STONE_BRICKS.getDefaultState());
+                        chunk.setBlockState(m.set(wx, y, wz), Blocks.STONE_BRICKS.defaultBlockState());
                     }
                 }
             }
@@ -127,8 +127,8 @@ public final class DunyaSekillendirici {
     // yamaçlara toslar, hiçbir şey göremez — his birebir aynı ama maliyet Sky Grid kadar.
     private static final int KOR_ZEMIN = 56;
 
-    private static void kor(WorldChunk chunk, BlockPos.Mutable m, int bx, int bz, int taban) {
-        final BlockState barrier = Blocks.BARRIER.getDefaultState();
+    private static void kor(LevelChunk chunk, BlockPos.MutableBlockPos m, int bx, int bz, int taban) {
+        final BlockState barrier = Blocks.BARRIER.defaultBlockState();
         for (int lx = 0; lx < 16; lx++) {
             int wx = bx + lx;
             for (int lz = 0; lz < 16; lz++) {
@@ -145,7 +145,7 @@ public final class DunyaSekillendirici {
     // ─────────────────────────────────────────────────────────
     // FAR LANDS / FARTHER LANDS — süngerimsi dikey duvarlar
     // ─────────────────────────────────────────────────────────
-    private static void farLands(WorldChunk chunk, BlockPos.Mutable m, int bx, int bz, boolean farther) {
+    private static void farLands(LevelChunk chunk, BlockPos.MutableBlockPos m, int bx, int bz, boolean farther) {
         // Far Lands ÇOĞUNLUKLA KATI, içi delik deşik dev duvarlardır — tersi değil.
         // Farther: bir eksende çok daha düşük frekans → gerilmiş, akışkan arazi.
         final double fx = farther ? 0.010 : 0.045;
@@ -168,15 +168,15 @@ public final class DunyaSekillendirici {
     }
 
     private static BlockState farLandsBlok(int y) {
-        if (y < 40) return Blocks.DEEPSLATE.getDefaultState();
-        if (y < 120) return Blocks.STONE.getDefaultState();
-        return Blocks.COBBLESTONE.getDefaultState();
+        if (y < 40) return Blocks.DEEPSLATE.defaultBlockState();
+        if (y < 120) return Blocks.STONE.defaultBlockState();
+        return Blocks.COBBLESTONE.defaultBlockState();
     }
 
     // ─────────────────────────────────────────────────────────
     // CORNER FAR LANDS — dümdüz, üst üste yığılı yatay katmanlar
     // ─────────────────────────────────────────────────────────
-    private static void cornerLands(WorldChunk chunk, BlockPos.Mutable m, int bx, int bz) {
+    private static void cornerLands(LevelChunk chunk, BlockPos.MutableBlockPos m, int bx, int bz) {
         // Dümdüz, üst üste yığılı yatay platolar: her 8 Y'de bir "kat", katın dolu bölgesi
         // yumuşak 2B gürültüden. Biome geçişi çökünce oluşan basamaklı platoların taklidi.
         for (int lx = 0; lx < 16; lx++) {

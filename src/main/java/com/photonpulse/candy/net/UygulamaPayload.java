@@ -1,10 +1,10 @@
 package com.photonpulse.candy.net;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * C2S — client, açık olan uygulamalardan <b>yalnızca bir tanesinin beyaz liste
@@ -18,19 +18,19 @@ import net.minecraft.util.Identifier;
  *
  * Değer sunucuda yalnızca RAM'de durur, diske yazılmaz, Vagus prompt'una girmez.
  */
-public record UygulamaPayload(int indeks) implements CustomPayload {
+public record UygulamaPayload(int indeks) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<UygulamaPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("candy", "uygulama"));
+    public static final CustomPacketPayload.Type<UygulamaPayload> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("candy", "uygulama"));
 
-    public static final PacketCodec<RegistryByteBuf, UygulamaPayload> CODEC =
-        PacketCodec.tuple(
-            PacketCodecs.VAR_INT, UygulamaPayload::indeks,
+    public static final StreamCodec<RegistryFriendlyByteBuf, UygulamaPayload> CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, UygulamaPayload::indeks,
             UygulamaPayload::new
         );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

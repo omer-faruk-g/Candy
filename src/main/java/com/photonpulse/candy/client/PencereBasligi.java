@@ -3,7 +3,7 @@ package com.photonpulse.candy.client;
 import com.photonpulse.candy.Candy;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /**
  * PencereBasligi (v8.2, istemci) — Candy oyun penceresinin başlığını değiştirir.
@@ -55,7 +55,7 @@ public final class PencereBasligi {
 
     public static void uygula(int indeks) {
         try {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.getWindow() == null) return;
             if (indeks < 0 || indeks >= BASLIKLAR.length) return;
 
@@ -74,7 +74,7 @@ public final class PencereBasligi {
         try {
             String g = ozgun;
             if (g == null) return;
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.getWindow() == null) return;
             mc.getWindow().setTitle(g);
             ozgun = null;
@@ -90,9 +90,9 @@ public final class PencereBasligi {
      * "Minecraft <sürüm>". Sürüm okunamazsa düz "Minecraft" — hiçbir hâlde boş başlık
      * bırakılmıyor.
      */
-    private static String baslikTahmin(MinecraftClient mc) {
+    private static String baslikTahmin(Minecraft mc) {
         try {
-            String s = mc.getGameVersion();
+            String s = mc.getLaunchedVersion();
             if (s != null && !s.isBlank()) return "Minecraft " + s;
         } catch (Throwable ignored) {}
         return "Minecraft";

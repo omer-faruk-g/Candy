@@ -1,15 +1,14 @@
 package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.chunk.WorldChunk;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
  * DunyaKlon — "Klon" dünyasının tek şablonu: ne yaparsan HER chunk'a yansır.
@@ -52,12 +51,12 @@ public final class DunyaKlon {
     }
 
     /** Chunk üretiminde şablonu bu chunk'a damgalar (zemin + tüm düzenlemeler). */
-    public static void damgala(WorldChunk chunk, BlockPos.Mutable m, int bx, int bz) {
+    public static void damgala(LevelChunk chunk, BlockPos.MutableBlockPos m, int bx, int bz) {
         // Zemin
         for (int lx = 0; lx < 16; lx++) {
             for (int lz = 0; lz < 16; lz++) {
-                chunk.setBlockState(m.set(bx + lx, ZEMIN_TAS, bz + lz), Blocks.STONE.getDefaultState());
-                chunk.setBlockState(m.set(bx + lx, ZEMIN_CIM, bz + lz), Blocks.GRASS_BLOCK.getDefaultState());
+                chunk.setBlockState(m.set(bx + lx, ZEMIN_TAS, bz + lz), Blocks.STONE.defaultBlockState());
+                chunk.setBlockState(m.set(bx + lx, ZEMIN_CIM, bz + lz), Blocks.GRASS_BLOCK.defaultBlockState());
             }
         }
         // Düzenlemeler
@@ -74,7 +73,7 @@ public final class DunyaKlon {
      * Oyuncu Klon dünyasında bir bloğu değiştirdi (koydu/kırdı/yaktı).
      * Şablonu güncelle ve oyuncuların çevresindeki tüm chunk'lara yay.
      */
-    public static void guncelle(ServerWorld world, BlockPos pos, BlockState state) {
+    public static void guncelle(ServerLevel world, BlockPos pos, BlockState state) {
         if (world == null || pos == null || state == null) return;
         int lx = pos.getX() & 15;
         int lz = pos.getZ() & 15;
@@ -83,8 +82,8 @@ public final class DunyaKlon {
 
         long k = anahtar(lx, lz, y);
         boolean varsayilanaDondu =
-            (y == ZEMIN_TAS && state.isOf(Blocks.STONE)) ||
-            (y == ZEMIN_CIM && state.isOf(Blocks.GRASS_BLOCK)) ||
+            (y == ZEMIN_TAS && state.is(Blocks.STONE)) ||
+            (y == ZEMIN_CIM && state.is(Blocks.GRASS_BLOCK)) ||
             (y != ZEMIN_TAS && y != ZEMIN_CIM && state.isAir());
         if (varsayilanaDondu) override.remove(k);
         else override.put(k, state);
@@ -93,11 +92,11 @@ public final class DunyaKlon {
     }
 
     /** Değişikliği, Klon dünyasındaki oyuncuların çevresindeki tüm chunk'lara uygula. */
-    private static void yay(ServerWorld world, int lx, int lz, int y, BlockState state) {
-        BlockPos.Mutable m = new BlockPos.Mutable();
+    private static void yay(ServerLevel world, int lx, int lz, int y, BlockState state) {
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         yayiliyor.set(true);
         try {
-        for (ServerPlayerEntity p : world.getPlayers()) {
+        for (ServerPlayer p : world.players()) {
             int pcx = p.getBlockX() >> 4;
             int pcz = p.getBlockZ() >> 4;
             for (int cx = pcx - YAYILIM_YARICAP; cx <= pcx + YAYILIM_YARICAP; cx++) {
@@ -106,7 +105,7 @@ public final class DunyaKlon {
                     // Kendi tetiklediğimiz değişiklik döngüye girmesin diye 0x4 (no-neighbor-update)
                     // + sonradan capture'da re-entrancy guard var.
                     if (!world.getBlockState(m).equals(state)) {
-                        world.setBlockState(m, state, 0x2 | 0x10);
+                        world.setBlock(m, state, 0x2 | 0x10);
                     }
                 }
             }

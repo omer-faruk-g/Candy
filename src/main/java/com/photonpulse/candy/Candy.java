@@ -162,7 +162,7 @@ public class Candy implements ModInitializer {
             // Sadece test botları içindir; üretimde flag kapalı → hiç etkisi yok.
             if (Boolean.getBoolean("candy.autosetup") && !tp.kurulumTamam) {
                 tp.kurulumTamam = true;
-                tp.kurulumTamamTick = server.getOverworld().getTime();
+                tp.kurulumTamamTick = server.overworld().getGameTime();
                 LOG.info("[Candy] AUTOSETUP — kurulum otomatik tamamlandı: {}",
                     player.getName().getString());
             }
@@ -176,10 +176,10 @@ public class Candy implements ModInitializer {
                     var trKitap = Denek239Book.olustur(true);
                     var enKitap = Denek239Book.olustur(false);
                     var inv = player.getInventory();
-                    if (inv.getStack(0).isEmpty()) inv.setStack(0, trKitap);
-                    else player.giveItemStack(trKitap);
-                    if (inv.getStack(1).isEmpty()) inv.setStack(1, enKitap);
-                    else player.giveItemStack(enKitap);
+                    if (inv.getItem(0).isEmpty()) inv.setItem(0, trKitap);
+                    else player.addItem(trKitap);
+                    if (inv.getItem(1).isEmpty()) inv.setItem(1, enKitap);
+                    else player.addItem(enKitap);
                     tp.denek239Verildi = true;
                     com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "denek_239");
                     LOG.info("[Candy] Denek 239 kitapları verildi: {}", player.getName().getString());
@@ -190,7 +190,7 @@ public class Candy implements ModInitializer {
             if (!tp.kuranVerildi) {
                 server.execute(() -> {
                     if (player.isRemoved()) return;
-                    player.giveItemStack(com.photonpulse.candy.item.KuranKitap.olustur());
+                    player.addItem(com.photonpulse.candy.item.KuranKitap.olustur());
                     tp.kuranVerildi = true;
                     LOG.info("[Candy] Kuran-ı Kerim verildi: {}", player.getName().getString());
                 });
@@ -198,10 +198,10 @@ public class Candy implements ModInitializer {
         });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            var uid = handler.player.getUuid();
+            var uid = handler.player.getUUID();
             // Önce tp'yi güncel tut — cleanup diske yazacak, kayıp olmasın
             var tp = PersonalityManager.get(uid);
-            tp.sonAyrilmaTick = server.getOverworld().getTime();
+            tp.sonAyrilmaTick = server.overworld().getGameTime();
             // v8.2: son görülen dünya tick'ini yaz — sonraki katılış buna bakacak
             com.photonpulse.candy.kacis.KacisSensoru.ayrilis(handler.player);
             // Diske yaz + tüm per-player cache'leri temizle (MP'de birikmesin)

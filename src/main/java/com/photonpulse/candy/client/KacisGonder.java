@@ -8,7 +8,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /**
  * KacisGonder (v8.2, istemci) — F3 hata ayıklama ekranının açık kaldığı süreyi ölçüp
@@ -49,10 +49,10 @@ public final class KacisGonder {
         ClientTickEvents.END_CLIENT_TICK.register(KacisGonder::istemciTick);
     }
 
-    private static void istemciTick(MinecraftClient mc) {
+    private static void istemciTick(Minecraft mc) {
         try {
             if (mc == null || mc.player == null) return;
-            if (mc.getDebugHud() != null && mc.getDebugHud().shouldShowDebugHud()) f3Tick++;
+            if (mc.getDebugOverlay() != null && mc.getDebugOverlay().showDebugScreen()) f3Tick++;
 
             tick++;
             if (tick % RAPOR_ARALIK != 0) return;

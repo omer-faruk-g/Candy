@@ -7,16 +7,15 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.SpawnReason;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.world.Heightmap;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -104,18 +103,18 @@ public class AynaSistemi {
 
     private static void onTick(MinecraftServer server) {
         tick++;
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
-                UUID id = player.getUuid();
+                UUID id = player.getUUID();
 
                 // 1) Her tick hareketi kaydet (ring buffer)
                 Kayit buf = kayit.computeIfAbsent(id, k -> new Kayit());
                 buf.ekle((float) player.getX(), (float) player.getY(), (float) player.getZ(),
-                    player.getYaw(), player.getPitch());
+                    player.getYRot(), player.getXRot());
 
                 // 2) Hazırlık fazı: düzenek kuruldu → süre dolunca oyuncuyu Ayna'ya AL
                 Long hb = hazirlikBitis.get(id);
@@ -132,7 +131,7 @@ public class AynaSistemi {
                     tp.aynaToplamSure++;
                     kopyayiSur(server, player, buf);
                     boolean sureDoldu = simdi - tp.aynaGirisTick > AYNA_SURE;
-                    boolean yanlisBoyut = !player.getWorld().getRegistryKey().equals(CandyDimensions.AYNA);
+                    boolean yanlisBoyut = !player.level().dimension().equals(CandyDimensions.AYNA);
                     if (sureDoldu || yanlisBoyut) {
                         geriTakas(server, player, tp);
                     }
@@ -142,7 +141,7 @@ public class AynaSistemi {
                 // 4) Merak kontrolü (1 sn'de bir) — Candy "acaba bu nasıl olurdu?" diye düşünür
                 if (tick % ARALIK != 0) continue;
                 if (tp.bossOldurulmeTick > 0) continue;              // WIN sessizliği
-                if (!player.getWorld().getRegistryKey().equals(server.getOverworld().getRegistryKey()))
+                if (!player.level().dimension().equals(server.overworld().dimension()))
                     continue;                                        // sadece overworld'den
                 if (simdi - tp.sonAynaTakas < COOLDOWN) continue;    // 5 dk cooldown
                 if (tp.kehanetToplam < MIN_VERI) continue;           // merak edecek kadar veri
@@ -163,71 +162,71 @@ public class AynaSistemi {
      * Çevreyi Ayna'ya kopyalar, kopya NPC + sessiz bekçiyi kurar, HAZIRLIK_SURE sonra
      * oyuncu {@link #spawnla} ile sahneye alınır. "Acaba bu nasıl olurdu... görelim."
      */
-    private static void hazirla(MinecraftServer server, ServerPlayerEntity player,
+    private static void hazirla(MinecraftServer server, ServerPlayer player,
                                 TruePersonality tp, long simdi) {
-        ServerWorld ayna = server.getWorld(CandyDimensions.AYNA);
-        ServerWorld ow = (ServerWorld) player.getWorld();
+        ServerLevel ayna = server.getLevel(CandyDimensions.AYNA);
+        ServerLevel ow = (ServerLevel) player.level();
         if (ayna == null) return;
 
-        BlockPos merkez = player.getBlockPos();
+        BlockPos merkez = player.blockPosition();
         tp.aynaDonusPoz = merkez.asLong();
 
         // Candy'nin iç sesi — merak ettiğini duyurur (bir düşünce, tehdit değil)
         if (tp.bossOldurulmeTick == 0) {
-            player.sendMessage(Text.translatable("candy.ayna.dusunce")
-                .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+            player.displayClientMessage(Component.translatable("candy.ayna.dusunce")
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
         }
 
         // Düzenek ZEMİNİ: çevreyi Ayna'ya birebir kopyala (kusursuz illüzyon).
         // NPC'ler oyuncu geldiğinde (spawnla) doğurulur — aksi halde oyuncusuz Ayna chunk'ı
         // yüklenmeden kalır ve kopya/bekçi kaybolabilir.
         bolgeKopyala(ow, ayna, merkez);
-        ayna.setTimeOfDay(ow.getTimeOfDay());  // gökyüzü senkron
+        ayna.setDayTime(ow.getDayTime());  // gökyüzü senkron
 
-        hazirlikBitis.put(player.getUuid(), simdi + HAZIRLIK_SURE);
+        hazirlikBitis.put(player.getUUID(), simdi + HAZIRLIK_SURE);
         tp.sonAynaTakas = simdi;               // cooldown karar anından işler
         Candy.LOG.info("[Candy] AYNA HAZIRLIK[{}] düzenek kuruluyor @({}, {}, {}) — {} tick sonra spawn",
             player.getName().getString(), merkez.getX(), merkez.getY(), merkez.getZ(), HAZIRLIK_SURE);
     }
 
     /** Hazırlık bitince oyuncuyu hazırlanan Ayna sahnesine AL (F3 "overworld" gösterir). */
-    private static void spawnla(MinecraftServer server, ServerPlayerEntity player, TruePersonality tp) {
-        ServerWorld ayna = server.getWorld(CandyDimensions.AYNA);
+    private static void spawnla(MinecraftServer server, ServerPlayer player, TruePersonality tp) {
+        ServerLevel ayna = server.getLevel(CandyDimensions.AYNA);
         if (ayna == null) return;
-        BlockPos hedef = BlockPos.fromLong(tp.aynaDonusPoz);
-        ayna.setTimeOfDay(server.getOverworld().getTimeOfDay()); // son senkron
-        player.teleport(ayna, hedef.getX() + 0.5, hedef.getY(), hedef.getZ() + 0.5,
-            Collections.emptySet(), player.getYaw(), player.getPitch(), false);
+        BlockPos hedef = BlockPos.of(tp.aynaDonusPoz);
+        ayna.setDayTime(server.overworld().getDayTime()); // son senkron
+        player.teleportTo(ayna, hedef.getX() + 0.5, hedef.getY(), hedef.getZ() + 0.5,
+            Collections.emptySet(), player.getYRot(), player.getXRot(), false);
         // Oyuncu artık Ayna'da (chunk yüklü) → kopya NPC + sessiz bekçiyi şimdi doğur
         kopyaDogur(ayna, player);              // kopya — kaydını gecikmeli oynatacak
         duzenekKur(ayna, player);              // arkasında sessiz bekçi
         tp.aynada = true;
-        tp.aynaGirisTick = server.getOverworld().getTime();
+        tp.aynaGirisTick = server.overworld().getGameTime();
         Candy.LOG.info("[Candy] AYNA SPAWN[{}] → hazır sahneye alındı @({}, {}, {})",
             player.getName().getString(), hedef.getX(), hedef.getY(), hedef.getZ());
     }
 
     /** Ayna → overworld geri takas + İFŞA. */
-    private static void geriTakas(MinecraftServer server, ServerPlayerEntity player, TruePersonality tp) {
-        ServerWorld ow = server.getOverworld();
-        BlockPos donus = BlockPos.fromLong(tp.aynaDonusPoz);
+    private static void geriTakas(MinecraftServer server, ServerPlayer player, TruePersonality tp) {
+        ServerLevel ow = server.overworld();
+        BlockPos donus = BlockPos.of(tp.aynaDonusPoz);
         int x = donus.getX(), z = donus.getZ();
-        int y = ow.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
-        player.teleport(ow, x + 0.5, y, z + 0.5, Collections.emptySet(),
-            player.getYaw(), player.getPitch(), false);
+        int y = ow.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+        player.teleportTo(ow, x + 0.5, y, z + 0.5, Collections.emptySet(),
+            player.getYRot(), player.getXRot(), false);
         player.setHealth(player.getMaxHealth());
 
-        kopyayiSil(server, player, BlockPos.fromLong(tp.aynaDonusPoz));
+        kopyayiSil(server, player, BlockPos.of(tp.aynaDonusPoz));
         tp.aynada = false;
 
         // İFŞA: "Bu sefer sen kopyasın." — bir kez, kanıtla birlikte
         if (!tp.aynaIfsaEdildi && tp.bossOldurulmeTick == 0) {
             tp.aynaIfsaEdildi = true;
-            player.sendMessage(Text.translatable("candy.ayna.ifsa")
-                .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+            player.displayClientMessage(Component.translatable("candy.ayna.ifsa")
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
         } else if (tp.bossOldurulmeTick == 0) {
-            player.sendMessage(Text.translatable("candy.ayna.geri")
-                .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+            player.displayClientMessage(Component.translatable("candy.ayna.geri")
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
         }
         CandyBasarimlar.tetikle(player, "kim_gercek");
         Candy.LOG.info("[Candy] AYNA GERİ[{}] → overworld @({}, {}, {})",
@@ -235,15 +234,15 @@ public class AynaSistemi {
     }
 
     /** Kopya NPC'yi kaydın ECHO_GECIKME kadar geçmişindeki frame'e taşı (gecikmeli eko). */
-    private static void kopyayiSur(MinecraftServer server, ServerPlayerEntity player, Kayit buf) {
-        UUID npcId = kopyaEntity.get(player.getUuid());
+    private static void kopyayiSur(MinecraftServer server, ServerPlayer player, Kayit buf) {
+        UUID npcId = kopyaEntity.get(player.getUUID());
         if (npcId == null) return;
-        ServerWorld ayna = server.getWorld(CandyDimensions.AYNA);
+        ServerLevel ayna = server.getLevel(CandyDimensions.AYNA);
         if (ayna == null) return;
         var e = ayna.getEntity(npcId);
         if (e == null) return; // chunk henüz yüklenmemiş olabilir — haritadan SİLME, bekle
         if (!(e instanceof CandyDoppelEntity kopya) || !kopya.isAlive()) {
-            kopyaEntity.remove(player.getUuid());
+            kopyaEntity.remove(player.getUUID());
             return;
         }
         // Buffer'dan ECHO_GECIKME frame geriyi al
@@ -251,56 +250,56 @@ public class AynaSistemi {
         if (buf.adet <= ECHO_GECIKME) return;
         final float[] frame = kareScratch;
         if (!buf.kare(ECHO_GECIKME, frame)) return;
-        kopya.refreshPositionAndAngles(frame[0], frame[1], frame[2], frame[3], frame[4]);
-        kopya.setHeadYaw(frame[3]);
-        kopya.setBodyYaw(frame[3]);
+        kopya.snapTo(frame[0], frame[1], frame[2], frame[3], frame[4]);
+        kopya.setYHeadRot(frame[3]);
+        kopya.setYBodyRot(frame[3]);
     }
 
-    private static void kopyaDogur(ServerWorld ayna, ServerPlayerEntity player) {
-        BlockPos pos = player.getBlockPos();
-        var spawned = CandyEntities.DOPPEL.spawn(ayna, pos, SpawnReason.MOB_SUMMONED);
+    private static void kopyaDogur(ServerLevel ayna, ServerPlayer player) {
+        BlockPos pos = player.blockPosition();
+        var spawned = CandyEntities.DOPPEL.spawn(ayna, pos, EntitySpawnReason.MOB_SUMMONED);
         if (spawned instanceof CandyDoppelEntity kopya) {
-            kopya.setOwnerUuid(player.getUuid());
-            kopya.addCommandTag(CandyDoppelEntity.TAG_AYNA);
-            kopya.setPersistent();
+            kopya.setOwnerUuid(player.getUUID());
+            kopya.addTag(CandyDoppelEntity.TAG_AYNA);
+            kopya.setPersistenceRequired();
             kopya.setNoGravity(true);
-            kopyaEntity.put(player.getUuid(), kopya.getUuid());
+            kopyaEntity.put(player.getUUID(), kopya.getUUID());
         }
     }
 
     /** Düzenek: kopyanın arkasında sessiz bir bekçi — senden alamadığını Candy burada kurar. */
-    private static void duzenekKur(ServerWorld ayna, ServerPlayerEntity player) {
-        double yaw = Math.toRadians(player.getYaw());
+    private static void duzenekKur(ServerLevel ayna, ServerPlayer player) {
+        double yaw = Math.toRadians(player.getYRot());
         double x = player.getX() + Math.sin(yaw) * 4.0;   // arkaya
         double z = player.getZ() - Math.cos(yaw) * 4.0;
-        BlockPos pos = BlockPos.ofFloored(x, player.getY(), z);
-        var spawned = CandyEntities.DOPPEL.spawn(ayna, pos, SpawnReason.MOB_SUMMONED);
+        BlockPos pos = BlockPos.containing(x, player.getY(), z);
+        var spawned = CandyEntities.DOPPEL.spawn(ayna, pos, EntitySpawnReason.MOB_SUMMONED);
         if (spawned instanceof CandyDoppelEntity bekci) {
-            bekci.setOwnerUuid(player.getUuid());
-            bekci.addCommandTag(CandyDoppelEntity.TAG_BEKCI);
-            bekci.setPersistent();
+            bekci.setOwnerUuid(player.getUUID());
+            bekci.addTag(CandyDoppelEntity.TAG_BEKCI);
+            bekci.setPersistenceRequired();
         }
     }
 
     /** Overworld çevresini Ayna'ya birebir kopyala — kusursuz illüzyon zemini. */
-    private static void bolgeKopyala(ServerWorld kaynak, ServerWorld hedef, BlockPos merkez) {
+    private static void bolgeKopyala(ServerLevel kaynak, ServerLevel hedef, BlockPos merkez) {
         int cx = merkez.getX(), cy = merkez.getY(), cz = merkez.getZ();
-        BlockPos.Mutable m = new BlockPos.Mutable();
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int dx = -KOPYA_YARICAP; dx <= KOPYA_YARICAP; dx++) {
             for (int dz = -KOPYA_YARICAP; dz <= KOPYA_YARICAP; dz++) {
                 for (int dy = -3; dy <= 18; dy++) {
                     m.set(cx + dx, cy + dy, cz + dz);
                     var st = kaynak.getBlockState(m);
                     // flag 2 = client'a gönder ama komşu güncellemesi yok (hafif)
-                    hedef.setBlockState(m, st, 2);
+                    hedef.setBlock(m, st, 2);
                 }
             }
         }
     }
 
-    private static void kopyayiSil(MinecraftServer server, ServerPlayerEntity player, BlockPos merkez) {
-        UUID npcId = kopyaEntity.remove(player.getUuid());
-        ServerWorld ayna = server.getWorld(CandyDimensions.AYNA);
+    private static void kopyayiSil(MinecraftServer server, ServerPlayer player, BlockPos merkez) {
+        UUID npcId = kopyaEntity.remove(player.getUUID());
+        ServerLevel ayna = server.getLevel(CandyDimensions.AYNA);
         if (ayna == null) return;
         if (npcId != null) {
             var e = ayna.getEntity(npcId);
@@ -308,13 +307,13 @@ public class AynaSistemi {
         }
         // Owner eşleşen TAG_AYNA/TAG_BEKCI'leri Ayna'da GİRİŞ konumu çevresinde temizle
         // (oyuncu artık overworld'de — o yüzden dönüş koordinatını merkez al; restart yetimleri dahil)
-        Box kutu = new Box(merkez).expand(48);
-        ayna.getEntitiesByClass(CandyDoppelEntity.class, kutu, d -> {
+        AABB kutu = new AABB(merkez).inflate(48);
+        ayna.getEntitiesOfClass(CandyDoppelEntity.class, kutu, d -> {
             var o = d.getOwnerUuid();
-            return o.isPresent() && o.get().equals(player.getUuid())
-                && (d.getCommandTags().contains(CandyDoppelEntity.TAG_AYNA)
-                    || d.getCommandTags().contains(CandyDoppelEntity.TAG_BEKCI));
-        }).forEach(net.minecraft.entity.Entity::discard);
+            return o.isPresent() && o.get().equals(player.getUUID())
+                && (d.getTags().contains(CandyDoppelEntity.TAG_AYNA)
+                    || d.getTags().contains(CandyDoppelEntity.TAG_BEKCI));
+        }).forEach(net.minecraft.world.entity.Entity::discard);
     }
 
     public static void oyuncuAyrildi(UUID uuid) {
