@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import com.photonpulse.candy.platform.CanliOlaylari;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,7 +27,7 @@ public class GriefSystem {
     private static final double YAS_SOK_CARPANI = 0.4;   // aktiflik *= 0.4
 
     public static void register() {
-        ServerLivingEntityEvents.AFTER_DEATH.register(GriefSystem::onOlum);
+        CanliOlaylari.AFTER_DEATH.register(GriefSystem::onOlum);
         Candy.LOG.info("[Candy] GriefSystem aktif — yas ve travma sonrası büyüme");
     }
 

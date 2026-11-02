@@ -4,8 +4,8 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import com.photonpulse.candy.platform.BlokOlaylari;
+import com.photonpulse.candy.platform.EtkilesimOlaylari;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -50,7 +50,7 @@ public class IcDusunce {
 
     public static void register() {
         // Blok kırma → mining sinyali
-        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, be) -> {
+        BlokOlaylari.AFTER.register((world, player, pos, state) -> {
             if (player instanceof ServerPlayer) {
                 UUID id = player.getUUID();
                 sonKirmaTick.put(id, world.getGameTime());
@@ -59,7 +59,7 @@ public class IcDusunce {
         });
 
         // Blok koyma (BlockItem kullanımı) → building sinyali
-        UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
+        EtkilesimOlaylari.BLOK.register((player, world, hand, hit) -> {
             if (player instanceof ServerPlayer
                 && player.getItemInHand(hand).getItem() instanceof BlockItem) {
                 sonKoymaTick.put(player.getUUID(), world.getGameTime());

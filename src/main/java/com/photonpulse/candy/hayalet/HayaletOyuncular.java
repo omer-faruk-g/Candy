@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
+import com.photonpulse.candy.platform.SohbetOlaylari;
 import com.photonpulse.candy.platform.SunucuBaglanti;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -99,7 +99,7 @@ public class HayaletOyuncular {
         SunucuTick.END_SERVER_TICK.register(HayaletOyuncular::onTick);
 
         // v1.4.6: player chat mesajı → cevap kuyruğuna ekle (%25)
-        ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
+        SohbetOlaylari.CHAT_MESSAGE.register((sender, hamMetin, sunulanMetin) -> {
             if (RNG.nextDouble() > 0.25) return;
             String isim = secilebilirHayalet(sender.level().getGameTime());
             if (isim == null) return;

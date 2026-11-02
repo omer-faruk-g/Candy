@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
+import com.photonpulse.candy.platform.UykuOlaylari;
 import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -50,7 +50,7 @@ public class BaseSabotaji {
 
     public static void register() {
         // Bed konumunu takip — player uyuduğunda güncelle
-        EntitySleepEvents.START_SLEEPING.register((entity, sleepPos) -> {
+        UykuOlaylari.UYKUYA_GIRDI.register((entity, sleepPos) -> {
             if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             tp.baseKonum = new int[]{sleepPos.getX(), sleepPos.getY(), sleepPos.getZ()};

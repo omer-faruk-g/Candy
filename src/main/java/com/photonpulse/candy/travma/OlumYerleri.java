@@ -5,7 +5,7 @@ import com.photonpulse.candy.audio.CandySounds;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import com.photonpulse.candy.platform.CanliOlaylari;
 import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -38,7 +38,7 @@ public class OlumYerleri {
 
     public static void register() {
         // Player ölümü — konumu kaydet
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+        CanliOlaylari.AFTER_DEATH.register((entity, source) -> {
             if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) return;

@@ -6,7 +6,7 @@ import com.photonpulse.candy.platform.Yukleyici;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import com.photonpulse.candy.platform.IstemciTick;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.ChatFormatting;
@@ -43,7 +43,7 @@ public class CandyClient implements ClientModInitializer {
         EntityRendererRegistry.register(CandyEntities.ARKADAS, ArkadasRenderer::new);
 
         // ME dünyası: her blok oyuncunun yüzü olur (skin okunamazsa gemideki yüz dokusu kalır)
-        ClientTickEvents.END_CLIENT_TICK.register(MeYuz::istemciTick);
+        IstemciTick.END_CLIENT_TICK.register(MeYuz::istemciTick);
 
         // v1.5.0-mixin: config yükle + server intensity dinleyici
         CandyMixinConfig.load();

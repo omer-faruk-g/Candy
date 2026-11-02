@@ -3,8 +3,8 @@ package com.photonpulse.candy.item;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.platform.SunucuTick;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import com.photonpulse.candy.platform.EtkilesimOlaylari;
+import com.photonpulse.candy.platform.VarligaSaldiri;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -54,7 +54,7 @@ public class KuranSistemi {
 
     public static void register() {
         // SAĞ TIK — Ayetel Kürsi (düz book zaten açılmaz)
-        UseItemCallback.EVENT.register((player, world, hand) -> {
+        EtkilesimOlaylari.ESYA.register((player, world, hand) -> {
             if (world.isClientSide()) return InteractionResult.PASS;
             if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
             if (!KuranKitap.esittir(player.getItemInHand(hand))) return InteractionResult.PASS;
@@ -76,7 +76,7 @@ public class KuranSistemi {
         });
 
         // SOL TIK (varlığa)
-        AttackEntityCallback.EVENT.register((player, world, hand, target, hit) -> {
+        VarligaSaldiri.EVENT.register((player, world, hand, target, hit) -> {
             if (world.isClientSide() || hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
             if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
             if (!KuranKitap.esittir(sp.getMainHandItem())) return InteractionResult.PASS;

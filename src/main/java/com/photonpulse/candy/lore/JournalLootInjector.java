@@ -1,7 +1,9 @@
 package com.photonpulse.candy.lore;
 
 import com.photonpulse.candy.Candy;
+//? if fabric {
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
+//?}
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.network.Filterable;
@@ -30,6 +32,7 @@ public class JournalLootInjector {
     private static final float SANDIK_IHTIMAL = 0.10f;
 
     public static void register() {
+        //? if fabric {
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
             if (key == null) return;
             String path = key.location().getPath();
@@ -51,6 +54,11 @@ public class JournalLootInjector {
             tableBuilder.pool(havuz.build());
         });
         Candy.LOG.info("[Candy] JournalLootInjector aktif — sandıklara %10 ihtimalle günlük");
+        //?}
+        //? if neoforge {
+        /*Candy.LOG.info("[Candy] JournalLootInjector KAPALI — NeoForge'da LootTableEvents karşılığı yok");
+        */
+        //?}
     }
 
     private static WrittenBookContent kitapIcerik(JournalTexts.Journal j) {

@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.kacis.KacisPayload;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import com.photonpulse.candy.platform.IstemciTick;
 import com.photonpulse.candy.platform.IstemciBaglanti;
 import com.photonpulse.candy.platform.IstemciAg;
 import com.photonpulse.candy.platform.AgKayit;
@@ -46,7 +46,7 @@ public final class KacisGonder {
             f3Tick = 0;
         });
 
-        ClientTickEvents.END_CLIENT_TICK.register(KacisGonder::istemciTick);
+        IstemciTick.END_CLIENT_TICK.register(KacisGonder::istemciTick);
     }
 
     private static void istemciTick(Minecraft mc) {

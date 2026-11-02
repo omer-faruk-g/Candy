@@ -4,9 +4,9 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 // Ozguven aynı package — import gerekmez
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import com.photonpulse.candy.platform.CanliOlaylari;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import com.photonpulse.candy.platform.BlokOlaylari;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -58,8 +58,8 @@ public class PsikolojiTakip {
         SunucuTick.END_SERVER_TICK.register(PsikolojiTakip::onTick);
 
         // Mob'dan damage yeme
-        ServerLivingEntityEvents.AFTER_DAMAGE.register(
-            (entity, damageSource, baseDamageTaken, damageTaken, blocked) -> {
+        CanliOlaylari.AFTER_DAMAGE.register(
+            (entity, damageSource) -> {
                 if (!(entity instanceof ServerPlayer player)) return;
                 if (!(damageSource.getEntity() instanceof Monster)) return;
                 TruePersonality tp = PersonalityManager.get(player);
@@ -68,7 +68,7 @@ public class PsikolojiTakip {
             });
 
         // Blok kırma — elmas / çiçek
-        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
+        BlokOlaylari.AFTER.register((world, player, pos, state) -> {
             if (!(player instanceof ServerPlayer sp)) return;
             TruePersonality tp = PersonalityManager.get(sp);
             if (!tp.kurulumTamam) return;

@@ -8,7 +8,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
 import com.photonpulse.candy.entity.CandyEntities;
-import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
+import com.photonpulse.candy.platform.UykuOlaylari;
 import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -49,7 +49,7 @@ public class RuyaSistemi {
     private static final Map<UUID, Long> aktifBekciler = new HashMap<>();
 
     public static void register() {
-        EntitySleepEvents.STOP_SLEEPING.register((entity, sleepPos) -> {
+        UykuOlaylari.UYANDI.register((entity, sleepPos) -> {
             if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) return;

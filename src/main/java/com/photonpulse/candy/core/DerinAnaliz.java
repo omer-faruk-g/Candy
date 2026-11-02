@@ -2,9 +2,10 @@ package com.photonpulse.candy.core;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import com.photonpulse.candy.platform.CanliOlaylari;
+import com.photonpulse.candy.platform.SohbetOlaylari;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import com.photonpulse.candy.platform.VarligaSaldiri;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -43,7 +44,7 @@ public class DerinAnaliz {
         SunucuTick.END_SERVER_TICK.register(DerinAnaliz::onTick);
 
         // Yetenek — isabetli vuruş sayacı
-        AttackEntityCallback.EVENT.register((player, world, hand, target, hit) -> {
+        VarligaSaldiri.EVENT.register((player, world, hand, target, hit) -> {
             if (player instanceof ServerPlayer sp && target instanceof LivingEntity) {
                 PersonalityManager.get(sp).toplamVurus++;
             }
@@ -51,7 +52,7 @@ public class DerinAnaliz {
         });
 
         // Ölüm — konum + tepki takibi + yetenek
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+        CanliOlaylari.AFTER_DEATH.register((entity, source) -> {
             if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             tp.toplamOlum++;
@@ -64,11 +65,11 @@ public class DerinAnaliz {
         });
 
         // Chat analizi — (9) güven + (11) tilt. Dil-nötr: küfür listesi yok.
-        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.CHAT_MESSAGE.register(
-            (message, sender, params) -> {
+        SohbetOlaylari.CHAT_MESSAGE.register(
+            (sender, hamMetin, sunulanMetin) -> {
                 try {
                     TruePersonality tp = PersonalityManager.get(sender);
-                    String metin = message.decoratedContent().getString();
+                    String metin = sunulanMetin.getString();
                     String kucuk = metin.toLowerCase();
 
                     // (9) Steve/Alex'ten bahsediyorsa hayaletlerle ilgileniyor → güven artar

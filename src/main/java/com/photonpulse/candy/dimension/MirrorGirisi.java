@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import com.photonpulse.candy.platform.CanliOlaylari;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -34,7 +34,7 @@ public class MirrorGirisi {
     private static final String KLON_ETIKETI = "candy_clone";
 
     public static void register() {
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+        CanliOlaylari.AFTER_DEATH.register((entity, source) -> {
             if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) return;

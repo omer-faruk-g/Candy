@@ -6,7 +6,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.dimension.CandyDimensions;
 import com.photonpulse.candy.entity.CandyEntities;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import com.photonpulse.candy.platform.EtkilesimOlaylari;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -66,7 +66,7 @@ public class BossManager {
         });
 
         // Gizemli Kitap ile boss'a sağ tık → WIN
-        UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
+        EtkilesimOlaylari.VARLIK.register((player, world, hand, entity) -> {
             if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
             if (!(entity instanceof TrueRealCandyEntity boss)) return InteractionResult.PASS;
             var stack = sp.getItemInHand(hand);

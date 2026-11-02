@@ -2,8 +2,9 @@
 
 > Durum: **kaynak Mojang resmî adlarına göçtü, Fabric iki MC düğümünde de yeşil.
 > NeoForge düğümleri ve araç zinciri kuruldu, ama NeoForge HENÜZ JAR ÜRETMİYOR** —
-> platform katmanının 2/4'ü bitti (tick + ağ), `net.fabricmc` import eden
-> **41 dosya** kaldı.
+> platform katmanının 3/4'ü bitti (tick + ağ + yükleyici + olaylar),
+> `net.fabricmc` import eden **24 dosya** kaldı (2'si kasten kapatılmış,
+> hata veren 22).
 >
 > Bu dosya üç katman taşıyor: (1) portun ilk denemesinde ölçülen engeller,
 > (2) o engellerden birinin nasıl kaldırıldığı — mapping göçü, (3) sıradaki adım.
@@ -14,7 +15,7 @@
 
 | Yol | Engel | Durum |
 |---|---|---|
-| **ModDevGradle / NeoGradle** | Mapping duvarı: 143 dosyada 156 Yarn sınıf adı | **Engel kaldırıldı** — kaynak Mojang adlarında, araç zinciri kurulu. Kalan: platform katmanı 2/4 bitti (268 → 148 hata) |
+| **ModDevGradle / NeoGradle** | Mapping duvarı: 143 dosyada 156 Yarn sınıf adı | **Engel kaldırıldı** — kaynak Mojang adlarında, araç zinciri kurulu. Kalan: platform katmanı 3/4 bitti (268 → 87 hata) |
 | **Architectury Loom** | Upstream remap çakışması: `InGameHud.renderHotbar` | **Artık ilgisiz** — Yarn'ı korumaya ihtiyaç yok |
 | **Stonecutter dalları** | Dal başına ayrı `src/` ağacı → 206 dosya loader başına kopya | Elendi, portun amacını bozuyor |
 
@@ -449,12 +450,12 @@ NeoForge düğümünde `compileJava` hata veriyor ama hatalarının **hiçbiri
 | ~~`PayloadTypeRegistry`~~ | ~~16~~ | 18 × `playS2C().register(ID, CODEC)`, 8 × `playC2S()` | ✅ **TAŞINDI** → `AgKayit` |
 | `Environment` / `EnvType` | 14 | `@Environment(EnvType.CLIENT)` | `@OnlyIn(Dist.CLIENT)` — anotasyon, metotla sarılamaz → `//? if fabric` |
 | ~~`ServerPlayNetworking`~~ | ~~13~~ | 14 × `send`, 4 × `registerGlobalReceiver` | ✅ **TAŞINDI** → `SunucuAg` |
-| `FabricLoader` | 8 | `getConfigDir` ×5, `isModLoaded` ×2, `getGameDir`, `getAllMods`, `getModContainer` | `FMLPaths`, `ModList` |
+| ~~`FabricLoader`~~ | ~~8~~ | `getConfigDir` ×5, `isModLoaded` ×2, `getGameDir`, `getAllMods`, `getModContainer` | ✅ **TAŞINDI** → `Yukleyici` |
 | ~~`ServerPlayConnectionEvents`~~ | ~~7~~ | join/disconnect | ✅ **TAŞINDI** → `SunucuBaglanti` |
-| `ServerLivingEntityEvents` | 5 | — | `LivingDeathEvent` vb. |
+| ~~`ServerLivingEntityEvents`~~ | ~~5~~ | — | ✅ **TAŞINDI** → `CanliOlaylari` |
 | ~~`ClientPlayNetworking`~~ | ~~5~~ | 9 × `registerGlobalReceiver`, 4 × `send`, 4 × `canSend` | ✅ **TAŞINDI** → `IstemciAg` |
 | ~~`ClientPlayConnectionEvents`~~ | ~~4~~ | — | ✅ **TAŞINDI** → `IstemciBaglanti` |
-| `AttackEntityCallback` | 3 | — | `AttackEntityEvent` |
+| ~~`AttackEntityCallback`~~ | ~~3~~ | — | ✅ **TAŞINDI** → `VarligaSaldiri` |
 | diğer 18 tip | 1–2'şer | — | mod bus olayları |
 | `ModInitializer` / `ClientModInitializer` | 2 | 4 giriş noktası | `@Mod` sınıfı + `Dist` ayrımı |
 
@@ -478,7 +479,9 @@ yalnızca import satırları değişti.
 > |---|---|
 > | ölçüm tavanı (gerçek değil) | ~~100~~ |
 > | 1/4 sonrası — gerçek taban | 268 |
-> | 2/4 sonrası (ağ katmanı) | **148** |
+> | 2/4 sonrası (ağ katmanı) | 148 |
+| 3a/4 sonrası (`Yukleyici`) | 130 |
+| 3b/4 sonrası (olay katmanı) | **87** |
 
 **Payload sınıfları hiç değişmeyecek** — zaten vanilla `CustomPacketPayload` +
 `StreamCodec` kullanıyorlar (Fabric'in değil Minecraft'ın tipleri). NeoForge'un
@@ -650,6 +653,240 @@ Fabric: temizlenmiş `build/generated/stonecutter` ağacından kökte
 > gitmenin yolu `player.level().getServer()` — kaynağın başka yerinde zaten
 > kullanılan biçim (`CandyBasarimlar.java`).
 
+### Yükleyici katmanı (adım 3a/4) — taşındı
+
+`FabricLoader` → `Yukleyici`, 9 dosya. `src/main/java` içinde `FabricLoader`
+referansı: **sıfır**. API iki loader'da aynı:
+
+```java
+public record ModBilgisi(String id, String ad) {}
+public static Path ayarDizini();
+public static Path oyunDizini();
+public static boolean modYuklu(String id);
+public static String minecraftSurumu();   // okunamazsa null
+public static List<ModBilgisi> modlar();
+```
+
+**Config dizini sınırı iki kaynaktan doğrulandı, varsayılmadı.** Projenin sert
+sınırı `config/candy-*` dışına yazmamak; sarmalayıcı o yolu değiştirirse sınır
+*sessizce* kayar. İki loader'ın kaynağı ayrı ayrı okundu:
+
+| Loader | Kaynak | Çözüm |
+|---|---|---|
+| Fabric | `FabricLoaderImpl.setGameDir`: `configDir = gameDir.resolve("config")` | `<gameDir>/config` |
+| NeoForge | `FMLPaths.CONFIGDIR("config")`, `loadAbsolutePaths(rootPath)` → `rootPath.resolve(relativePath)` | `<gameDir>/config` |
+
+**Aynı yer. Sınır kaymıyor.**
+
+İki bilinçli fark:
+
+- **Atış davranışı kasten eşitlendi.** `FMLPaths.get()` init'ten önce `null`
+  dönüyor, Fabric ise atıyor. Candy'nin çağrı yerleri `catch (Throwable)` ile
+  "headless doğrulama" yedeğine düşüyor — `null` dönmek o yedeği sessizce
+  atlatırdı. NeoForge sarmalayıcısı bu yüzden açıkça `IllegalStateException`
+  atıyor.
+- **`IModInfo.getType()` YOK.** Fabric'in `"builtin".equals(md.getType())`
+  filtresinin NeoForge karşılığı yok. Uydurulmadı: platform sınıfında açık
+  kimlik kümesi (`minecraft`, `neoforge`). Fabric tarafında davranış birebir
+  aynı — `GIZLE` zaten `minecraft` ve `java`'yı tutuyordu, builtin tipli tek
+  girdiler onlar. `ModFarkindaligi.GIZLE` ayrıca `neoforge, connector, kffmod,
+  kotlinforforge` ile genişletildi.
+
+### Olay katmanı (adım 3b/4) — yedi sınıf çifti, bir özellik kapatıldı
+
+Yedi platform sınıfı çifti eklendi; hepsi `com.photonpulse.candy.platform`
+altında, gövdeler `src/fabric/java` ve `src/neoforge/java` ağaçlarında:
+
+| Fabric tipi | Platform sınıfı | NeoForge olayı | Dosya |
+|---|---|---|---|
+| `ServerLivingEntityEvents.AFTER_DEATH` | `CanliOlaylari.AFTER_DEATH` | `LivingDeathEvent` ⚠ | 4 |
+| `ServerLivingEntityEvents.AFTER_DAMAGE` | `CanliOlaylari.AFTER_DAMAGE` | `LivingDamageEvent.Post` | 1 |
+| `AttackEntityCallback` | `VarligaSaldiri.EVENT` | `AttackEntityEvent` | 3 |
+| `ServerMessageEvents.CHAT_MESSAGE` | `SohbetOlaylari.CHAT_MESSAGE` | `ServerChatEvent` ⚠ | 3 |
+| `PlayerBlockBreakEvents.AFTER` | `BlokOlaylari.AFTER` | `BlockEvent.BreakEvent` ⚠ | 2 |
+| `ClientTickEvents.END_CLIENT_TICK` | `IstemciTick.END_CLIENT_TICK` | `ClientTickEvent.Post` | 2 |
+| `UseItemCallback` | `EtkilesimOlaylari.ESYA` | `PlayerInteractEvent.RightClickItem` | 1 |
+| `UseBlockCallback` | `EtkilesimOlaylari.BLOK` | `PlayerInteractEvent.RightClickBlock` | 1 |
+| `UseEntityCallback` | `EtkilesimOlaylari.VARLIK` | `PlayerInteractEvent.EntityInteract` | 1 |
+| `EntitySleepEvents.START_SLEEPING` | `UykuOlaylari.UYKUYA_GIRDI` | **kenar tespiti** ⚠ | 1 |
+| `EntitySleepEvents.STOP_SLEEPING` | `UykuOlaylari.UYANDI` | `PlayerWakeUpEvent` | 1 |
+| `LootTableEvents.MODIFY` | **yok** | **KAPATILDI** | 2 |
+
+#### `EntitySleepEvents` — iki kanal KASTEN ayrı yollarla çözüldü
+
+Bu, tutarsızlık gibi görünen bilinçli bir seçim; sonradan okuyan "neden simetrik
+değil" diye sormasın. NeoForge jar'ındaki uyku ile ilgili **her şey** (tam liste,
+`neoforge-21.11.48-universal.jar`):
+
+```
+CanContinueSleepingEvent   CanPlayerSleepEvent
+PlayerWakeUpEvent          SleepFinishedTimeEvent
+```
+
+**`UYANDI` → `PlayerWakeUpEvent`: gerçek karşılık, kenar tespitine gerek yok.**
+
+`javap`: olay `sleepPos` **taşımıyor** — yalnızca `wakeImmediately()` ve
+`updateLevel()`, artı `PlayerEvent`'ten `getEntity()`. Ama **taşıması
+gerekmiyor**, çünkü yamalı kaynak okundu:
+
+```java
+// Player.stopSleepInBed — NeoForge yaması
+public void stopSleepInBed(boolean p_36226_, boolean p_36227_) {
+    net.neoforged.neoforge.event.EventHooks.onPlayerWakeup(this, p_36226_, p_36227_);
+    super.stopSleeping();     // <-- konumu temizleyen ve oyuncuyu yataktan kaldıran
+}
+```
+
+Olay `super.stopSleeping()`'den **hemen önce** atılıyor. `LivingEntity`
+tarafında doğrulandı: `clearSleepingPos()`, `stopSleeping()`'in **son** satırı
+(satır 3628) ve `isSleeping()` birebir `return this.getSleepingPos().isPresent()`
+(satır 3577–3579). Yani olay anında konum **kesin dolu** ve oyuncu hâlâ yatakta.
+
+Fabric de **aynı yerde duruyor** (`LivingEntityMixin`, `stopSleeping` HEAD'inde,
+`getSleepingPos()` okuyup `null` ise atlıyor). İki tarafta aynı an, aynı veri —
+yani sarmalayıcıda "son bilinen uyku konumu" tutmaya **gerek kalmadı**.
+Sarmalayıcı Fabric'in `null` korumasını da birebir taşıyor: konum yoksa olay
+ateşlenmiyor.
+
+**`UYKUYA_GIRDI` → kenar tespiti. `CanPlayerSleepEvent` KULLANILMADI.**
+
+Gerekçe: `CanPlayerSleepEvent` uyku *denemesi* anında ve **veto edilebilir**
+biçimde ateşliyor (`setProblem(BedSleepingProblem)`). Başka bir mod ya da bir
+vanilla kuralı uykuyu reddederse, **olmamış bir uyku için** üs sabotajı
+tetiklenirdi. Bu sessiz bir yanlış davranış olur ve derleme hatası vermez — en
+pahalı hata türü. Kenar tespiti (her sunucu tick'inde `isSleeping()` geçişini
+izlemek) bir tick gecikme getiriyor, o da bu çağrı yeri (üs konumu yazmak) için
+önemsiz.
+
+Kenar tespitinin doğruluk dayanağı yukarıdaki aynı değişmez: `isSleeping()` ≡
+`getSleepingPos().isPresent()`, yani geçişin yakalandığı tick'te konum dolu.
+Fabric `START_SLEEPING`'i `LivingEntity.sleep(BlockPos)` **RETURN**'ünde atıyor —
+orada da konum yazılmış durumda. Aynı veri, en fazla bir tick sonra.
+
+Kenar tespitinin tek gerçek riski durum sızıntısı: uyurken çıkan oyuncu "hâlâ
+uyuyor" olarak kalırsa bir sonraki uykusunda geçiş yakalanmaz ve olay **hiç**
+ateşlenmez. `PlayerEvent.PlayerLoggedOutEvent` ile temizleniyor.
+
+> **Devir notundaki `tp.uykusuzGunSayisi` tuzağı ÇÖZÜLDÜ, kapatılmadı.**
+> O not, `STOP_SLEEPING` kapatılırsa sayacın sıfırlandığı tek yerin
+> kaybolacağını ve uykusuzluk mekaniğinin oyuncu her gece uyusa bile
+> tırmanacağını —yani özelliğin "kapanmak" yerine *yanlış çalışacağını*—
+> işaret ediyordu. İki kanal da NeoForge'da çalıştığı için bu tuzak hiç
+> oluşmadı; nötrlenecek bir mekanik yok.
+
+#### `LootTableEvents` — NeoForge'da karşılığı YOK, özellik KAPATILDI
+
+`javap net.neoforged.neoforge.event.LootTableLoadEvent`:
+
+```
+public net.minecraft.world.level.storage.loot.LootTable getTable();
+public void setTable(net.minecraft.world.level.storage.loot.LootTable);
+```
+
+Fabric imzası `(key, tableBuilder, source, registries)` → `tableBuilder.pool(...)`.
+NeoForge'da **`LootTable.Builder` yok**, yalnızca bitmiş tabloyu *tümüyle
+değiştirme*. `source` parametresinin de karşılığı yok — "yalnızca vanilla
+tablosuna ekle, başka modun değiştirdiğine dokunma" ifade edilemiyor.
+
+NeoForge'un kastettiği mekanizma **Global Loot Modifier**: `IGlobalLootModifier` +
+`LootModifier` + `GlobalLootModifierProvider`, yani `data/<ns>/loot_modifiers/`
+altında veri güdümlü JSON + kayıtlı bir codec. Bu bir metot çağrısının arkasına
+gizlenemez — şekli tamamen başka. Uydurulmadı: iki çağrı yeri `//? if fabric`
+ile kapatıldı.
+
+**Kaybolan davranış (yalnızca NeoForge'da):**
+
+| Çağrı yeri | Ne yapıyordu | NeoForge'da |
+|---|---|---|
+| `lore/JournalLootInjector.java` | `chests/*` tablolarına %10 şansla günlük kitabı havuzu | sandıklarda günlük kitabı **çıkmıyor** |
+| `lore/YirtikSayfa.java` | `chests/*` tablolarına %5 şansla "Yırtık Sayfa" | sandıklarda yırtık sayfa **çıkmıyor** |
+
+İkisi de **salt-ek lore içeriği**; hiçbir sistem onların varlığına bağlı değil
+(kontrol edildi), oyun akışı bozulmuyor. `register()` NeoForge'da bir log satırı
+basıp çıkıyor, yani kapanma **sessiz değil**.
+
+#### Düşürülen parametreler — her biri neden
+
+Sarmalayıcı, iki loader'ın **ikisinin de** veremediği hiçbir şeyi vaat etmiyor.
+Düşürülen her parametre için çağrı yerlerinin onu kullanmadığı doğrulandı:
+
+| Kanal | Düşürülen | Neden |
+|---|---|---|
+| `SohbetOlaylari` | `ChatType.Bound params` | NeoForge'da karşılığı yok; üç çağrı yeri de kullanmıyor |
+| `SohbetOlaylari` | `PlayerChatMessage` nesnesi | NeoForge böyle bir nesne kurmuyor; yerine çağrı yerlerinin gerçekten okuduğu iki içerik taşınıyor: `getRawText()` ~ `signedContent()`, `getMessage()` ~ `decoratedContent()` |
+| `BlokOlaylari` | `BlockEntity` | `BreakEvent`'te getter yok; iki çağrı yeri de kullanmıyor |
+| `CanliOlaylari.AFTER_DAMAGE` | `baseDamageTaken`, `damageTaken`, `blocked` | `LivingDamageEvent.Post` sayıları farklı anlamda veriyor (`blocked` orada boolean değil, `getBlockedDamage()` float). Birebir eşleştiği *kanıtlanamadığı* için taşınmadı; tek çağrı yeri kullanmıyor |
+| `EtkilesimOlaylari.VARLIK` | `EntityHitResult` | `EntityInteract` taşımıyor (yalnızca `EntityInteractSpecific` taşıyor); tek çağrı yeri kullanmıyor |
+
+**`AttackEntityCallback`'te hiçbir şey düşürülmedi, çünkü iki parametre
+Fabric'te de sabit.** `AttackEntityEvent`'te `getHand()` ve isabet sonucu yok.
+Uydurulmadı — Fabric'in **kendi** çağrı yerleri okundu, ikisinde de aynı iki
+sabit geçiyor:
+
+```java
+// ServerPlayerMixin.java:37 ve MultiPlayerGameModeMixin.java:133
+AttackEntityCallback.EVENT.invoker().interact(player, level, class_1268.field_5808, target, null);
+//                                                          ^ MAIN_HAND        ^ hit = null
+```
+
+Yani NeoForge tarafında `InteractionHand.MAIN_HAND` ve `null` vermek birebir
+karşılık, varsayım değil. (`KuranSistemi`'nin `hand != MAIN_HAND` kontrolü iki
+loader'da da ölü-ama-zararsız.) İptal kuralı da Fabric'in mixin'inden alındı:
+`if (result != InteractionResult.PASS) iptal`. Use* üçlüsünde de aynı
+(`ServerPlayerGameModeMixin`: `setReturnValue(result); cancel();`).
+
+#### ⚠ Zamanlama farkları — `LOWEST` öncelikle en yakın ana çekildi
+
+Üç NeoForge olayı, Fabric'teki "sonra" karşılığından **önce** ve iptal edilebilir
+biçimde ateşliyor:
+
+| Fabric | NeoForge | Bozulan varsayım |
+|---|---|---|
+| `AFTER_DEATH` (ölüm mantığından sonra) | `LivingDeathEvent` (`die()` başında, iptal edilebilir) | "ölüm kesin" |
+| `PlayerBlockBreakEvents.AFTER` (kırıldıktan sonra) | `BlockEvent.BreakEvent` (kırılmadan önce, iptal edilebilir) | "blok kırıldı" |
+| `CHAT_MESSAGE` (dağıtımdan sonra) | `ServerChatEvent` (dağıtımdan önce, iptal edilebilir) | "mesaj gönderildi" |
+
+Üçünde de dinleyici `@SubscribeEvent(priority = EventPriority.LOWEST)` ile
+takılıyor ve `isCanceled()` olanlar atlanıyor. Böylece **bizden önce karar veren
+her mod görülmüş** oluyor. Kalan kaçınılamaz fark: bizden *sonra* takılan bir mod
+hâlâ iptal edebilir, o zaman gerçekleşmemiş bir olay sayılmış olur. Bu üç çağrı
+grubunun hiçbiri oyun akışını belirlemiyor (ölüm konumu/sayaç, madencilik
+sinyali, sohbet analizi) ve hiçbiri olayı iptal etmiyor.
+
+İki küçük not:
+
+- `ClientTickEvent.Post` istemciyi taşımıyor; Fabric'in verdiği `Minecraft`
+  örneği yerine `Minecraft.getInstance()` kullanılıyor — aynı tekil örnek.
+  `IstemciTick` `@EventBusSubscriber(value = Dist.CLIENT)` ile sınırlı.
+  **`MeYuz`'a dokunulmadı**: değişen yer `client/CandyClient.java`'daki çağrı
+  satırının import'u, `MeYuz::istemciTick` imzası (`Minecraft`) aynı kaldı.
+- `BlokOlaylari`'nda `world` olarak `event.getLevel()` **değil**
+  `event.getPlayer().level()` kullanılıyor: `getLevel()` `LevelAccessor` dönüyor,
+  çağrı yerleri `Level` bekliyor (`getGameTime()` çağırıyorlar).
+
+#### Ölçüm (3b/4 sonrası)
+
+| | 2/4 sonrası | 3a/4 sonrası | 3b/4 sonrası |
+|---|---|---|---|
+| NeoForge `compileJava` hata | 148 | 130 | **87** |
+| Hatalı dosya | 41 | 34 | **22** |
+
+`src/main/java` içinde `ServerLivingEntityEvents`, `AttackEntityCallback`,
+`ServerMessageEvents`, `PlayerBlockBreakEvents`, `ClientTickEvents`,
+`UseItemCallback`, `UseBlockCallback`, `UseEntityCallback`, `EntitySleepEvents`
+ve `FabricLoader` referansı: **sıfır** (onunun hepsi).
+
+`src/fabric/java` ve `src/neoforge/java` ağaçlarından gelen hata: **sıfır** —
+on dört platform sınıfının hepsi iki loader'da da derleniyor. Bu, şu NeoForge
+API'lerinin çözüldüğünün derleyici kanıtı: `LivingDeathEvent`,
+`LivingDamageEvent.Post`, `AttackEntityEvent`, `ServerChatEvent`,
+`BlockEvent.BreakEvent`, `ClientTickEvent.Post`,
+`PlayerInteractEvent.RightClickItem` / `RightClickBlock` / `EntityInteract`,
+`PlayerWakeUpEvent`, `EventPriority`, `ICancellableEvent.isCanceled()`.
+
+Fabric: **iki MC düğümünde de yeşil** (`:1.21.7:compileJava` ve
+`:1.21.11:compileJava`, temizlenmiş `build/generated/stonecutter` ağacından).
+
 ### Sıradaki adımlar (sırayla, her adımda Fabric yeşil)
 
 1. **Uzun kuyruk** — `SunucuTick`'in yanına `Platform` (FabricLoader karşılığı) ve
@@ -657,7 +894,16 @@ Fabric: temizlenmiş `build/generated/stonecutter` ağacından kökte
 2. ~~**Ağ katmanı**~~ — ✅ **BİTTİ** (2/4): `AgKayit`, `SunucuAg`, `IstemciAg`,
    `SunucuBaglanti`, `IstemciBaglanti`. 25 dosya. Ayrıntı ve `javap` kanıtları
    için yukarıdaki "Ağ katmanı (adım 2/4)" bölümü.
-3. **Olay katmanı** — kalan 18 tip, her biri 1–2 dosya.
+3. ~~**Yükleyici + olay katmanı**~~ — ✅ **BİTTİ** (3/4): `Yukleyici` (3a) ve
+   yedi olay sınıfı çifti (3b). 9 + 19 dosya. `LootTableEvents` karşılığı
+   olmadığı için kapatıldı. Ayrıntı, `javap` kanıtları ve uyku olaylarındaki
+   bilinçli asimetri için yukarıdaki "Yükleyici katmanı (adım 3a/4)" ve
+   "Olay katmanı (adım 3b/4)" bölümleri.
+4. **Uzun kuyruk** — kalan 12 olay/giriş tipi: `ServerLifecycleEvents`,
+   `ServerChunkEvents`, `ServerPlayerEvents`, `ServerEntityWorldChangeEvents`,
+   `CommandRegistrationCallback`, `ScreenEvents`, `EntityRendererRegistry`,
+   `FabricDefaultAttributeRegistry`, `AttackBlockCallback`,
+   `ClientLifecycleEvents`.
 4. **Giriş noktası** — `@Mod` sınıfı + `META-INF/neoforge.mods.toml` (mixin
    bildirimi dahil). `processResources` toml'u da genişletiyor (yazıldı).
 5. **Jar** — `./gradlew :1.21.7-neoforge:build`, sonra 1.21.11.

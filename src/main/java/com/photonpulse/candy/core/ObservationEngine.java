@@ -4,7 +4,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.psikoloji.Ozguven;
 import com.photonpulse.candy.shadow.ShadowState;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import com.photonpulse.candy.platform.VarligaSaldiri;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
@@ -39,7 +39,7 @@ public class ObservationEngine {
 
     public static void register() {
         SunucuTick.END_SERVER_TICK.register(ObservationEngine::onServerTick);
-        AttackEntityCallback.EVENT.register(ObservationEngine::onSaldiri);
+        VarligaSaldiri.EVENT.register(ObservationEngine::onSaldiri);
         Candy.LOG.info("[Candy] ObservationEngine aktif");
     }
 
