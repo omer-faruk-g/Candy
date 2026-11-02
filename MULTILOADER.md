@@ -428,12 +428,75 @@ Eski engel şuydu: Yarn eşlemeleri **1.21.11'de duruyor**, 26.x ise Mojang resm
 mapping istiyor. Yani Yarn'da kalındığı sürece 26.x **kalıcı olarak kapalıydı** — ve
 açmanın bedeli 143 dosyadaki her MC sembolünün yeniden adlandırılmasıydı.
 
-Kaynak artık Mojang adlarını taşıyor. Bu yüzden 26.x düğümü eklemek **sıradan sürüm
-işi** oldu: yeni `versions/<sürüm>/`, o sürümün API farkları için `replacements`
-kuralı ya da `//? if` direktifi, `javap` ile doğrulama. Ad göçü **yok**.
+Kaynak artık Mojang adlarını taşıyor, yani **ad göçü tarafında yapılacak iş kalmadı** —
+bu ölçümle doğrulandı (aşağıda). Ama "sıradan sürüm işi oldu" demek **yanlıştı**:
+mapping engelinin arkasında ikinci bir engel duruyordu.
 
-Bu, NeoForge portundan bağımsızdır: **NeoForge hiç bitmese bile 26.x yolu açık.**
-İki iş ayrı ayrı teslim edilebilir.
+Bu, NeoForge portundan bağımsızdır: **NeoForge hiç bitmese bile 26.x'in mapping yolu
+açık.** İki iş ayrı ayrı teslim edilebilir.
+
+### Düzeltme: mapping engeli kalktı, JDK 25 engeli çıktı (ölçüm, 2026-11-02)
+
+`feat/mc-26x` dalında Adım 1 (hedefi ölç) koşturuldu. Sonuç: **26.x bu makinede
+derlenemiyor**, ve sebep mod tarafında değil.
+
+Beş 26.x sürümü var (26.1, 26.1.1, 26.1.2, 26.2, 26.3 — en güncel 26.3, 2026-09-15).
+**Fabric tarafında hiçbir eksik yok:** Loader 0.20.1 ve Fabric API beşi için de hazır
+(26.3 → 0.165.0+26.3). Engel tamamen araç zincirinde:
+
+- **26.x hattının tamamı Java 25 istiyor** (`javaVersion=25`, `java-runtime-epsilon`).
+  1.21.7/1.21.11 → Java 21.
+- **MC 26.x class dosyaları major 69** (Java 25) bayt kodu; 1.21.x → major 65. javac 21
+  bunu okuyamıyor: `class file has wrong version 69.0, should be 65.0`. `--release 21`
+  ile ve onsuz aynı.
+- **Loom zaten yapılandırmada reddediyor.** Geçici `versions/26.3` düğümü denendi
+  (commit edilmedi): `Minecraft 26.3 requires Java 25 but Gradle is using 21`.
+- **26.x'i destekleyen loom hattı JVM 25 bayt kodu:** loom 1.17.2 ve 1.17.21 → major 65,
+  1.18.1/1.18.4/1.19.3 → **major 69**. Yani loom 1.18+ JVM 21'deki Gradle daemon'ına
+  yüklenemez bile.
+
+Bu makinede yalnızca Corretto JDK 21.0.9 (ve bir JRE 1.8) var. Görev Java/loom
+yükseltmesini kapsam dışı bıraktığı için Adım 2'ye geçilmedi — yarım bir sürüm desteği
+eklemek hiç eklememekten kötü.
+
+### Beklenmeyen bulgu: Mojang 26.x'te obfuscation'ı bıraktı
+
+Bu, ad göçünün 26.x için gerçekten bittiğinin kanıtı. Version JSON'da `downloads`:
+
+```
+1.21.11: [client, client_mappings, server, server_mappings]
+26.1:    [client, server]
+26.3:    [client, server]
+```
+
+`client_mappings` **yok**, çünkü jar zaten deobfuscated. Jar içeriği sayıldı:
+
+| | class sayısı | `net/minecraft/*` | obfuscated top-level |
+|---|---|---|---|
+| 1.21.11 | 10291 | 33 (%0.3) | 10201 |
+| 26.3 | 11383 | 10737 (%94.3) | **0** |
+
+26.3'ün jar'ı `net/minecraft/world/entity/npc/Npc`, `net/minecraft/client/Camera$NearPlane`
+gibi **gerçek Mojang adlarını** taşıyor — Candy'nin kaynağının göçten sonra kullandığı
+adların aynısı. Yani 26.x için mapping katmanı hiç gerekmiyor; göç boşa gitmedi,
+aksine tam isabet etti. Yan etkisi: `loom.officialMojangMappings()` 26.x'te indirecek
+bir şey bulamaz, ve loom 1.18+ tam olarak bu durum için var.
+
+### 26.x'i açmak için gereken
+
+İkisi birlikte, biri yetmez:
+
+1. **JDK 25** kurulu olmalı ve Gradle daemon'ı onunla koşmalı.
+2. **fabric-loom 1.18+** (`settings.gradle` → `pluginManagement`).
+
+`settings.gradle` bir kez değerlendirildiği için düğüm başına ayrı loom sürümü
+**mümkün değil** — 1.18+'a geçmek 1.21.7 ve 1.21.11 düğümlerini de o loom'a taşır,
+ikisi yeniden doğrulanmalı. Gradle toolchain kaçış yolu değil: yalnızca `compileJava`'yı
+JDK 25'e vermek yetmiyor, daemon'ın kendisi loom 1.18+ yükleyebilmek için JVM 25 olmak
+zorunda. Auto-provisioning kurulu değil (foojay resolver yok).
+
+Sıra geldiğinde beklenen iş, ad göçü değil **araç zinciri yükseltmesi + dört düğümün
+yeniden doğrulanması**.
 
 ### Kalan iş — ölçülmüş envanter
 
