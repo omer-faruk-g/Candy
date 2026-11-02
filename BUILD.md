@@ -316,8 +316,9 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 
 - **1.21.7** — yeşil, jar üretiyor.
 - **1.21.11** — yeşil, jar üretiyor.
-- **26.x — düğüm YOK. Mapping engeli kalktı, yerine JDK 25 engeli çıktı.** Ölçüm
-  aşağıda; kısası: Fabric tarafında eksik yok, engel tamamen araç zincirinde.
+- **26.x — düğüm YOK.** JDK 25 ve loom 1.19.3 **kuruldu** (ilk iki engel yıkıldı),
+  ama üçüncü bir engel çıktı: 26.x hiç mapping yayınlamıyor ve
+  `officialMojangMappings()` bu yüzden çalışmıyor. Ölçüm aşağıda.
 
 #### 26.x — ölçülmüş durum (2026-11-02)
 
@@ -333,20 +334,28 @@ Mojang beş 26.x sürümü yayınladı. Fabric Loader ve Fabric API **hepsi içi
 
 Karşılaştırma: 1.21.7 ve 1.21.11 → Java 21, class major 65.
 
-**Engel: 26.x hattının tamamı Java 25 istiyor.** Bu makinede yalnızca JDK 21 var, ve
-görev gereği Java/loom yükseltmesi yapılmadı. Üç bağımsız ölçüm:
+**26.x hattının tamamı Java 25 istiyor.** Bu engel **YIKILDI**: JDK 25 (Temurin
+25.0.5+8) ve fabric-loom 1.19.3 kuruldu, mevcut iki Fabric düğümü yeşil kaldı.
+Kalan engel mapping tarafında.
 
-**1. Loom zaten yapılandırma aşamasında reddediyor.** Geçici bir `versions/26.3`
-düğümü eklenip denendi (commit edilmedi):
+**1. AKTİF ENGEL — 26.x mapping yayınlamıyor.** Geçici bir `versions/26.3` düğümü
+eklenip denendi (commit edilmedi):
 
 ```
-> Failed to setup Minecraft, java.lang.IllegalStateException:
-  Minecraft 26.3 requires Java 25 but Gradle is using 21
+> Failed to setup Minecraft, java.lang.RuntimeException:
+  Failed to find official mojang mappings for 26.3
 ```
 
-Kaynağa hiç dokunmadan, `compileJava`'ya gelmeden duruyor.
+Loom 1.19.3 Java 25 kontrolünü **geçiyor** (önbellekte `fabric-loom/26.3/` dizini
+bile açılıyor), ama `mappings loom.officialMojangMappings()` satırında duruyor —
+çünkü 26.x `client_mappings` yayınlamıyor (aşağıdaki "Beklenmeyen bulgu").
+Deobfuscated jar için doğru `mappings` yapılandırması **henüz bilinmiyor**; tahminle
+doldurulmadı.
 
-**2. javac 21, MC 26.x bayt kodunu okuyamıyor.** Gerçek 26.3 class dosyaları
+**1b. ESKİ engel (yıkıldı, tarihsel).** Loom 1.17.2 aynı düğümü yapılandırma
+aşamasında reddediyordu: `Minecraft 26.3 requires Java 25 but Gradle is using 21`.
+
+**2. javac 21, MC 26.x bayt kodunu okuyamıyor** (yıkıldı — JDK 25 kuruldu). Gerçek 26.3 class dosyaları
 `client.jar`'dan çekilip bu makinenin javac'ına verildi:
 
 ```
@@ -357,7 +366,7 @@ bad class file: .../net/minecraft/world/entity/npc/Npc.class
 `--release 21` ile ve onsuz aynı. Bu duvar mapping veya API farkı değil, JDK'nın
 kendisi.
 
-**3. 26.x'i destekleyen loom hattı JVM 25 bayt kodu.** Loom jar'larının class major
+**3. 26.x'i destekleyen loom hattı JVM 25 bayt kodu** (yıkıldı — loom 1.19.3 kuruldu). Loom jar'larının class major
 sürümü: 1.17.2 → 65, 1.17.21 → 65, **1.18.1 / 1.18.4 / 1.19.3 → 69**. Yani loom 1.18+
 JVM 21'de koşan bir Gradle daemon'ına **yüklenemez bile**.
 
@@ -385,19 +394,54 @@ Sebebi: **Mojang 26.x hattında obfuscation'ı bıraktı.** Jar içeriği sayıl
   gibi gerçek Mojang adlarını taşıyor; Candy'nin kaynağı göçten sonra zaten tam olarak
   bu adları kullanıyor. 26.x için mapping katmanı **hiç gerekmiyor**.
 
-#### Açmak için gereken
+#### Araç zinciri: kuruldu
 
-İkisi birlikte, biri yetmez:
+1. **JDK 25** — Temurin `25.0.5+8`, `~/.jdks/jdk-25.0.5+8`. Gradle daemon'ı bununla
+   koşuyor: `export JAVA_HOME="C:/Users/HP/.jdks/jdk-25.0.5+8"`.
+2. **fabric-loom 1.19.3** — `settings.gradle` → `pluginManagement`. CI de
+   `java-version: '25'`.
 
-1. **JDK 25** — Gradle daemon'ının kendisi onunla koşmalı.
-2. **fabric-loom 1.18+** — `settings.gradle` içindeki `pluginManagement`.
+**Artık bütün proje JDK 25 ile derleniyor, 1.21.x düğümleri dahil.** Dağıtılan
+1.21.x jar'ları hâlâ `release 21` bayt kodu (doğrulandı: class major 65) ve
+`fabric.mod.json` içinde `"java": ">=21"` — yani **oyuncunun Java'sı değişmiyor.**
+26.x düğümü `release 25` ve `">=25"` alacak (`build.gradle` → `javaSurum`).
+
+#### Kalan iş
+
+Loom 1.19.3'te deobfuscated 26.x jar'ı için doğru `mappings` kaynağı. Bulunduğunda
+sıradaki adım hazır: `replacements` kuralları 26.3'e karşı tek tek `javap` ile
+doğrulandı, 14 kuraldan 12'si geçerli, kırık ikisi aşağıda.
 
 `settings.gradle` bir kez değerlendirildiği için **düğüm başına ayrı loom sürümü
-mümkün değil**: 1.18+'a geçmek 1.21.7 ve 1.21.11 düğümlerini de o loom'a taşır, ikisinin
-yeniden doğrulanması gerekir. Gradle toolchain ile kaçış yolu yok — yalnızca
-`compileJava`'yı JDK 25'e vermek yetmiyor, daemon'ın kendisi loom 1.18+ yükleyebilmek
-için JVM 25 olmak zorunda. Toolchain auto-provisioning da kurulu değil (foojay
-resolver yok).
+mümkün değil** — 1.19.3'e geçmek 1.21.7 ve 1.21.11 düğümlerini de taşıdı, ikisi
+yeniden doğrulandı ve yeşil.
+
+#### 26.x'te kırılan iki mixin kuralı (javap ile ölçüldü)
+
+`replacements` listesindeki 14 kuraldan **12'si 26.3'te aynen geçerli** — altı paket
+taşımasının hepsi dahil, ve `GameProfile` authlib **7.0.61 → 10.0.77** atlamasına
+rağmen hâlâ record, yani `name()`/`properties()` duruyor. Kırık ikisi bu yüzden
+`>=1.21.9 <26` ve `>=26` olarak **ayrıldı**:
+
+**`FogRenderer.setupFog` → `applyFog`: 26.x'te ad GERİ DÖNDÜ.** 26.3'te yine
+`setupFog`, yani 1.21.9'daki yeniden adlandırma geri alınmış — 26.x için kural yok.
+Ama imza değişti:
+
+| | imza |
+|---|---|
+| 1.21.7 | `Vector4f setupFog(Camera, int, boolean, DeltaTracker, float, ClientLevel)` |
+| 26.3 | `FogData setupFog(Camera, int, DeltaTracker, float, ClientLevel)` |
+
+`boolean thickFog` düştü, dönüş `FogData` oldu. `FogData` **1.21.7'de de var** (loom'un
+eşlenmiş jar'ından doğrulandı) ve `FogData.color` public `Vector4f` — yani özellik
+port edilebilir, **kaybolmuyor**. Metot gövdesi `//? if >=26` ile ayrılacak.
+
+**`DebugScreenOverlay.getGameInformation` → `getLeftText`: 26.x'te İKİSİ DE YOK.**
+Yerine `private void extractLines(GuiGraphicsExtractor, List<String>, boolean, int)`
+var — listeyi parametre olarak dolduruyor, dönüş değeri yok. Yani mixin `@At("TAIL")`
+ile listeyi **yerinde** değiştirmeli, `cir.setReturnValue()` ile değil.
+
+26.1 ve 26.2'nin class yerleşimi 26.3 ile aynı, yani tek `>=26` eşiği üçünü kapsıyor.
 
 ### Mapping: Mojang resmî adları (Yarn değil)
 

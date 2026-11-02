@@ -15,6 +15,12 @@ plugins {
 def mc = stonecutter.current.version
 def loader = (findProperty('loader') ?: 'fabric').toString()
 
+// JAVA SURUMU SURUME BAGLI. 26.x hattinin tamami JVM 25 istiyor: Minecraft'in KENDI
+// class dosyalari major 69 (Java 25) ve javac 21 onlari okuyamiyor bile
+// ("class file has wrong version 69.0, should be 65.0"). 1.21.x 21'de kaliyor, yani
+// dagitilan 1.21.x jar'larinin calisma zamani gereksinimi DEGISMIYOR.
+def javaSurum = stonecutter.current.parsed >= '26' ? 25 : 21
+
 version = "${property('mod_version')}+${mc}"
 group = property('maven_group')
 base { archivesName = property('archives_base_name') }
@@ -99,23 +105,28 @@ if (loader == 'fabric') {
 // Kapanis icinde property() task'a delege olur, projeye degil — disarida yakala.
 def modSurum = version
 def mcDep = property('minecraft_dep')
+// fabric.mod.json'daki "java" kisiti da surume bagli: 26.x jar'i JVM 25 istiyor.
+// Sabit ">=21" birakilsa 26.x jar'i Java 21'de yuklenmeyi kabul eder ve oyun
+// ic cagrida patlardi.
+def javaDep = ">=${javaSurum}".toString()
 processResources {
     inputs.property "version", modSurum
     inputs.property "minecraft_dep", mcDep
-    // Iki loader'in metadata dosyasi da ayni iki degeri bekliyor.
+    inputs.property "java_dep", javaDep
+    // Iki loader'in metadata dosyasi da ayni degerleri bekliyor.
     filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
-        expand "version": modSurum, "minecraft_dep": mcDep
+        expand "version": modSurum, "minecraft_dep": mcDep, "java_dep": javaDep
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    it.options.release = javaSurum
 }
 
 java {
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.toVersion(javaSurum)
+    targetCompatibility = JavaVersion.toVersion(javaSurum)
 }
 
 jar {
@@ -185,9 +196,6 @@ stonecutter {
         // tasiyan baska siniflar (Entity.getName gibi) etkilenmesin.
         replace '.getGameProfile().getName()', '.getGameProfile().name()'
         replace '.getGameProfile().getProperties()', '.getGameProfile().properties()'
-        // Mixin hedef dizgileri (@Inject method = "..."). Ikisi de src/ icinde tek kullanim.
-        replace 'getGameInformation', 'getLeftText'
-        replace 'setupFog', 'applyFog'
         // Paket tasimalari. Hepsi tam nitelikli, her biri src/ icinde tek kullanim.
         replace 'net.minecraft.client.model.PlayerModel', 'net.minecraft.client.model.player.PlayerModel'
         replace 'net.minecraft.client.resources.PlayerSkin', 'net.minecraft.world.entity.player.PlayerSkin'
@@ -195,5 +203,30 @@ stonecutter {
         replace 'net.minecraft.world.entity.animal.horse.AbstractHorse', 'net.minecraft.world.entity.animal.equine.AbstractHorse'
         replace 'net.minecraft.world.entity.monster.Spider', 'net.minecraft.world.entity.monster.spider.Spider'
         replace 'net.minecraft.world.entity.npc.Villager', 'net.minecraft.world.entity.npc.villager.Villager'
+    }
+
+    // MIXIN HEDEF DIZGILERI (@Inject method = "..."). Bunlar >=1.21.9 ile BIRLIKTE
+    // gidemiyor, cunku 26.x ikisini de yeniden kirdi. Her biri src/ icinde tek kullanim.
+    //
+    // 1.21.9 <= x < 26 araligi:
+    //   DebugScreenOverlay.getGameInformation -> getLeftText
+    //   FogRenderer.setupFog                  -> applyFog
+    replacements.string(current.parsed >= '1.21.9' && current.parsed < '26') {
+        replace 'getGameInformation', 'getLeftText'
+        replace 'setupFog', 'applyFog'
+    }
+
+    // 26.x:
+    //   FogRenderer.setupFog adi GERI DONDU -- 26.3'te yine 'setupFog'. Yani 1.21.9'daki
+    //   applyFog yeniden adlandirmasi 26'da geri alinmis; bu yuzden 26.x'te KURAL YOK
+    //   (javap ile dogrulandi: FogData setupFog(Camera,int,DeltaTracker,float,ClientLevel)).
+    //   Imza ve donus tipi degisti, o kisim //? if ile cozuldu.
+    //
+    //   DebugScreenOverlay.getGameInformation / getLeftText 26.x'te IKISI DE YOK. Yerine
+    //   private void extractLines(GuiGraphicsExtractor, List<String>, boolean, int) var --
+    //   listeyi parametre olarak doldurdugu icin donus degeri yerine liste yerinde
+    //   degistiriliyor (imza farki //? if ile).
+    replacements.string(current.parsed >= '26') {
+        replace 'getGameInformation', 'extractLines'
     }
 }

@@ -51,10 +51,10 @@ Jars are named `candy-<mod version>+<minecraft version>.jar`, e.g.
 `candy-8.4.0+1.21.11.jar`. Installing the wrong one will not load.
 
 **Minecraft 26.x (26.1 – 26.3) is not supported yet.** Not for mod reasons: Fabric
-Loader and Fabric API are ready for every 26.x release. The whole 26.x line requires
-**Java 25** — Minecraft's own class files are Java 25 bytecode — so building Candy
-against it needs a JDK 25 toolchain, which the project does not have yet. The
-measurement is in [BUILD.md](BUILD.md).
+Loader and Fabric API are ready for every 26.x release. The JDK 25 toolchain it needs
+is now in place, but Mojang stopped publishing mappings for the 26.x line and the
+build's mapping step has no working source for it yet. The measurement is in
+[BUILD.md](BUILD.md).
 
 One known difference between the two: the Mirror dimension's *face on the blocks*
 effect runs on 1.21.7 only. Minecraft rewrote the texture atlas upload path in
@@ -84,7 +84,8 @@ one shared source tree, one node per Minecraft version under `versions/`.
 ./gradlew runTest                          # test profile: /candy, short cooldowns, cheats on
 ```
 
-Requires Gradle 9.8.2 and Java 21. Build details, the version-split rules and the
+Building requires Gradle 9.8.2 and **JDK 25** (fabric-loom 1.19.3 needs it). The
+jars it produces still target Java 21, so players need only Java 21. Build details, the version-split rules and the
 per-version API notes are in [BUILD.md](BUILD.md).
 
 ## Licence
@@ -120,10 +121,10 @@ Jar adı `candy-<mod sürümü>+<minecraft sürümü>.jar` biçiminde, örn.
 `candy-8.4.0+1.21.11.jar`. Yanlışını kurarsan yüklenmez.
 
 **Minecraft 26.x (26.1 – 26.3) henüz desteklenmiyor.** Sebebi mod tarafında değil:
-Fabric Loader ve Fabric API bütün 26.x sürümleri için hazır. 26.x hattının tamamı
-**Java 25** istiyor — Minecraft'ın kendi class dosyaları Java 25 bayt kodu — yani
-Candy'yi ona karşı derlemek JDK 25 araç zinciri gerektiriyor, projede henüz yok.
-Ölçüm [BUILD.md](BUILD.md) içinde.
+Fabric Loader ve Fabric API bütün 26.x sürümleri için hazır. Gereken JDK 25 araç
+zinciri **artık kurulu**, ama Mojang 26.x hattında mapping yayınlamayı bıraktı ve
+build'in mapping adımının henüz çalışan bir kaynağı yok. Ölçüm
+[BUILD.md](BUILD.md) içinde.
 
 İki sürüm arasındaki tek fark: Ayna boyutundaki *blokların yüze dönmesi* efekti
 yalnızca 1.21.7'de çalışıyor. Minecraft 1.21.9'da doku atlası yükleme yolunu
