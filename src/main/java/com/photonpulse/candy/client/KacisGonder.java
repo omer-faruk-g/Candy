@@ -2,8 +2,10 @@ package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.kacis.KacisPayload;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import com.photonpulse.candy.platform.IstemciTick;
 import com.photonpulse.candy.platform.IstemciBaglanti;
 import com.photonpulse.candy.platform.IstemciAg;
@@ -22,7 +24,9 @@ import net.minecraft.client.Minecraft;
  * kendisini</b> inceliyor. Candy'nin {@code DebugHudMixin}'i zaten boyut adını
  * gizliyor — yani F3 oyuncunun Candy'yi yakalama girişimi. Candy bunu fark etsin.</p>
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class KacisGonder {
 
     private KacisGonder() {}

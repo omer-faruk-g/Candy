@@ -3,8 +3,10 @@ package com.photonpulse.candy.client;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.photonpulse.candy.Candy;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import com.photonpulse.candy.platform.Yukleyici;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
@@ -36,7 +38,9 @@ import java.nio.file.Path;
  * İkinci bir müdahale geldiğinde yedek <i>güncellenmez</i>. Yoksa Candy'nin kendi
  * değiştirdiği değer "orijinal" sanılır ve geri dönüş yolu kaybolur.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class GoruntuMudahale {
 
     private GoruntuMudahale() {}

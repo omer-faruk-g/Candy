@@ -1,7 +1,7 @@
 package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
+import com.photonpulse.candy.platform.ChunkOlaylari;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
@@ -12,7 +12,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * DunyaSekillendirici — 8 kurul dünyasının desenini chunk üretiminde damgalar.
  *
  * <p>Özel {@code ChunkGenerator} YOK. Boyut JSON'u basit bir vanilla üreteç kullanır;
- * bu sınıf {@code ServerChunkEvents.CHUNK_GENERATE} anında (chunk başına TAM BİR KEZ)
+ * bu sınıf {@code ChunkOlaylari.CHUNK_GENERATE} anında (chunk başına TAM BİR KEZ)
  * {@link KurulDunya.Sekil}'e göre chunk'u şekillendirir. Böylece tüm karmaşık worldgen
  * codec yüzeyi (ve onun bakım/uyumluluk riski) tamamen atlanır.</p>
  *
@@ -24,7 +24,7 @@ public final class DunyaSekillendirici {
     private DunyaSekillendirici() {}
 
     public static void register() {
-        ServerChunkEvents.CHUNK_GENERATE.register((world, chunk) -> {
+        ChunkOlaylari.CHUNK_GENERATE.register((world, chunk) -> {
             KurulDunya d = KurulDunya.bul(world.dimension());
             if (d == null) return;
             try {

@@ -56,9 +56,8 @@ import com.photonpulse.candy.travma.OlumYerleri;
 import com.photonpulse.candy.travma.PetOlumu;
 import com.photonpulse.candy.travma.TotemIptali;
 import com.photonpulse.candy.tree.TreeGrowth;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import com.photonpulse.candy.platform.SunucuBaglanti;
+import com.photonpulse.candy.platform.SunucuYasamDongusu;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,13 +67,12 @@ import org.slf4j.LoggerFactory;
  * Mod ana entry point. Tüm sistemler burada register edilir.
  * Sıralama önemli: Personality → Observation → Persona → Sign → Disguise → Clone
  */
-public class Candy implements ModInitializer {
+public class Candy {
 
     public static final String MOD_ID = "candy";
     public static final Logger LOG = LoggerFactory.getLogger(MOD_ID);
 
-    @Override
-    public void onInitialize() {
+    public static void onInitialize() {
         LOG.info("[Candy] uyanıyor...");
 
         // v8.4: Sürüm/komşu tespiti her şeyden önce — alt sistemler guvenliMi()'ye bakıyor.
@@ -90,7 +88,7 @@ public class Candy implements ModInitializer {
         CandySounds.register();
 
         // Sunucu yaşam döngüsü
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+        SunucuYasamDongusu.SERVER_STARTED.register(server -> {
             com.photonpulse.candy.beyin.BeyinDeposu.sunucuBaslat(); // v4.0 cihaz-basi beyin
             com.photonpulse.candy.beyin.BeyinMotoru.dunyaIdAyarla(
                 com.photonpulse.candy.beyin.DunyaDogrulayici.dunyaKimligi(server));
@@ -99,7 +97,7 @@ public class Candy implements ModInitializer {
             SimulationManager.sunucuBaslat(server);
             ShadowTreeManager.sunucuBaslat(server);
         });
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+        SunucuYasamDongusu.SERVER_STOPPING.register(server -> {
             PersonalityManager.sunucuKapan();
             com.photonpulse.candy.beyin.BeyinMotoru.sunucuKapan();
             TreeGrowth.sunucuKapan();

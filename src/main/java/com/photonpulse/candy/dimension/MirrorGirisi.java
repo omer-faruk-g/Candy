@@ -5,7 +5,7 @@ import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.platform.CanliOlaylari;
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import com.photonpulse.candy.platform.OyuncuOlaylari;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -82,7 +82,7 @@ public class MirrorGirisi {
         });
 
         // Respawn sonrası teleport
-        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+        OyuncuOlaylari.AFTER_RESPAWN.register((newPlayer, alive) -> {
             if (alive) return;
             TruePersonality tp = PersonalityManager.get(newPlayer);
             MinecraftServer server = newPlayer.level().getServer();

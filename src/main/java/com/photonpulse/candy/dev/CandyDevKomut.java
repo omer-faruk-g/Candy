@@ -13,7 +13,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyEntities;
 import com.photonpulse.candy.sifre.IkilikFisilti;
 import com.photonpulse.candy.sifre.TuzakYayini;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import com.photonpulse.candy.platform.KomutKayit;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -57,7 +57,7 @@ public final class CandyDevKomut {
     public static void register() {
         if (!DEBUG) return;   // normal oyunda komut HİÇ kaydedilmiyor
 
-        CommandRegistrationCallback.EVENT.register((dispatcher, access, env) ->
+        KomutKayit.EVENT.register((dispatcher, access, env) ->
             dispatcher.register(Commands.literal("candy")
                 .executes(c -> durum(c.getSource()))
                 .then(Commands.literal("durum")

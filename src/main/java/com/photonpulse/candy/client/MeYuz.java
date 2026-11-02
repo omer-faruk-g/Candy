@@ -3,8 +3,10 @@ package com.photonpulse.candy.client;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.mixin.client.SpriteContentsAccessor;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -29,7 +31,9 @@ import net.minecraft.resources.ResourceLocation;
  * kalır. Yani en kötü durum "genel bir yüz", en iyi durum "senin yüzün". Her şey try/catch
  * içinde: bir hata olsa bile oyun akmaz, ME yine yüzlerle dolu görünür.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class MeYuz {
 
     /** v8: Identifier olarak tutulur — toString() her istemci tick'inde String tahsisiydi. */

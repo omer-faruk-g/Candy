@@ -99,12 +99,17 @@ if (loader == 'fabric') {
 // Kapanis icinde property() task'a delege olur, projeye degil — disarida yakala.
 def modSurum = version
 def mcDep = property('minecraft_dep')
+// minecraft_dep Fabric'in semver araligi (~1.21.7). NeoForge Maven araligi
+// bekliyor ve "~" ifadesini AYRISTIRAMAZ -- ayni degeri ikisine de vermek
+// yukleme aninda patlardi, derleme hatasi vermeden. O yuzden ikinci bir
+// deger uretiliyor: ~1.21.7 == ">=1.21.7 <1.22" == [1.21.7,1.22).
+def mcDepNeo = "[${property('minecraft_version')},1.22)"
 processResources {
     inputs.property "version", modSurum
     inputs.property "minecraft_dep", mcDep
-    // Iki loader'in metadata dosyasi da ayni iki degeri bekliyor.
+    inputs.property "minecraft_dep_neo", mcDepNeo
     filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
-        expand "version": modSurum, "minecraft_dep": mcDep
+        expand "version": modSurum, "minecraft_dep": mcDep, "minecraft_dep_neo": mcDepNeo
     }
 }
 

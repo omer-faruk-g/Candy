@@ -3,8 +3,10 @@ package com.photonpulse.candy.client;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.meta.UygulamaListesi;
 import com.photonpulse.candy.net.UygulamaPayload;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import com.photonpulse.candy.platform.IstemciBaglanti;
 import com.photonpulse.candy.platform.IstemciAg;
 import com.photonpulse.candy.platform.AgKayit;
@@ -34,7 +36,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * {@link CandyMixinConfig#uygulamaSezgisi} false ise süreç listesi <b>hiç okunmaz</b>.
  * Tarama oturum başına bir kez, sunucuya bağlanırken, ayrı bir daemon thread'de yapılır.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class UygulamaGonder {
 
     private UygulamaGonder() {}

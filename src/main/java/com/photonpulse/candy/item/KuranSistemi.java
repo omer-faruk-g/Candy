@@ -2,7 +2,7 @@ package com.photonpulse.candy.item;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import com.photonpulse.candy.platform.BlokaSaldiri;
 import com.photonpulse.candy.platform.EtkilesimOlaylari;
 import com.photonpulse.candy.platform.VarligaSaldiri;
 import net.minecraft.ChatFormatting;
@@ -67,7 +67,7 @@ public class KuranSistemi {
         });
 
         // SOL TIK (bloğa) — tüket + çile + nimet
-        AttackBlockCallback.EVENT.register((player, world, hand, pos, dir) -> {
+        BlokaSaldiri.EVENT.register((player, world, hand, pos, dir) -> {
             if (world.isClientSide() || hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
             if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
             if (!KuranKitap.esittir(sp.getMainHandItem())) return InteractionResult.PASS;

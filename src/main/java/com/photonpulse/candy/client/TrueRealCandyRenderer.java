@@ -2,8 +2,10 @@ package com.photonpulse.candy.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.photonpulse.candy.boss.TrueRealCandyEntity;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -31,7 +33,9 @@ import java.util.UUID;
  * TrueRealCandyRenderer — boss'u oyuncunun kendi skiniyle, çok karanlık render eder.
  * "Karşındaki gerçek Candy — ve o sensin."
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public class TrueRealCandyRenderer extends MobRenderer<
         TrueRealCandyEntity, PlayerRenderState, PlayerModel> {
 

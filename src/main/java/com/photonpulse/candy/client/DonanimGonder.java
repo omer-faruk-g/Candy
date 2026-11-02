@@ -4,8 +4,10 @@ import com.mojang.blaze3d.platform.GLX;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.DonanimPayload;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import com.photonpulse.candy.platform.IstemciBaglanti;
 import com.photonpulse.candy.platform.IstemciAg;
 import com.photonpulse.candy.platform.AgKayit;
@@ -24,7 +26,9 @@ import java.util.List;
  * Join'de bir kez gonderilir. Veri hicbir yere gitmez — sunucu (ayni oyuncuya)
  * "Ben PC'de %s var." diyalogunda gosterir.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public class DonanimGonder {
 
     public static void register() {

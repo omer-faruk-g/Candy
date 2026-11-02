@@ -3,12 +3,14 @@ package com.photonpulse.candy.client;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.entity.CandyEntities;
 import com.photonpulse.candy.platform.Yukleyici;
-import net.fabricmc.api.ClientModInitializer;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
+import com.photonpulse.candy.platform.EkranOlaylari;
 import com.photonpulse.candy.platform.IstemciTick;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import com.photonpulse.candy.platform.IstemciYasamDongusu;
+import com.photonpulse.candy.platform.VarlikRenderKayit;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -26,21 +28,22 @@ import net.minecraft.network.chat.Component;
  * NOT: Mesaj tamamen client-side üretilir. Sunucu paketi gerekmez.
  *      Bu yüzden single-player'da da çalışır, çok oyunculuda da.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
-public class CandyClient implements ClientModInitializer {
+//?}
+public class CandyClient {
 
     // Aynı oturumda tekrar tekrar göstermeyelim
     private static long sonGosterim = 0;
     private static final long COOLDOWN_MS = 60_000L;   // 1 dakika
 
-    @Override
-    public void onInitializeClient() {
+    public static void onInitializeClient() {
         // v0.7: CandyDoppelEntity için renderer
-        EntityRendererRegistry.register(CandyEntities.DOPPEL, CandyDoppelRenderer::new);
+        VarlikRenderKayit.register(CandyEntities.DOPPEL, CandyDoppelRenderer::new);
         // v3.1: boss renderer
-        EntityRendererRegistry.register(CandyEntities.TRUE_REAL_CANDY, TrueRealCandyRenderer::new);
+        VarlikRenderKayit.register(CandyEntities.TRUE_REAL_CANDY, TrueRealCandyRenderer::new);
         // v8.3: Arkadaş — oyuncu modeli, tamamen siyah doku
-        EntityRendererRegistry.register(CandyEntities.ARKADAS, ArkadasRenderer::new);
+        VarlikRenderKayit.register(CandyEntities.ARKADAS, ArkadasRenderer::new);
 
         // ME dünyası: her blok oyuncunun yüzü olur (skin okunamazsa gemideki yüz dokusu kalır)
         IstemciTick.END_CLIENT_TICK.register(MeYuz::istemciTick);
@@ -80,7 +83,7 @@ public class CandyClient implements ClientModInitializer {
                 }
                 KaranlikState.sifirla();
             });
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING
+        IstemciYasamDongusu.CLIENT_STOPPING
             .register(client -> {
                 GoruntuMudahale.geriAl();
                 PencereBasligi.geriAl();
@@ -93,7 +96,7 @@ public class CandyClient implements ClientModInitializer {
             Candy.LOG.info("[Candy] Sodium tespit edildi — mixin'ler Sodium ile uyumlu");
         }
 
-        ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+        EkranOlaylari.AFTER_INIT.register((client, screen, w, h) -> {
             if (screen instanceof PauseScreen) {
                 belkiGoster(client);
             }

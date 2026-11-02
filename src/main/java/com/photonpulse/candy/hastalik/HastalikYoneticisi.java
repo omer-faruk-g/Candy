@@ -53,8 +53,8 @@ public class HastalikYoneticisi {
         // v1.9.15 fix: Ölümden sonra hastalık + korku sıfırla
         //   Bug: player kalp krizinden ölür → respawn → korku hâlâ ≥ 85 + hastalikBaslangicTick
         //   çok eski → panikSuresi > 7 dk → tekrar ölür → sonsuz döngü.
-        net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN
-            .register((oldPlayer, newPlayer, alive) -> {
+        com.photonpulse.candy.platform.OyuncuOlaylari.AFTER_RESPAWN
+            .register((newPlayer, alive) -> {
                 try {
                     var tp = PersonalityManager.get(newPlayer);
                     tp.aktifHastalik = "";

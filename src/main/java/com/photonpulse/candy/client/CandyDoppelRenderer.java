@@ -2,8 +2,10 @@ package com.photonpulse.candy.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
@@ -41,7 +43,9 @@ import java.util.UUID;
  * PlayerEntityModel invariant olarak BipedEntityModel<PlayerEntityRenderState>'e bağlı.
  * Owner UUID artık state'te değil, updateRenderState anında entity'den okunuyor.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public class CandyDoppelRenderer extends MobRenderer<
         CandyDoppelEntity, PlayerRenderState, PlayerModel> {
 

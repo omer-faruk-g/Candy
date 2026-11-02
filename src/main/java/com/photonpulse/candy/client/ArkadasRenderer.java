@@ -1,8 +1,10 @@
 package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.arkadas.ArkadasEntity;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -31,7 +33,9 @@ import net.minecraft.resources.ResourceLocation;
  * çizilir: doku zaten siyah, kısık ışık onu görünmez yapar ve ortada bir şeyin durduğu
  * hiç anlaşılmaz. Burada istenen "göremiyorum" değil, "orada duruyor ve yüzü yok".
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public class ArkadasRenderer extends MobRenderer<
         ArkadasEntity, PlayerRenderState, PlayerModel> {
 

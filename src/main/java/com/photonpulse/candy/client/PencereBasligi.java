@@ -1,8 +1,10 @@
 package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.Candy;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import net.minecraft.client.Minecraft;
 
 /**
@@ -26,7 +28,9 @@ import net.minecraft.client.Minecraft;
  * açardı. {@link com.photonpulse.candy.net.BaslikPayload} yalnızca indeks taşıyor ve
  * metinler burada, istemcide sabit.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class PencereBasligi {
 
     private PencereBasligi() {}

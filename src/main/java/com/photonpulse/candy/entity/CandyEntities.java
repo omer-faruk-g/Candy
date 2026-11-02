@@ -2,7 +2,7 @@ package com.photonpulse.candy.entity;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.boss.TrueRealCandyEntity;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import com.photonpulse.candy.platform.NitelikKayit;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -60,9 +60,9 @@ public class CandyEntities {
 
     public static void register() {
         // Static initializer yapar; attribute'ları explicit ekle
-        FabricDefaultAttributeRegistry.register(DOPPEL, CandyDoppelEntity.createDoppelAttributes());
-        FabricDefaultAttributeRegistry.register(TRUE_REAL_CANDY, TrueRealCandyEntity.createBossAttributes());
-        FabricDefaultAttributeRegistry.register(ARKADAS,
+        NitelikKayit.register(DOPPEL, CandyDoppelEntity.createDoppelAttributes());
+        NitelikKayit.register(TRUE_REAL_CANDY, TrueRealCandyEntity.createBossAttributes());
+        NitelikKayit.register(ARKADAS,
             com.photonpulse.candy.arkadas.ArkadasEntity.createArkadasAttributes());
         Candy.LOG.info(
             "[Candy] Entity type registered: candy:doppel, candy:true_real_candy, candy:arkadas");

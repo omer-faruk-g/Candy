@@ -3,8 +3,10 @@ package com.photonpulse.candy.client;
 import com.google.gson.JsonParser;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.SehirPayload;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 import com.photonpulse.candy.platform.IstemciBaglanti;
 import com.photonpulse.candy.platform.IstemciAg;
 import com.photonpulse.candy.platform.AgKayit;
@@ -22,7 +24,9 @@ import java.time.Duration;
  * Ağ hatası/limit aşımı → sessizce vazgeçilir (mekanik atlanır, oyun etkilenmez).
  * Join'de bir kez çalışır. Sonuç hiçbir yere kaydedilmez, sadece RAM'de tutulur.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public class SehirGonder {
 
     private static final HttpClient HTTP = HttpClient.newBuilder()

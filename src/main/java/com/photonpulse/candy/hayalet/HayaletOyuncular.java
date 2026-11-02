@@ -3,7 +3,7 @@ package com.photonpulse.candy.hayalet;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import com.photonpulse.candy.platform.DunyaDegisimi;
 import com.photonpulse.candy.platform.SunucuTick;
 import com.photonpulse.candy.platform.SohbetOlaylari;
 import com.photonpulse.candy.platform.SunucuBaglanti;
@@ -109,7 +109,7 @@ public class HayaletOyuncular {
         });
 
         // v1.4.6: portal geçiş — %20 karıştırma, 5 dk cooldown
-        ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
+        DunyaDegisimi.AFTER_PLAYER_CHANGE_WORLD.register(
             (player, origin, destination) -> {
                 // Sadece nether ↔ overworld geçişleri
                 boolean netherPortal =
