@@ -111,6 +111,15 @@ processResources {
     filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
         expand "version": modSurum, "minecraft_dep": mcDep, "minecraft_dep_neo": mcDepNeo
     }
+    // Her jar YALNIZCA kendi loader'inin metadata'sini tasir. Ikisi birden kalirsa
+    // NeoForge jar'i kendini Fabric moduymus gibi de ilan eder (ve tersi); coklu
+    // loader destekleyen launcher'lar bunu yanlis tarafa yukleyebilir ve hata
+    // derlemede degil kullanicinin oyununda cikar.
+    if (loader == 'fabric') {
+        exclude "META-INF/neoforge.mods.toml"
+    } else {
+        exclude "fabric.mod.json"
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -125,6 +134,15 @@ java {
 
 jar {
     from("LICENSE") { rename { "${it}_${base.archivesName.get()}" } }
+}
+
+// Fabric ve NeoForge jar'lari ayni adi tasiyamaz. Ayni surum+MC icin ikisi de
+// "candy-8.4.1+1.21.11.jar" uretiyordu: indiren hangisi oldugunu anlayamaz ve
+// tumunuTopla biri digerinin uzerine yazar. NeoForge jar'ina "-neoforge" eki
+// konuyor; Fabric adi degismiyor (README'de belgelenen ad o).
+if (loader != 'fabric') {
+    tasks.named('jar') { archiveClassifier = loader }
+    tasks.named('sourcesJar') { archiveClassifier = "${loader}-sources" }
 }
 
 // Her düğümün jar'ı kök build/libs altında toplanır — dağıtımı tek yerden yapmak için.
