@@ -7,7 +7,14 @@ pluginManagement {
     plugins {
         // Tek loom tüm düğümleri çeviriyor; düğüm başına ayrı loom sürümü mümkün değil
         // (settings bir kez değerlendirilir), o yüzden en yeni stabil sürüm.
-        id 'fabric-loom' version '1.17.2'
+        //
+        // 1.17.2 -> 1.19.3: 26.x hattı için ZORUNLU. Loom 1.17.x MC 26.x'i yapılandırma
+        // aşamasında reddediyor ("Minecraft 26.3 requires Java 25 but Gradle is using 21")
+        // ve 26.x hiç mapping yayınlamıyor (jar zaten deobfuscated), bunu yalnızca
+        // loom 1.18+ biliyor. Bedeli: loom 1.18+ JVM 25 bayt kodu (class major 69), yani
+        // ARTIK BÜTÜN PROJE JDK 25 İLE DERLENİYOR — 1.21.x düğümleri dahil.
+        // Üretilen jar'lar hâlâ release 21 bayt kodu (26.x düğümü release 25).
+        id 'fabric-loom' version '1.19.3'
         // ModDevGradle — NeoForge düğümleri için. Java 17 bytecode, JDK 21'de çalışır.
         id 'net.neoforged.moddev' version '2.0.148'
     }
