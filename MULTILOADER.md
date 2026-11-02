@@ -1,4 +1,4 @@
-# Çok loader portu — mapping göçü yapıldı, NeoForge hâlâ yok
+# Çok loader portu — NeoForge yükleniyor ve mixinleri uyguluyor, registry kaydında çöküyor
 
 > Durum: **kaynak Mojang resmî adlarına göçtü, Fabric iki MC düğümünde de yeşil.
 > NeoForge düğümleri ve araç zinciri kuruldu, ama NeoForge HENÜZ JAR ÜRETMİYOR** —
@@ -1063,3 +1063,147 @@ göçürüldü, kaynak Mojang adlarını taşıyor.
 - README gereksinimler tablosu gerçeği söyler. **Desteklenmeyen bir loader
   destekleniyormuş gibi yazılmaz** — bu yüzden bu oturum README'ye NeoForge
   eklemedi.
+
+---
+
+## Çalışma zamanı doğrulaması (2026-11-02) — NeoForge YÜKLENİYOR, registry'de çöküyor
+
+`:1.21.11-neoforge:runClient` ilk kez gerçekten çalıştırıldı. Jar üretmek
+yetmiyordu; bu test derlemede görünmeyen bir mimari farkı buldu.
+
+### Çalışan kısım (ölçüldü, log'dan)
+
+Mod tanınıyor ve mixin'ler **NeoForge'da gerçekten uyguluyor**:
+
+```
+Candy 8.4.1+1.21.11 (candy)                    <- mod listesinde
+Selecting config candy.mixins.json
+Preparing candy.mixins.json (11)
+Mixing LivingEntityMixin      -> net.minecraft.world.entity.LivingEntity
+Mixing WorldSetBlockMixin     -> net.minecraft.world.level.Level
+Mixing CommandManagerMixin    -> net.minecraft.commands.Commands
+Mixing client.DeathScreenMixin-> net.minecraft.client.gui.screens.DeathScreen
+Mixing client.ChatHudMixin    -> net.minecraft.client.gui.components.ChatComponent
+[Candy] uyanıyor...                            <- Candy.onInitialize girdi
+```
+
+Yani: Mojang adlı mixin hedefleri NeoForge'da çözülüyor, platform katmanı
+ayakta, giriş noktası çağrılıyor. Ad alanı tarafı bitti.
+
+Ek doğrulama — her jar kendi loader'ının ad alanını taşıyor:
+
+| Jar | intermediary | Mojang yolu | Doğru mu |
+|---|---|---|---|
+| Fabric   | var (2–29) | 0          | ✅ Loom bayt kodunda remap ediyor |
+| NeoForge | 0          | var (1–23) | ✅ üretim zaten resmi adlar |
+
+Hiçbirinde refmap yok, ve olmaması doğru.
+
+### Çöken kısım — asıl engel
+
+```
+Caused by: java.lang.IllegalStateException: Registry is already frozen
+  at CandyEntities.<clinit>(CandyEntities.java:30)
+  at Candy.onInitialize(Candy.java:84)
+  at NeoForgeGiris.<init>(NeoForgeGiris.java:18)
+-> ExceptionInInitializerError
+-> NoClassDefFoundError: Could not initialize class CandyEntities
+```
+
+Sebep mapping ya da isim değil, **kayıt zamanlaması**:
+
+- Fabric'te mod init registry **donmadan önce** çalışır, bu yüzden
+  `static final EntityType X = Registry.register(...)` çalışıyor.
+- NeoForge'da mod kurucusu çalıştığında `BuiltInRegistries` **çoktan
+  donmuştur**. Kayıt `RegisterEvent` / `DeferredRegister` içinde yapılmak
+  zorunda.
+
+Bu fark derlemede görünmez. 268 -> 0 hata ve dört jar, bunu yakalamadı.
+Yakalayan tek şey istemciyi açmak oldu.
+
+### Ölçülmüş kapsam: 12 kayıt / 6 dosya / 5 registry
+
+| Dosya | `Registry.register` | registry |
+|---|---|---|
+| `entity/CandyEntities`      | 3 | ENTITY_TYPE (**clinit'te, çöken yer**) |
+| `audio/CandySounds`         | 5 | SOUND_EVENT |
+| `dimension/CandyBloklar`    | 1 | BLOCK |
+| `item/CandyEfektler`        | 1 | MOB_EFFECT |
+| `boss/GizemliKitapRecipe`   | 1 | RECIPE_SERIALIZER |
+| `item/KuranRecipe`          | 1 | RECIPE_SERIALIZER |
+
+`audio/SesGonder` ve `core/ObservationEngine` yalnızca **okuyor**, kayıt
+yapmıyor — dokunulmayacak.
+
+### Düzeltmenin şekli — çağrı yerleri korunuyor
+
+Proje zaten doğru desene sahip: `Candy.onInitialize()` içinden
+`CandyEntities.register()`, `CandyEfektler.register()`,
+`CandySounds.register()` açıkça çağrılıyor (Candy.java:84). Şu an bu
+metotlar yalnızca nitelik (attribute) kaydı yapıyor; asıl entity kaydı
+static alanda oluyor. Yapılacak:
+
+1. `Registry.register` çağrıları static initializer'dan `register()`
+   gövdesine taşınır; alanlar `static final` -> `static` olur.
+2. `register()`'ı loader doğru anda çağırır: Fabric'te mod init (şu anki
+   davranış), NeoForge'da mod veri yolundaki `RegisterEvent`.
+3. **Okuma yerleri değişmez** — toplam 24 okuma
+   (`CandyEntities.DOPPEL` 11, `ARKADAS` 4, `TRUE_REAL_CANDY` 2,
+   `CandySounds.*` 7) aynı kalır, çünkü hepsi kayıttan sonra okuyor.
+
+`final` kaybı bilinçli bedel: alternatif, 24 okuma yerini
+`DeferredHolder.get()` çağrısına çevirmek olurdu.
+
+### Yan bulgu 1 — doğrulamayı zayıflatan ayar
+
+`candy.mixins.json` içinde `"injectors": { "defaultRequire": 0 }` var ve
+**11 mixin'in hiçbiri** `require`/`expect` tanımlamıyor. Yani enjeksiyon
+başarısız olursa sessizce geçer: "açılışta çökmedi" tek başına mixin'lerin
+çalıştığını kanıtlamaz. Bu port sırasında eklenmedi, Fabric tarafında da
+öyleydi.
+
+Blanket `defaultRequire: 1` yapmak YANLIŞ olur: Stonecutter çoklu sürümde
+bazı mixin'lerin bazı sürümlerde uygulanmaması meşru. Doğrusu, her sürümde
+uygulanması gereken enjektörlere tek tek `require = 1` koymak. Ayrı iş
+olarak bırakıldı, bu portta davranış sessizce değiştirilmedi.
+
+### Yan bulgu 2 — sürüm kapısı 1.21.11'i reddediyor
+
+```
+[Candy] SurumKapisi: 1.21.11 DESTEKLENMİYOR (test edilen: 1.21.7).
+Candy kendini kısıtlı kipte açıyor: invazif alt sistemler kapalı.
+```
+
+`uyum/SurumKapisi` hâlâ 1.21.7'ye sabitli. Bu loader'dan bağımsız: **Fabric
+1.21.11 jar'ı da kısıtlı kipte açılıyor.** Yani çoklu sürüm portu derleme
+tarafında bitti ama çalışma zamanında kapı kapalı. Loader işinden ayrı
+ele alınmalı.
+
+## Forge (LexForge) — erteleme gerekçem yanlıştı, düzeltme
+
+Daha önce bu belgede Forge, "1.21+ modlu ekosistem fiilen NeoForge'da"
+denerek ertelendi. **Mevcudiyet açısından bu yanlıştı.** Forge'un kendi
+promosyon verisi (`files.minecraftforge.net/.../promotions_slim.json`):
+
+| MC | Forge latest | recommended |
+|---|---|---|
+| 1.21.7  | 57.0.3  | — |
+| 1.21.11 | 61.2.4  | **61.2.4 (promote edilmiş kararlı)** |
+| 26.3    | 66.1.3  | 66.1.0 |
+
+Forge aktif, Candy'nin **iki hedef sürümünü de** destekliyor, 1.21.11 için
+kararlı yapısı var ve 26.x'i bile takip ediyor. ForgeGradle güncel sürümü
+`6.0.54`.
+
+Forge lehine iki yapısal avantaj:
+
+- Forge da 1.17'den beri **Mojang resmi adlarını** kullanıyor, yani bu
+  portun en pahalı kısmı (mapping duvarı) Forge için zaten aşıldı.
+- Olay sınıflarının çoğu NeoForge ile **aynı adı** taşıyor, paket farklı
+  (`net.minecraftforge.*` / `net.neoforged.*`), yani `src/forge/java`
+  büyük ölçüde `src/neoforge/java`'nın paket yazımıyla türetilebilir.
+
+Forge yine de NeoForge yeşile dönene kadar başlatılmıyor — ama gerekçe
+artık "Forge yok/ölü" değil, **sıralama**: registry düzeltmesi Forge'da da
+birebir gerekli (Forge'un registry modeli de donuyor), o yüzden önce orada
+çözülmeli.
