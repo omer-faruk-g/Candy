@@ -1,7 +1,7 @@
 package com.photonpulse.candy.sifre;
 
 import com.photonpulse.candy.Candy;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -46,14 +46,16 @@ public final class CihazKilidi {
     /**
      * Anahtar dosyasının yolu, ya da {@code null}.
      *
-     * {@code FabricLoader} oyun dışında (headless doğrulama, birim testi) yoktur ve
-     * {@code getInstance()} patlar. Bu yüzden hata yutulup {@code null} dönüyor;
+     * Ayar dizini oyun dışında (headless doğrulama, birim testi) yoktur ve
+     * {@link Yukleyici#ayarDizini()} patlar — iki loader'da da (Fabric'te
+     * {@code getInstance()} attığı için, NeoForge'da {@code FMLPaths} henüz
+     * kurulmadığı için). Bu yüzden hata yutulup {@code null} dönüyor;
      * çağıran oturumluk anahtarla devam ediyor. {@code VagusAyar.yukle()} aynı sebeple
      * aynı şeyi yapıyor.
      */
     private static Path yol() {
         try {
-            return FabricLoader.getInstance().getConfigDir().resolve("candy-cihaz.key");
+            return Yukleyici.ayarDizini().resolve("candy-cihaz.key");
         } catch (Throwable t) {
             return null;
         }

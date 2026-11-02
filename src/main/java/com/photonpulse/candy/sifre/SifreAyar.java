@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import com.photonpulse.candy.Candy;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -70,7 +70,7 @@ public class SifreAyar {
         SifreAyar ayar = new SifreAyar();
         Path yol;
         try {
-            yol = FabricLoader.getInstance().getConfigDir().resolve("candy-sifre.json");
+            yol = Yukleyici.ayarDizini().resolve("candy-sifre.json");
         } catch (Throwable t) {
             ayar.dogrula();
             return ayar;      // ayar dizini yok (headless doğrulama)

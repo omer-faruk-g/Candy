@@ -2,6 +2,7 @@ package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.entity.CandyEntities;
+import com.photonpulse.candy.platform.Yukleyici;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -88,7 +89,7 @@ public class CandyClient implements ClientModInitializer {
         KacisGonder.register();
 
         // Sodium tespiti — log
-        if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("sodium")) {
+        if (Yukleyici.modYuklu("sodium")) {
             Candy.LOG.info("[Candy] Sodium tespit edildi — mixin'ler Sodium ile uyumlu");
         }
 

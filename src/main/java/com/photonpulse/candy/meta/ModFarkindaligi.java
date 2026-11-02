@@ -5,7 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sign.SignSystem;
 import com.photonpulse.candy.platform.SunucuTick;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -31,10 +31,14 @@ public class ModFarkindaligi {
     private static final Random RNG = new Random();
     private static final int SORU_SAYISI = 6;
 
-    // Candy'nin "görmezden geleceği" altyapı modları
+    // Candy'nin "görmezden geleceği" altyapı modları. Loader'ın KENDİ sentetik
+    // girdilerini (Fabric'te "builtin" tipi, NeoForge'da kendi kimlikleri)
+    // Yukleyici.modlar() zaten atıyor — "neyin builtin olduğu" loader gerçeği.
     private static final Set<String> GIZLE = Set.of(
         "minecraft", "java", "fabricloader", "fabric-api", "fabric",
-        "candy", "mixinextras", "fabric-language-kotlin"
+        "candy", "mixinextras", "fabric-language-kotlin",
+        // NeoForge tarafının altyapı karşılıkları
+        "neoforge", "connector", "kffmod", "kotlinforforge"
     );
 
     // Kurulu kullanıcı modlarının görünen adları
@@ -49,16 +53,11 @@ public class ModFarkindaligi {
 
     private static void modlariTopla() {
         MOD_ADLARI.clear();
-        for (var container : FabricLoader.getInstance().getAllMods()) {
-            var md = container.getMetadata();
-            String id = md.getId();
-            if (id == null) continue;
+        for (var mod : Yukleyici.modlar()) {
+            String id = mod.id();
             if (GIZLE.contains(id)) continue;
             if (id.startsWith("fabric-")) continue;   // Fabric API alt modülleri
-            if ("builtin".equals(md.getType())) continue;
-            String ad = md.getName();
-            if (ad == null || ad.isBlank()) ad = id;
-            MOD_ADLARI.add(ad);
+            MOD_ADLARI.add(mod.ad());
         }
     }
 

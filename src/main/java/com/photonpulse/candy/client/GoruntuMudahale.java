@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.photonpulse.candy.Candy;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
@@ -52,7 +52,7 @@ public final class GoruntuMudahale {
     private static final int RENDER_MIN = 2, RENDER_MAKS = 32;
 
     private static Path yol() {
-        return FabricLoader.getInstance().getConfigDir().resolve("candy-goruntu-yedek.json");
+        return Yukleyici.ayarDizini().resolve("candy-goruntu-yedek.json");
     }
 
     /**
