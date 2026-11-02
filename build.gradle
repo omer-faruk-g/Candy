@@ -9,6 +9,7 @@
 plugins {
     id 'java'
     id 'fabric-loom' apply false
+    id 'net.fabricmc.fabric-loom' apply false
     id 'net.neoforged.moddev' apply false
 }
 
@@ -20,6 +21,15 @@ def loader = (findProperty('loader') ?: 'fabric').toString()
 // ("class file has wrong version 69.0, should be 65.0"). 1.21.x 21'de kaliyor, yani
 // dagitilan 1.21.x jar'larinin calisma zamani gereksinimi DEGISMIYOR.
 def javaSurum = stonecutter.current.parsed >= '26' ? 25 : 21
+
+// MAPPING YOLU SURUME BAGLI. 26.x'te Mojang obfuscation'i BIRAKTI: version JSON'da
+// client_mappings yok ve Fabric intermediary de 1.21.11'de duruyor. Yani 26.x'te
+// eslenecek bir sey yok — jar zaten net/minecraft/* adlarini tasiyor.
+// Loom bunu ayri bir plugin id ile cozuyor (loom 1.19.3 jar'indan dogrulandi):
+//   fabric-loom              -> LoomGradlePlugin        (remap)
+//   net.fabricmc.fabric-loom -> LoomNoRemapGradlePlugin  (no-remap)
+// No-remap yolunda `mappings` satiri OLMAMALI (okunmuyor) ve remapJar task'i YOK.
+def obfuscated = stonecutter.current.parsed < '26'
 
 version = "${property('mod_version')}+${mc}"
 group = property('maven_group')
@@ -40,18 +50,31 @@ repositories {
 }
 
 if (loader == 'fabric') {
-    apply plugin: 'fabric-loom'
+    apply plugin: obfuscated ? 'fabric-loom' : 'net.fabricmc.fabric-loom'
 
     dependencies {
         minecraft "com.mojang:minecraft:${property('minecraft_version')}"
-        // Mojang resmî adları — TÜM düğümlerde. Yarn eşlemeleri 1.21.11'de durduğu için
-        // Yarn'da kalmak 26.x hattını kalıcı olarak kapatıyordu; kaynak Mojang adlarına
-        // göçtü (bkz. MULTILOADER.md "Mapping göçü"). Yarn artık hiçbir düğümde kullanılmıyor,
-        // ama versions/<sürüm>/gradle.properties içindeki yarn_mappings anahtarı
-        // doğrulama/karşılaştırma için korundu.
-        mappings loom.officialMojangMappings()
-        modImplementation "net.fabricmc:fabric-loader:${property('loader_version')}"
-        modImplementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
+        if (obfuscated) {
+            // Mojang resmî adları. Yarn eşlemeleri 1.21.11'de durduğu için Yarn'da kalmak
+            // 26.x hattını kalıcı olarak kapatıyordu; kaynak Mojang adlarına göçtü
+            // (bkz. MULTILOADER.md "Mapping göçü"). Yarn artık hiçbir düğümde kullanılmıyor,
+            // ama versions/<sürüm>/gradle.properties içindeki yarn_mappings anahtarı
+            // doğrulama/karşılaştırma için korundu.
+            mappings loom.officialMojangMappings()
+        }
+        // 26.x'te `mappings` satiri YOK ve olmamali: officialMojangMappings() 26.x icin
+        // "Failed to find official mojang mappings" ile patliyor (client_mappings
+        // yayinlanmiyor), ve no-remap yolunda loom `mappings` yapilandirmasini hic okumuyor.
+
+        // mod* YAPILANDIRMALARI DA SURUME BAGLI. LoomConfigurations bytecode'unda
+        // disableObfuscation() true ise `namedElements`, `mappings`, `mappingsFinal` ve
+        // createRemapConfigurations(sourceSet) ATLANIYOR — yani no-remap yolunda
+        // modImplementation diye bir yapilandirma YOK ("Could not find method
+        // modImplementation()"). Zaten gereksiz: remap edilecek bir ad uzayi yok,
+        // mod jar'lari dogrudan derleme yolunda kullanilabilir.
+        def modDep = obfuscated ? 'modImplementation' : 'implementation'
+        add(modDep, "net.fabricmc:fabric-loader:${property('loader_version')}")
+        add(modDep, "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}")
         // Gson zaten Minecraft ile geliyor, ayrıca eklemiyoruz
     }
 
@@ -134,8 +157,10 @@ jar {
 }
 
 // Her düğümün jar'ı kök build/libs altında toplanır — dağıtımı tek yerden yapmak için.
-// Fabric'te dagitilan jar remapJar'in cikti; NeoForge'da remap yok, jar dogrudan.
-def dagitimJar = loader == 'fabric' ? tasks.named('remapJar') : tasks.named('jar')
+// Remap OLAN yerde dagitilan jar remapJar'in ciktisi. Remap olmayan iki durumda jar
+// dogrudan: NeoForge (hep) ve Fabric 26.x (no-remap yolunda remapJar task'i YOK).
+def remapVar = loader == 'fabric' && obfuscated
+def dagitimJar = remapVar ? tasks.named('remapJar') : tasks.named('jar')
 tasks.register('tumunuTopla', Copy) {
     dependsOn dagitimJar
     from dagitimJar

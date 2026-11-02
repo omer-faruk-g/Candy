@@ -15,6 +15,16 @@ pluginManagement {
         // ARTIK BÜTÜN PROJE JDK 25 İLE DERLENİYOR — 1.21.x düğümleri dahil.
         // Üretilen jar'lar hâlâ release 21 bayt kodu (26.x düğümü release 25).
         id 'fabric-loom' version '1.19.3'
+        // AYNI artifact, FARKLI plugin id. Loom 1.19.3 iki yol sunuyor ve secimi plugin
+        // id yapiyor (loom jar'indaki META-INF/gradle-plugins'ten dogrulandi):
+        //   fabric-loom              -> LoomGradlePlugin       (obfuscated/remap, 1.21.x)
+        //   net.fabricmc.fabric-loom -> LoomNoRemapGradlePlugin (no-remap, 26.x)
+        // CompileConfiguration bytecode'u: disableObfuscation() true ise `mappings`
+        // yapilandirmasi HIC OKUNMUYOR, NoRemapMappingConfiguration kullaniliyor; ve
+        // disableObfuscation, hasPlugin("net.fabricmc.fabric-loom") ise true'ya set ediliyor.
+        // 26.x bunu gerektiriyor cunku ne client_mappings ne de intermediary yayinlaniyor
+        // (intermediary de Yarn gibi 1.21.11'de duruyor) — jar zaten deobfuscated.
+        id 'net.fabricmc.fabric-loom' version '1.19.3'
         // ModDevGradle — NeoForge düğümleri için. Java 17 bytecode, JDK 21'de çalışır.
         id 'net.neoforged.moddev' version '2.0.148'
     }
