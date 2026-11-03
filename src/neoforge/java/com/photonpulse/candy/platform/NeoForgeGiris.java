@@ -15,6 +15,15 @@ import net.neoforged.fml.common.Mod;
 public final class NeoForgeGiris {
 
     public NeoForgeGiris(IEventBus modVeriYolu, ModContainer kap) {
+        // Dinleyiciler ONCE baglanir: onInitialize kayitlari yalnizca siraya
+        // atiyor, olaylar bu kurucudan SONRA geliyor.
+        //
+        // Anotasyon (@EventBusSubscriber) yerine acik baglama kullaniliyor:
+        // yanlis veri yoluna giden bir abonelik sessiz no-op olur -- kayit hic
+        // yapilmaz, hicbir hata da cikmaz. Bu portta sessiz basarisizlik zaten
+        // bir kez pahaliya geldi.
+        KayitKapisi.baglan(modVeriYolu);
+        NitelikKayit.baglan(modVeriYolu);
         Candy.onInitialize();
     }
 }

@@ -1207,3 +1207,58 @@ Forge yine de NeoForge yeşile dönene kadar başlatılmıyor — ama gerekçe
 artık "Forge yok/ölü" değil, **sıralama**: registry düzeltmesi Forge'da da
 birebir gerekli (Forge'un registry modeli de donuyor), o yüzden önce orada
 çözülmeli.
+
+---
+
+## Sürüm kapısı ölü kod — log yanlış söylüyor (2026-11-03)
+
+NeoForge koşusunda şu uyarı çıktı:
+
+```
+[Candy] SurumKapisi: 1.21.11 DESTEKLENMİYOR (test edilen: 1.21.7).
+Candy kendini kısıtlı kipte açıyor: invazif alt sistemler kapalı.
+```
+
+İkinci cümle **doğru değil**. `SurumKapisi.guvenliMi()` hiçbir yerden
+çağrılmıyor:
+
+| Nerede | Ne |
+|---|---|
+| `SurumKapisi.java:20`  | javadoc içinde `{@link #guvenliMi()}` |
+| `SurumKapisi.java:81`  | metodun kendi tanımı |
+| `Candy.java:80`        | yorum satırı ("alt sistemler guvenliMi()'ye bakıyor") |
+| `meta/KonumKaydirma.java:181,190` | **ayrı ve ilgisiz** bir private `guvenliMi(ServerLevel, BlockPos)` |
+
+Yani hiçbir alt sistem bayrağı okumuyor. `TEST_EDILDI = { "1.21.7" }` ve
+`YAKIN = { "1.21.6", "1.21.8" }` sınıflandırması yapılıyor, loglanıyor ve
+sonra kullanılmıyor.
+
+Sonucu: 1.21.11'de Candy kendini kısıtlamıyor — **tam invazif çalışıyor**,
+üstelik kısıtlı kipte olduğunu söyleyerek. Log, davranışı yanlış
+raporluyor.
+
+Bu loader portundan bağımsız, önceden var olan bir kusur. Burada
+**düzeltilmedi**: kapıyı gerçekten bağlamak çok sayıda alt sistemin
+çalışma zamanı davranışını değiştirir ve hangi alt sistemin "invazif"
+sayılacağı ürün kararıdır, port kararı değil. İki seçenek de sahibinin:
+
+1. Kapıyı bağla (alt sistemler `guvenliMi()`'ye baksın) — log doğru hale
+   gelir, 1.21.11 gerçekten kısıtlı açılır.
+2. `TEST_EDILDI`'ye 1.21.11 ekle — ama dosyanın kendi notu bunu yasaklıyor:
+   *"Buraya eklemek bir karar, tahmin değil."* Ana menüye kadar açılmak
+   test edilmiş olmak değil.
+
+Üçüncü seçenek (log cümlesini yumuşatmak) kusuru gizler, çözmez.
+
+## Çalışma zamanı kapsama sınırı — mixin 10/11
+
+Fabric 1.21.7 ana menüye ulaştı, 0 hata, ama **10/11** mixin uygulandı.
+Uygulanmayan: `CommandManagerMixin`.
+
+Bu bir hata değil: `net.minecraft.commands.Commands` ancak dünya/sunucu
+kurulurken örnekleniyor, ana menüde hiç yüklenmiyor; mixin de hedef sınıf
+yüklenmeden uygulanmıyor. Yani "ana menüye ulaştı" testi komut
+mixin'ini **kapsamıyor** — doğrulamak için dünyaya girmek gerekir.
+
+NeoForge'da 11/11 görünmesinin sebebi NeoForge'un mod yükleme sırasında
+`Commands`'i zaten yüklemesi.

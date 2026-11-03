@@ -56,8 +56,10 @@ import com.photonpulse.candy.travma.OlumYerleri;
 import com.photonpulse.candy.travma.PetOlumu;
 import com.photonpulse.candy.travma.TotemIptali;
 import com.photonpulse.candy.tree.TreeGrowth;
+import com.photonpulse.candy.platform.KayitKapisi;
 import com.photonpulse.candy.platform.SunucuBaglanti;
 import com.photonpulse.candy.platform.SunucuYasamDongusu;
+import net.minecraft.core.registries.Registries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,13 +81,15 @@ public class Candy {
         com.photonpulse.candy.uyum.SurumKapisi.register();
 
         // v0.7: Custom entity — Candy'nin doppelganger'ı (player-shaped, 40 HP)
-        // NOT: EntityType static field'ı init sırasında register olur; explicit çağrı
-        // attribute registry için gerekli.
-        CandyEntities.register();
-        com.photonpulse.candy.item.CandyEfektler.register(); // v3.6 İmanın Gücü efekti
+        // Kayıtlar KayitKapisi üzerinden: Fabric'te çağrıldığı anda çalışır,
+        // NeoForge'da ilgili RegisterEvent'e kadar bekler. NeoForge'da mod
+        // kurucusu çalıştığında BuiltInRegistries zaten donmuş oluyor.
+        KayitKapisi.kaydet(Registries.ENTITY_TYPE, CandyEntities::register);
+        KayitKapisi.kaydet(Registries.MOB_EFFECT,
+            com.photonpulse.candy.item.CandyEfektler::register); // v3.6 İmanın Gücü efekti
 
         // v1.9.2: Custom sound events (murmur)
-        CandySounds.register();
+        KayitKapisi.kaydet(Registries.SOUND_EVENT, CandySounds::register);
 
         // Sunucu yaşam döngüsü
         SunucuYasamDongusu.SERVER_STARTED.register(server -> {
@@ -320,7 +324,8 @@ public class Candy {
         AntiMirrorLottery.register();       // Phase 4: 5 sn lottery + mercy reset
 
         // ─── v7: Kurul Dünyaları — 11 beyin her 5dk "seni atayım mı, nereye?" karar verir ───
-        com.photonpulse.candy.dimension.CandyBloklar.register();  // candy:me bloğu (ME dünyası)
+        KayitKapisi.kaydet(Registries.BLOCK,
+            com.photonpulse.candy.dimension.CandyBloklar::register); // candy:me bloğu (ME dünyası)
         DunyaSekillendirici.register();     // 8 dünyanın desenini chunk üretiminde damgalar
         DunyaKurulu.register();             // kurul kararı + DunyaGecisi ışınlama/dönüş
         AnomalyPatches.register();          // Phase 3.5: %10 overworld chunk anomaly
@@ -369,9 +374,11 @@ public class Candy {
         com.photonpulse.candy.dev.CandyDevKomut.register();
 
         // ─── v3.1: True RealCandy Boss ───
-        com.photonpulse.candy.boss.GizemliKitapRecipe.register();
+        KayitKapisi.kaydet(Registries.RECIPE_SERIALIZER,
+            com.photonpulse.candy.boss.GizemliKitapRecipe::register);
         com.photonpulse.candy.boss.BossManager.register();
-        com.photonpulse.candy.item.KuranRecipe.register();   // v3.5 Kuran-ı Kerim tarifi
+        KayitKapisi.kaydet(Registries.RECIPE_SERIALIZER,
+            com.photonpulse.candy.item.KuranRecipe::register);  // v3.5 Kuran-ı Kerim tarifi
         com.photonpulse.candy.item.KuranSistemi.register();  // v3.5 Ayetel Kürsi + İmanın Gücü
 
         LOG.info("[Candy] tüm aşamalar aktif — v8.3.0 (Arkadaş | Perde | Şifre | Vagus)");
