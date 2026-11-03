@@ -78,6 +78,25 @@ if (loader == 'fabric') {
         obfuscated ? 'src/fabric-kayit-eski/java' : 'src/fabric-kayit-26/java')
 }
 
+// BOYUT TIPI (dimension_type) SEMASI 1.21.9'DA KIRILDI -- data katmaninda, derleyicinin
+// gormedigi yerde. Olculdu: her surumun KENDI jar'indaki vanilla dosyalari okunarak
+// (data/minecraft/dimension_type/*.json), tahminle degil.
+//   1.21.7  : ultrawarm, natural, piglin_safe, bed_works, respawn_anchor_works,
+//             has_raids, effects, fixed_time   -> hepsi dogrudan dimension_type alani
+//   1.21.11 : BU SEKIZ ANAHTAR YOK. Yerine attributes (EnvironmentAttributeMap),
+//             skybox, cardinal_light, has_fixed_time + timelines geldi. monster_spawn_*
+//             kaldi (hala ZORUNLU). Bilinmeyen anahtari DFU sessizce atiyor, yani
+//             eski dosyalar HATA VERMEDEN yukleniyordu ve sekiz anahtarin tamami
+//             GOZARDI EDILIYORDU -- siyah gokyuzu (sky_color default 0x000000),
+//             siyah sis, ve gameplay/sky_light_level default 15.0 ile surekli gunduz.
+//   26.x    : ayni sema + has_ender_dragon_fight ZORUNLU (fieldOf) oldu.
+// Yani tek dosya iki semayi birden karsilayamaz: ayri agac. replacements buraya
+// ugramiyor (resources'a girmiyor), processResources/expand ise tek tek deger icin;
+// burada butun dosya degisiyor, o yuzden src/fabric-kayit-* ile ayni yol: srcDir secimi.
+sourceSets.main.resources.srcDir rootProject.file(
+    stonecutter.current.parsed >= '1.21.9' ? 'src/boyut-yeni/resources'
+                                           : 'src/boyut-eski/resources')
+
 repositories {
     mavenCentral()
     maven { url = 'https://maven.fabricmc.net/' }
