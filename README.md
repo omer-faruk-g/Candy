@@ -60,7 +60,7 @@ rather than approximated. Everything else is identical.
 `config/candy-mixin.json`, created on first launch. The keys the content warning
 above refers to are `hudFlash` (HUD flashes) and `cameraShake` (camera shake) —
 set either to `false` if you are photosensitive or motion sensitive, and
-`uygulamaSezgisi` to `false` to switch off program recognition completely.
+
 `yogunlukTavani` (0.0–1.0) is an intensity ceiling: `0.5` is "same mod, half the
 chaos", and it is the setting to reach for instead of turning features off.
 
@@ -146,8 +146,7 @@ Bu liste readme'de bir vaat değil, kodda sert bir sınır:
 - program listesi bir **beyaz liste**, asla siyah liste değil: o 12 satırda olmayan
   hiçbir şey okunmaz, taşınmaz, saklanmaz. Banka uygulaman, belgelerin, diğer
   pencereleriniz Candy için yok
-- süreç okuması tek anahtar: `uygulamaSezgisi: false` tamamen kapatır ve Candy'nin
-  onu geri açması yasaktır
+
 - terminal yok, OS komutu yok, Minecraft dışında pencere açma yok
 - `config/candy-*` ve dünya kaydı dışında hiçbir dosyaya dokunulmaz
 
