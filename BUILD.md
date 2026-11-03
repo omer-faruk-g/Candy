@@ -478,27 +478,48 @@ düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeni
 
 ## Loader desteği
 
-Şu an jar üreten **yalnızca Fabric** — 1.21.7 ve 1.21.11.
+Fabric ve **NeoForge**, iki MC sürümünde de jar üretiyor ve istemci açılışı
+ölçüldü.
 
 | Loader | 1.21.7 | 1.21.11 |
 |---|---|---|
-| Fabric | ✅ jar üretiyor | ✅ jar üretiyor |
-| NeoForge | 🚧 düğüm var, jar yok | 🚧 düğüm var, jar yok |
+| Fabric | ✅ jar + açılış | ✅ jar + açılış |
+| NeoForge | ✅ jar + açılış | ✅ jar + açılış |
 | Forge | ❌ yok | ❌ yok |
 
-NeoForge düğümleri (`versions/1.21.7-neoforge`, `versions/1.21.11-neoforge`)
-**varsayılan olarak kapalı** — `gradle.properties` içindeki `candy.neoforge=false`.
-Kökteki `./gradlew build` bütün düğümleri derlediği için, derlenmeyen bir düğüm açık
-bırakılsa build ve CI kırmızı olurdu. Üzerinde çalışmak için:
+NeoForge düğümleri artık varsayılan açık (`candy.neoforge=true`). Kapatmak için
+`gradle.properties` içinde `false` yap ya da `-Pcandy.neoforge=false` geç.
 
-```bash
-./gradlew -Pcandy.neoforge=true :1.21.7-neoforge:compileJava
+Jar adları çakışmasın diye NeoForge jar'ı `-neoforge` eki taşıyor; Fabric adı
+değişmedi:
+
+```
+candy-8.4.1+1.21.11.jar            <- Fabric
+candy-8.4.1+1.21.11-neoforge.jar   <- NeoForge
 ```
 
-Açıldığında Minecraft+NeoForge classpath'i çözülüyor, ama kaynak **derlenmiyor**:
-`src/main/java` içindeki 101 dosya hâlâ `net.fabricmc.*` import ediyor. Platform
-katmanı (`src/fabric/java`, `src/neoforge/java`) kuruldu ama henüz yalnızca sunucu
-tick kancasını kapsıyor. Envanter ve sıradaki adımlar: [MULTILOADER.md](MULTILOADER.md).
+Her jar yalnızca kendi loader'ının metadata'sını taşır (`fabric.mod.json` /
+`META-INF/neoforge.mods.toml`), ikisi birden değil.
+
+### Ölçülen açılış sonuçları
+
+Dört düğümün hepsi `runClient` ile ana menüye kadar açıldı, mixin uygulaması
+`-Dmixin.debug.verbose=true` ile sayıldı:
+
+| Düğüm | Sonuç | Mixin | Hata |
+|---|---|---|---|
+| fabric 1.21.7 | ana menü | 10/11 | 0 |
+| fabric 1.21.11 | ana menü | 10/11 | 0 |
+| neoforge 1.21.7 | ana menü | 11/11 | 0 |
+| neoforge 1.21.11 | ana menü | 11/11 | 0 |
+
+Fabric'teki 10/11 eksiklik değil: `CommandManagerMixin`'in hedefi
+`net.minecraft.commands.Commands` ana menüde hiç yüklenmiyor, o yüzden bu test
+onu kapsamıyor. Doğrulamak için dünyaya girmek gerekir.
+
+**Açılış testi oynanabilirlik testi değil.** 1.21.11 `SurumKapisi` tarafından
+hâlâ "test edilmemiş" sayılıyor. Ayrıntı ve bilinen kusurlar:
+[MULTILOADER.md](MULTILOADER.md).
 
 NeoForge portu bir kez denendi ve engele çarptı; **o engelin yarısı artık kalktı:**
 

@@ -42,13 +42,24 @@ This list is a hard boundary in the code, not a promise in a readme:
 | | |
 |---|---|
 | Minecraft | **1.21.7** or **1.21.11** — one jar per version, pick the matching one |
-| Loader | Fabric (0.16.14+ on 1.21.7, 0.20.1+ on 1.21.11) |
-| Fabric API | required |
+| Loader | **Fabric** (0.16.14+ on 1.21.7, 0.20.1+ on 1.21.11) or **NeoForge** (21+) |
+| Fabric API | required on Fabric only — NeoForge needs no extra API mod |
 | Java | 21+ |
 | Side | works in single player and on servers (install on both) |
 
-Jars are named `candy-<mod version>+<minecraft version>.jar`, e.g.
-`candy-8.4.0+1.21.11.jar`. Installing the wrong one will not load.
+Jars are named `candy-<mod version>+<minecraft version>.jar` for Fabric and
+`candy-<mod version>+<minecraft version>-neoforge.jar` for NeoForge, e.g.
+`candy-8.4.1+1.21.11.jar` / `candy-8.4.1+1.21.11-neoforge.jar`. Installing the
+wrong one will not load. Each jar carries only its own loader's metadata, so a
+multi-loader launcher cannot load it on the wrong side.
+
+**Forge (LexForge) is not supported.** Forge itself is available for both target
+versions (57.0.3 on 1.21.7, 61.2.4 on 1.21.11), so this is not a Forge
+availability problem — the port simply has not been done.
+
+NeoForge support is new. Both NeoForge jars load to the main menu with all 11
+mixins applied and no errors, but that is a startup check, not a playthrough.
+Report anything odd.
 
 **Minecraft 26.x (26.1 – 26.3) is not supported yet.** Not for mod reasons: Fabric
 Loader and Fabric API are ready for every 26.x release. The whole 26.x line requires
@@ -111,13 +122,24 @@ an AGPL copy you already hold keeps its grant — see [LICENSE](LICENSE).
 | | |
 |---|---|
 | Minecraft | **1.21.7** veya **1.21.11** — her sürüm için ayrı jar, eşleşeni indir |
-| Loader | Fabric (1.21.7'de 0.16.14+, 1.21.11'de 0.20.1+) |
-| Fabric API | zorunlu |
+| Loader | **Fabric** (1.21.7'de 0.16.14+, 1.21.11'de 0.20.1+) veya **NeoForge** (21+) |
+| Fabric API | yalnızca Fabric'te zorunlu — NeoForge'da ek API modu gerekmiyor |
 | Java | 21+ |
 | Taraf | tek oyuncu ve sunucuda çalışır (ikisine de kur) |
 
-Jar adı `candy-<mod sürümü>+<minecraft sürümü>.jar` biçiminde, örn.
-`candy-8.4.0+1.21.11.jar`. Yanlışını kurarsan yüklenmez.
+Jar adı Fabric'te `candy-<mod sürümü>+<minecraft sürümü>.jar`, NeoForge'da
+`candy-<mod sürümü>+<minecraft sürümü>-neoforge.jar` biçiminde, örn.
+`candy-8.4.1+1.21.11.jar` / `candy-8.4.1+1.21.11-neoforge.jar`. Yanlışını
+kurarsan yüklenmez. Her jar yalnızca kendi loader'ının metadata'sını taşıyor,
+yani çoklu loader destekleyen bir launcher onu yanlış tarafa yükleyemez.
+
+**Forge (LexForge) desteklenmiyor.** Forge'un kendisi iki hedef sürüm için de
+var (1.21.7'de 57.0.3, 1.21.11'de 61.2.4), yani sorun Forge'un yokluğu değil —
+port basitçe yapılmadı.
+
+NeoForge desteği yeni. İki NeoForge jar'ı da ana menüye kadar açılıyor, 11
+mixin'in tamamı uygulanıyor ve hata yok; ama bu bir açılış kontrolü, baştan
+sona oynanmış değil. Tuhaf bir şey görürsen bildir.
 
 **Minecraft 26.x (26.1 – 26.3) henüz desteklenmiyor.** Sebebi mod tarafında değil:
 Fabric Loader ve Fabric API bütün 26.x sürümleri için hazır. 26.x hattının tamamı
