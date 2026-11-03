@@ -209,6 +209,7 @@ public final class ArkadasYonetici {
     public static void sunucuKapan() {
         sayac = 0;
         ArkadasFisilti.sunucuKapan();
+        TanidikFisilti.sunucuKapan();
         ArkadasKaydi.sunucuKapan();
     }
 }

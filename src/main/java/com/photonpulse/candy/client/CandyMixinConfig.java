@@ -55,6 +55,12 @@ public class CandyMixinConfig {
     public static boolean uygulamaSezgisi = true;
 
     /**
+     * v9.0.0 — Gerçek klavyenin kilit LED'i korkuya tepki versin mi
+     * ({@link KlavyeIsigi}). false ise AWT'ye hiç dokunulmaz ve LED'e hiç yazılmaz.
+     */
+    public static boolean klavyeIsigi = true;
+
+    /**
      * v8.4 — Yoğunluk tavanı (0.0–1.0). {@link IntensityState#get()} döndürdüğü değeri
      * bu tavanla kırpar, yani oyuncu "aynı mod, daha az kaos" diyebilir.
      *
@@ -75,7 +81,7 @@ public class CandyMixinConfig {
     /** Bilinen bayrak adları — yabancı anahtar ayıklaması bunun dışını alır. */
     private static final String[] BILINEN = {
         "chatCorruption", "hudFlash", "deathScreen", "cameraShake", "camscreen",
-        "uygulamaSezgisi", "yogunlukTavani"
+        "uygulamaSezgisi", "klavyeIsigi", "yogunlukTavani"
     };
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -111,6 +117,7 @@ public class CandyMixinConfig {
             cameraShake     = bool(o, "cameraShake",     cameraShake);
             camscreen       = bool(o, "camscreen",       camscreen);
             uygulamaSezgisi = bool(o, "uygulamaSezgisi", uygulamaSezgisi);
+            klavyeIsigi     = bool(o, "klavyeIsigi",     klavyeIsigi);
             yogunlukTavani  = kesir(o, "yogunlukTavani", yogunlukTavani);
 
             yabanci.clear();
@@ -118,9 +125,9 @@ public class CandyMixinConfig {
                 if (!bilinenMi(e.getKey())) yabanci.put(e.getKey(), e.getValue());
             }
 
-            Candy.LOG.info("[Candy] Mixin config yüklendi: chat={} hud={} death={} camera={} camscreen={} uygulama={} tavan={} yabanci={}",
+            Candy.LOG.info("[Candy] Mixin config yüklendi: chat={} hud={} death={} camera={} camscreen={} uygulama={} klavye={} tavan={} yabanci={}",
                 chatCorruption, hudFlash, deathScreen, cameraShake, camscreen,
-                uygulamaSezgisi, yogunlukTavani, yabanci.size());
+                uygulamaSezgisi, klavyeIsigi, yogunlukTavani, yabanci.size());
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] Config yüklenemedi, defaults: {}", t.getMessage());
         }
@@ -173,6 +180,7 @@ public class CandyMixinConfig {
         o.addProperty("cameraShake", cameraShake);
         o.addProperty("camscreen", camscreen);
         o.addProperty("uygulamaSezgisi", uygulamaSezgisi);
+        o.addProperty("klavyeIsigi", klavyeIsigi);
         o.addProperty("yogunlukTavani", yogunlukTavani);
         for (Map.Entry<String, JsonElement> e : yabanci.entrySet()) {
             if (!bilinenMi(e.getKey())) o.add(e.getKey(), e.getValue());

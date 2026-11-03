@@ -138,6 +138,8 @@ public final class GoruntuMudahale {
             Files.deleteIfExists(p);
         } catch (Throwable ignored) {}
         KaranlikState.sifirla();
+        // v9.0.0: karanlık kademesi sıfırlandıysa klavye nabzı da susmalı — ikisi aynı sayı.
+        KlavyeIsigi.kademe(0);
         Candy.LOG.info("[Candy] görüntü ayarları geri alındı (fov={} render={})", y.fov, y.render);
     }
 

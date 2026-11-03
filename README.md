@@ -12,7 +12,13 @@ Candy deliberately breaks the fourth wall. By design it:
   but if you are photosensitive, set `hudFlash` and `cameraShake` to `false`)
 - **plays sudden loud sounds**, whispers and imitated voices
 - **writes in chat as if another player were there**, and corrupts your own messages
+- **says back to you what you did in the game** — your own sign answers, how many
+  nights you went without sleep, the name of your world (in-game observation only;
+  nothing from outside Minecraft)
 - **changes your window title**, your HUD and your death screen
+- **blinks a light on your real keyboard** (the Scroll Lock LED, or Num Lock if your
+  keyboard has no Scroll Lock — flipped back within 140 ms, Windows only;
+  `klavyeIsigi: false` turns it off)
 - **edits its own config file** — you will find a line you did not write
 - **damages the world around you**: torches go out, signs appear, your base is
   interfered with, pets can die
@@ -36,6 +42,11 @@ This list is a hard boundary in the code, not a promise in a readme:
   completely, and Candy is forbidden from ever turning it back on
 - no terminal commands, no OS commands, no windows opened outside Minecraft
 - no files touched outside `config/candy-*` and the world save
+- the keyboard light is the lock-key LED and nothing else: no vendor driver, no RGB
+  SDK, no device access. The only key Candy ever touches is **Scroll Lock** (Num Lock
+  as a fallback) — a key nothing in Minecraft is bound to, flipped back within 140 ms.
+  Candy never sends a key the game or another window acts on, so an alt-tab can
+  never catch a keystroke from it
 
 ## Requirements
 
@@ -49,7 +60,7 @@ This list is a hard boundary in the code, not a promise in a readme:
 
 Jars are named `candy-<mod version>+<minecraft version>.jar` for Fabric and
 `candy-<mod version>+<minecraft version>-neoforge.jar` for NeoForge, e.g.
-`candy-8.4.1+1.21.11.jar` / `candy-8.4.1+1.21.11-neoforge.jar`. Installing the
+`candy-9.0.0+1.21.11.jar` / `candy-9.0.0+1.21.11-neoforge.jar`. Installing the
 wrong one will not load. Each jar carries only its own loader's metadata, so a
 multi-loader launcher cannot load it on the wrong side.
 
@@ -77,7 +88,8 @@ rather than approximated. Everything else is identical.
 `config/candy-mixin.json`, created on first launch. The keys the content warning
 above refers to are `hudFlash` (HUD flashes) and `cameraShake` (camera shake) —
 set either to `false` if you are photosensitive or motion sensitive, and
-`uygulamaSezgisi` to `false` to switch off program recognition completely.
+`uygulamaSezgisi` to `false` to switch off program recognition completely, and
+`klavyeIsigi` to `false` to stop Candy touching your keyboard's lock LED.
 `yogunlukTavani` (0.0–1.0) is an intensity ceiling: `0.5` is "same mod, half the
 chaos", and it is the setting to reach for instead of turning features off.
 
@@ -129,7 +141,7 @@ an AGPL copy you already hold keeps its grant — see [LICENSE](LICENSE).
 
 Jar adı Fabric'te `candy-<mod sürümü>+<minecraft sürümü>.jar`, NeoForge'da
 `candy-<mod sürümü>+<minecraft sürümü>-neoforge.jar` biçiminde, örn.
-`candy-8.4.1+1.21.11.jar` / `candy-8.4.1+1.21.11-neoforge.jar`. Yanlışını
+`candy-9.0.0+1.21.11.jar` / `candy-9.0.0+1.21.11-neoforge.jar`. Yanlışını
 kurarsan yüklenmez. Her jar yalnızca kendi loader'ının metadata'sını taşıyor,
 yani çoklu loader destekleyen bir launcher onu yanlış tarafa yükleyemez.
 
@@ -160,7 +172,13 @@ Candy dördüncü duvarı bilerek kırar. Tasarım gereği:
   ışığa duyarlıysan `hudFlash` ve `cameraShake` ayarlarını `false` yap)
 - **ani yüksek sesler**, fısıltılar, taklit edilmiş sesler çalar
 - **sohbete başka bir oyuncu varmış gibi yazar**, senin mesajlarını bozar
+- **oyun içinde yaptıklarını sana geri söyler** — kendi tabela cevapların, kaç gece
+  uyumadığın, dünyanın adı (yalnızca oyun-içi gözlem; Minecraft dışından hiçbir şey
+  okunmuyor)
 - **pencere başlığını, HUD'ı, ölüm ekranını değiştirir**
+- **gerçek klavyendeki bir ışığı yakıp söndürür** (Scroll Lock LED'i; klavyende yoksa
+  Num Lock — 140 ms içinde geri alınır, yalnızca Windows'ta;
+  `klavyeIsigi: false` kapatır)
 - **kendi ayar dosyasını düzenler** — koymadığın bir satır bulursun
 - **çevreni bozar**: meşaleler söner, tabelalar çıkar, üsse müdahale edilir,
   evcil hayvan ölebilir
@@ -184,13 +202,19 @@ Bu liste readme'de bir vaat değil, kodda sert bir sınır:
   onu geri açması yasaktır
 - terminal yok, OS komutu yok, Minecraft dışında pencere açma yok
 - `config/candy-*` ve dünya kaydı dışında hiçbir dosyaya dokunulmaz
+- klavye ışığı yalnızca kilit tuşu LED'i: üretici sürücüsü yok, RGB SDK'sı yok,
+  aygıt erişimi yok. Candy'nin dokunduğu tek tuş **Scroll Lock** (yedeği Num Lock) —
+  Minecraft'ta hiçbir şeye bağlı olmayan bir tuş, 140 ms içinde geri alınıyor. Oyunun
+  ya da başka bir pencerenin tepki verdiği bir tuş asla yollanmıyor; alt-tab yaptığında
+  hiçbir tuş basımı başka bir yere düşemez
 
 ## Ayarlar
 
 `config/candy-mixin.json` — ilk açılışta oluşur. Yukarıdaki içerik uyarısının
 bahsettiği anahtarlar `hudFlash` (HUD parlaması) ve `cameraShake` (kamera
 sallanması): ışığa veya harekete duyarlıysan birini ya da ikisini `false` yap.
-`uygulamaSezgisi: false` program tanımayı tamamen kapatır. `yogunlukTavani`
+`uygulamaSezgisi: false` program tanımayı tamamen kapatır. `klavyeIsigi: false`
+Candy'nin klavye kilit LED'ine dokunmasını durdurur. `yogunlukTavani`
 (0.0–1.0) yoğunluk tavanı: `0.5` = "aynı mod, yarı kaos" — efektleri kapatmak
 yerine önce buna bak.
 

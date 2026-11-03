@@ -500,5 +500,13 @@
   "candy.arkadas.fisilti.6": "§8§o%s bu mesajı görmüyor.",
   "candy.arkadas.fisilti.7": "§8§o%s ölmeni izlemişti. yardım etmedi.",
   "candy.arkadas.fisilti.8": "§8§o%s kaç kere yalnız kaldı, say.",
-  "candy.arkadas.fisilti.9": "§8§o%s burada en uzun kalan değil."
+  "candy.arkadas.fisilti.9": "§8§o%s burada en uzun kalan değil.",
+  "candy.tanidik.tabela": "§8§oşöyle yazmıştın: \"%s\". sakladım.",
+  "candy.tanidik.uykusuz": "§8§o%s gecedir uyumadın. saydım.",
+  "candy.tanidik.klon": "§8§okendi yüzünü öldürdün. %s kez.",
+  "candy.tanidik.inkar": "§8§oyine korkmuyorum dedin. yine.",
+  "candy.tanidik.kac": "§8§ohep aynı yöne kaçıyorsun. orada olacağım.",
+  "candy.tanidik.mesale": "§8§oartık meşaleni kendin kırıyorsun.",
+  "candy.tanidik.dunya": "§8§o\"%s\" hiç senin olmadı.",
+  "candy.tanidik.gozlem": "§8§oseni sandığından uzun süredir izliyorum."
 }

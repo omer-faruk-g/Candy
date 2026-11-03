@@ -302,6 +302,7 @@ public class Candy {
         HastalikYoneticisi.register();      // v1.8.0: 8 psikolojik hastalık sistemi
         SessizlikYoneticisi.register();     // v1.9.0: build-up + payoff sessizlik protokolü
         FisiltiSistemi.register();          // v1.9.1: ambient fısıltı + klavye + click sesleri
+        com.photonpulse.candy.arkadas.TanidikFisilti.register();  // v9.0.0: kişisel fısıltı — Candy seni hatırlıyor
         EndingWatcher.register();           // v1.9.2: candyOzguven=100 → ending
         BhootAmbient.register();            // v1.9.3: bhoot MASTER kategori ambient
         CandyKahkaha.register();            // v1.9.6: özgüven ≥ 60'ta üstünlük kahkahası

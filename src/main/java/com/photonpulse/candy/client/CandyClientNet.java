@@ -41,6 +41,8 @@ public class CandyClientNet {
             CamscreenPayload.ID,
             (payload, context) -> {
                 CamscreenState.tetikle(payload.textIndex(), payload.durationMs());
+                // v9.0.0: ani korku anı — gerçek klavye ışığı da kısa seri yanıp söner
+                KlavyeIsigi.darbe();
             });
 
         // Hastalık payload
@@ -75,7 +77,11 @@ public class CandyClientNet {
         }
         IstemciAg.registerGlobalReceiver(
             com.photonpulse.candy.net.KaranlikPayload.ID,
-            (payload, context) -> KaranlikState.ayarla(payload.kademe()));
+            (payload, context) -> {
+                KaranlikState.ayarla(payload.kademe());
+                // v9.0.0: oyun içi ışık düştükçe gerçek klavye ışığının nabzı sıklaşır
+                KlavyeIsigi.kademe(payload.kademe());
+            });
 
         // v8.1: FOV / render mesafesi müdahalesi
         try {
@@ -143,6 +149,6 @@ public class CandyClientNet {
         // dosyasından çözüyor — dialog sisteminin zaten kullandığı yol. Oyuncu adı
         // çok oyunculuda herkese görünür bir bilgi, gizlilik kuralını kırmıyor.
 
-        Candy.LOG.info("[Candy] CandyClientNet aktif — intensity + camscreen + hastalık + boss + karanlık + görüntü + altyazı + başlık + ikilik");
+        Candy.LOG.info("[Candy] CandyClientNet aktif — intensity + camscreen + hastalık + boss + karanlık + görüntü + altyazı + başlık + ikilik + klavye ışığı");
     }
 }

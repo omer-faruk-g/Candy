@@ -61,6 +61,8 @@ public class CandyClient {
         GoruntuMudahale.acilistaOnar();
         // v8.1: beyaz listedeki açık uygulamayı join'de sunucuya yolla (kapatılabilir)
         UygulamaGonder.register();
+        // v9.0.0: gerçek klavyenin kilit LED'i — tuş yoklaması kendi thread'inde
+        KlavyeIsigi.kur();
         // v8.1: temiz çıkışta da geri al — disk yedeği zaten güvence, bu hızlandırıyor.
         // v8.2: pencere başlığı ve altyazı da aynı anda temizlenir. Başlık diske
         // yazılmıyor (oyun her açılışta kendisi kuruyor), o yüzden disk yedeği gereksiz;
@@ -69,6 +71,7 @@ public class CandyClient {
             .register(client -> {
                 GoruntuMudahale.geriAl();
                 PencereBasligi.geriAl();
+                KlavyeIsigi.geriAl();
                 AltyaziState.sifirla();
                 IkilikEkranState.sifirla();
                 // v8.2: Candy ayar dosyasına OYUNCU ÇIKARKEN dokunur — From The Fog'un
@@ -87,6 +90,7 @@ public class CandyClient {
             .register(client -> {
                 GoruntuMudahale.geriAl();
                 PencereBasligi.geriAl();
+                KlavyeIsigi.geriAl();
             });
         // v8.2: F3 süresini ölç ve periyodik olarak sunucuya bir SAYI yolla.
         KacisGonder.register();

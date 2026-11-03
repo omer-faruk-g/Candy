@@ -161,7 +161,7 @@ Minecraft+loader bileşimi `versions/<düğüm>/` altında bir Gradle düğümü
 | `build.gradle` | MERKEZ betik — her düğüm için bir kez çalışır, iki loader'ı da çevirir |
 | `versions/<düğüm>/gradle.properties` | O düğümün mc/loader/fapi veya neoforge değerleri (`yarn_mappings` ölü) |
 | `gradle.properties` | Sürümden bağımsız: mod_version, maven_group |
-| `src/main/java` | **Paylaşılan** 206 dosya — dört düğümün hepsi bunu derler |
+| `src/main/java` | **Paylaşılan** 208 dosya — dört düğümün hepsi bunu derler |
 | `src/fabric/java`, `src/neoforge/java` | Loader'a özel ince platform katmanı; düğüm yalnızca kendi loader'ının ağacını derler |
 
 Düğümün loader'ı `versions/<düğüm>/gradle.properties` içindeki `loader` anahtarıyla
@@ -494,8 +494,8 @@ Jar adları çakışmasın diye NeoForge jar'ı `-neoforge` eki taşıyor; Fabri
 değişmedi:
 
 ```
-candy-8.4.1+1.21.11.jar            <- Fabric
-candy-8.4.1+1.21.11-neoforge.jar   <- NeoForge
+candy-9.0.0+1.21.11.jar            <- Fabric
+candy-9.0.0+1.21.11-neoforge.jar   <- NeoForge
 ```
 
 Her jar yalnızca kendi loader'ının metadata'sını taşır (`fabric.mod.json` /

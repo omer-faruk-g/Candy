@@ -17,7 +17,7 @@
 |---|---|---|
 | **ModDevGradle / NeoGradle** | Mapping duvarı: 143 dosyada 156 Yarn sınıf adı | **Engel kaldırıldı** — kaynak Mojang adlarında, araç zinciri kurulu. Kalan: platform katmanı 3/4 bitti (268 → 87 hata) |
 | **Architectury Loom** | Upstream remap çakışması: `InGameHud.renderHotbar` | **Artık ilgisiz** — Yarn'ı korumaya ihtiyaç yok |
-| **Stonecutter dalları** | Dal başına ayrı `src/` ağacı → 206 dosya loader başına kopya | Elendi, portun amacını bozuyor |
+| **Stonecutter dalları** | Dal başına ayrı `src/` ağacı → 208 dosya loader başına kopya | Elendi, portun amacını bozuyor |
 
 Mapping göçünün ikinci kazancı: **26.x engeli de kalktı.** Yarn eşlemeleri 1.21.11'de
 duruyor, 26.x Mojang resmî adları istiyor. Kaynak artık onları taşıdığı için 26.x
@@ -68,7 +68,7 @@ pasif düğüm  → srcDirs = [node/src/main/java, node/build/generated/...]  # 
 Dallar arasında paylaşılan tek bir kök `src/` **yok**, ve onu başka yere yönlendiren
 bir API de yok: `StonecutterBuildExtension`'da kaynak kökü ayarı bulunmuyor,
 `mapBuilds` yalnızca build script adını eşliyor. Yani dal mekanizması tam olarak bu
-belgenin kaçınmak için kurulduğu **gövde ikileşmesini** üretiyor — 206 dosya loader
+belgenin kaçınmak için kurulduğu **gövde ikileşmesini** üretiyor — 208 dosya loader
 başına kopya, her değişiklik iki yerde.
 
 Bu yüzden dallar kullanılmadı.
@@ -375,7 +375,7 @@ taşıyor — temizliğe oradan başlanmalı.
 düğümlerinde de aynen çalışıyor.
 
 **Stonecutter dalı (branch) kullanılmadı** — dal başına ayrı `src/` ağacı üretilir,
-yani 206 dosya loader başına kopyalanırdı. Dört düğüm **tek** `src/main/java`
+yani 208 dosya loader başına kopyalanırdı. Dört düğüm **tek** `src/main/java`
 ağacını paylaşıyor.
 
 **Tek merkez `build.gradle`** iki loader'ı da çeviriyor: eklentiler `apply false`
@@ -398,7 +398,7 @@ eklendi, yani kaynakta `//? if fabric {` / `//? if neoforge {` kullanılabilir.
 ### Platform katmanı: loader başına kaynak ağacı
 
 ```
-src/main/java      206 dosya — TEK, paylaşılan
+src/main/java      208 dosya — TEK, paylaşılan
 src/fabric/java    Fabric uygulaması      } ayni paket, ayni sinif adlari,
 src/neoforge/java  NeoForge uygulamasi    } farkli govdeler
 ```
@@ -976,7 +976,7 @@ Fabric: **iki MC düğümünde de yeşil** (`:1.21.7:compileJava` ve
 
 ## Bu göçte ne değişti, ne değişmedi
 
-**Değişti:** `src/main/java` içindeki 206 dosyanın tamamı Mojang adlarına geçti
+**Değişti:** `src/main/java` içindeki 208 dosyanın tamamı Mojang adlarına geçti
 (147 dosya diff'te), `build.gradle` mappings bloğu ve `replacements` listesi,
 `versions/*/gradle.properties` içindeki `yarn_mappings` ölü config olarak işaretlendi,
 `BUILD.md` ve bu dosya.
@@ -988,8 +988,8 @@ import'ları **değişmedi** (göç yalnızca `net.minecraft` adlarını kapsıy
 öyle de yazıyor).
 
 **Fabric yeşil:** `./gradlew build` iki düğümde de jar üretiyor —
-`versions/1.21.7/build/libs/candy-8.4.1+1.21.7.jar`,
-`versions/1.21.11/build/libs/candy-8.4.1+1.21.11.jar`.
+`versions/1.21.7/build/libs/candy-9.0.0+1.21.7.jar`,
+`versions/1.21.11/build/libs/candy-9.0.0+1.21.11.jar`.
 
 ## Ölçümler (referans olarak korundu)
 
@@ -1076,7 +1076,7 @@ yetmiyordu; bu test derlemede görünmeyen bir mimari farkı buldu.
 Mod tanınıyor ve mixin'ler **NeoForge'da gerçekten uyguluyor**:
 
 ```
-Candy 8.4.1+1.21.11 (candy)                    <- mod listesinde
+Candy 9.0.0+1.21.11 (candy)                    <- mod listesinde
 Selecting config candy.mixins.json
 Preparing candy.mixins.json (11)
 Mixing LivingEntityMixin      -> net.minecraft.world.entity.LivingEntity
