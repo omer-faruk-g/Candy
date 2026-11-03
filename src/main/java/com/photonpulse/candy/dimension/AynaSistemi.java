@@ -183,7 +183,12 @@ public class AynaSistemi {
         bolgeKopyala(ow, ayna, merkez);
         // 26.x'te zaman WorldClock'a tasindi: Level.setDayTime YOK ve saat seviye
         // basina degil SAAT basina (WorldClocks.OVERWORLD gibi) tutuluyor, yani
-        // Ayna'ya tek tek zaman yazilamiyor. O surumde acik senkron atlaniyor.
+        // Ayna'ya tek tek zaman YAZILAMIYOR. Karsiligi veri tarafinda: Ayna'nin
+        // dimension_type'i default_clock: minecraft:overworld tasiyor, yani gokyuzu
+        // Overworld saatini kendiliginden ve SUREKLI izliyor -- bu iki anlik acik
+        // senkrondan daha iyisi. Anahtar olmasa getDefaultClockTime() 0 donerdi
+        // (olculdu: getClockTimeTicks = opt.map(..).orElse(0L)) ve gokyuzu safakta
+        // donar kalirdi. Davranis kaybi YOK, yalnizca yeri degisti.
         //? if <26 {
         ayna.setDayTime(ow.getDayTime());  // gökyüzü senkron
         //?}
@@ -199,6 +204,7 @@ public class AynaSistemi {
         ServerLevel ayna = server.getLevel(CandyDimensions.AYNA);
         if (ayna == null) return;
         BlockPos hedef = BlockPos.of(tp.aynaDonusPoz);
+        // 26.x: default_clock ile kendiliginden izliyor, bkz. yukaridaki not.
         //? if <26 {
         ayna.setDayTime(server.overworld().getDayTime()); // son senkron
         //?}
