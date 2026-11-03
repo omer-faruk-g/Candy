@@ -4,12 +4,11 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sign.SignSystem;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.Yukleyici;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -32,10 +31,14 @@ public class ModFarkindaligi {
     private static final Random RNG = new Random();
     private static final int SORU_SAYISI = 6;
 
-    // Candy'nin "görmezden geleceği" altyapı modları
+    // Candy'nin "görmezden geleceği" altyapı modları. Loader'ın KENDİ sentetik
+    // girdilerini (Fabric'te "builtin" tipi, NeoForge'da kendi kimlikleri)
+    // Yukleyici.modlar() zaten atıyor — "neyin builtin olduğu" loader gerçeği.
     private static final Set<String> GIZLE = Set.of(
         "minecraft", "java", "fabricloader", "fabric-api", "fabric",
-        "candy", "mixinextras", "fabric-language-kotlin"
+        "candy", "mixinextras", "fabric-language-kotlin",
+        // NeoForge tarafının altyapı karşılıkları
+        "neoforge", "connector", "kffmod", "kotlinforforge"
     );
 
     // Kurulu kullanıcı modlarının görünen adları
@@ -43,32 +46,27 @@ public class ModFarkindaligi {
 
     public static void register() {
         modlariTopla();
-        ServerTickEvents.END_SERVER_TICK.register(ModFarkindaligi::onTick);
+        SunucuTick.END_SERVER_TICK.register(ModFarkindaligi::onTick);
         Candy.LOG.info("[Candy] ModFarkindaligi aktif — {} kullanıcı modu görüldü ({})",
             MOD_ADLARI.size(), DEBUG ? "DEBUG 20sn" : "3.3 dk kontrol, 5 dk cooldown, %20");
     }
 
     private static void modlariTopla() {
         MOD_ADLARI.clear();
-        for (var container : FabricLoader.getInstance().getAllMods()) {
-            var md = container.getMetadata();
-            String id = md.getId();
-            if (id == null) continue;
+        for (var mod : Yukleyici.modlar()) {
+            String id = mod.id();
             if (GIZLE.contains(id)) continue;
             if (id.startsWith("fabric-")) continue;   // Fabric API alt modülleri
-            if ("builtin".equals(md.getType())) continue;
-            String ad = md.getName();
-            if (ad == null || ad.isBlank()) ad = id;
-            MOD_ADLARI.add(ad);
+            MOD_ADLARI.add(mod.ad());
         }
     }
 
     private static void onTick(MinecraftServer server) {
         if (MOD_ADLARI.isEmpty()) return;
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.bossOldurulmeTick > 0) continue; // WIN 30dk sessizlik
@@ -77,7 +75,7 @@ public class ModFarkindaligi {
 
             String mod = MOD_ADLARI.get(RNG.nextInt(MOD_ADLARI.size()));
             String key = "candy.mod.soru." + (1 + RNG.nextInt(SORU_SAYISI));
-            Text soru = Text.translatable(key, mod);
+            Component soru = Component.translatable(key, mod);
 
             if (SignSystem.candyTabelaYerlestir(player, soru)) {
                 tp.sonModSorusuTick = simdi;

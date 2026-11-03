@@ -1,45 +1,97 @@
 // Stonecutter MERKEZ BETİĞİ — her düğüm (versions/<sürüm>) için bir kez çalışır.
 // Sürüme bağlı değerler versions/<sürüm>/gradle.properties'ten gelir.
+// LOADER SECIMI: tek merkez betik iki loader'i da cevirir. Eklenti kosullu uygulanir
+// cunku plugins{} blogu kosul kabul etmez — "apply false" ile classpath'e alinir,
+// sonra dugumun loader'ina gore apply edilir.
+// Neden tek betik: stonecutter replacements listesi TEK yerde kalmak zorunda. Iki kopya
+// olsaydi aralarindaki herhangi bir fark, aktif dugum degistiginde paylasilan src/
+// agacini yarim cevrilmis halde birakirdi (bkz. asagidaki UYARI).
 plugins {
-    id 'fabric-loom'
     id 'java'
+    id 'fabric-loom' apply false
+    id 'net.neoforged.moddev' apply false
 }
 
 def mc = stonecutter.current.version
+def loader = (findProperty('loader') ?: 'fabric').toString()
 
 version = "${property('mod_version')}+${mc}"
 group = property('maven_group')
 base { archivesName = property('archives_base_name') }
 
+// LOADER'A OZEL KAYNAK AGACI. Paylasilan src/main/java (206 dosya) TEK; bunun yaninda
+// her loader kendi platform katmanini kendi agacinda tutuyor. Ayni paket + ayni sinif
+// adlari, farkli govdeler — cagri yerleri iki tarafta da ayni kodu yaziyor.
+// Stonecutter DALI DEGIL: 206 dosya kopyalanmiyor, yalnizca ince katman ikiye ayriliyor.
+// Bu agaclarda //? direktifi ve replacement YOK; iki MC surumunde de ayni derlenen
+// sembolleri kullanmak zorundalar.
+sourceSets.main.java.srcDir rootProject.file("src/${loader}/java")
+
 repositories {
     mavenCentral()
     maven { url = 'https://maven.fabricmc.net/' }
+    maven { url = 'https://maven.neoforged.net/releases' }
 }
 
-dependencies {
-    minecraft "com.mojang:minecraft:${property('minecraft_version')}"
-    // Yarn 1.21.11'de duruyor; 26.x eklendiğinde Mojang mapping'e düşer.
-    if (stonecutter.current.parsed >= '26') {
+if (loader == 'fabric') {
+    apply plugin: 'fabric-loom'
+
+    dependencies {
+        minecraft "com.mojang:minecraft:${property('minecraft_version')}"
+        // Mojang resmî adları — TÜM düğümlerde. Yarn eşlemeleri 1.21.11'de durduğu için
+        // Yarn'da kalmak 26.x hattını kalıcı olarak kapatıyordu; kaynak Mojang adlarına
+        // göçtü (bkz. MULTILOADER.md "Mapping göçü"). Yarn artık hiçbir düğümde kullanılmıyor,
+        // ama versions/<sürüm>/gradle.properties içindeki yarn_mappings anahtarı
+        // doğrulama/karşılaştırma için korundu.
         mappings loom.officialMojangMappings()
-    } else {
-        mappings "net.fabricmc:yarn:${property('yarn_mappings')}:v2"
+        modImplementation "net.fabricmc:fabric-loader:${property('loader_version')}"
+        modImplementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
+        // Gson zaten Minecraft ile geliyor, ayrıca eklemiyoruz
     }
-    modImplementation "net.fabricmc:fabric-loader:${property('loader_version')}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
-    // Gson zaten Minecraft ile geliyor, ayrıca eklemiyoruz
-}
 
-// Test profili: ./gradlew runTest
-// runClient GERCEK davranisi korur (45 sn cooldown, komut kilidi acik, dev komutu yok).
-// runTest ise kapiyi acar: /candy komutu + kisa cooldown + vanilla cheat komutlari.
-// Yalnizca dev run'i etkiler; jar'a hicbir sey sizmaz.
-loom {
-    runs {
-        test {
-            client()
-            name = "Candy Test Client"
-            vmArg "-Dcandy.debug=true"   // /candy komutu + kisa cooldown
-            vmArg "-Dcandy.nolock=true"  // /gamemode /tp /time gibi vanilla komutlar
+    // Test profili: ./gradlew runTest
+    // runClient GERCEK davranisi korur (45 sn cooldown, komut kilidi acik, dev komutu yok).
+    // runTest ise kapiyi acar: /candy komutu + kisa cooldown + vanilla cheat komutlari.
+    // Yalnizca dev run'i etkiler; jar'a hicbir sey sizmaz.
+    loom {
+        runs {
+            test {
+                client()
+                name = "Candy Test Client"
+                vmArg "-Dcandy.debug=true"   // /candy komutu + kisa cooldown
+                vmArg "-Dcandy.nolock=true"  // /gamemode /tp /time gibi vanilla komutlar
+            }
+        }
+    }
+} else {
+    // NeoForge: ModDevGradle. Minecraft'i Mojang resmi adlariyla veriyor — kaynak
+    // zaten o adlari tasiyor, remap yok. (Gocten once bu yol kapali idi.)
+    apply plugin: 'net.neoforged.moddev'
+
+    // Port suresince TAM hata listesi lazim; javac varsayilan 100'de kesiyor ve
+    // kesilmis sayi "ilerleme yok" gibi gorunuyor. Port bitince kaldirilabilir.
+    tasks.withType(JavaCompile).configureEach {
+        it.options.compilerArgs << '-Xmaxerrs' << '2000'
+    }
+
+    neoForge {
+        version = property('neoforge_version')
+        // Mixin yapilandirmasi neoforge.mods.toml icindeki [[mixins]] ile bildiriliyor;
+        // candy.mixins.json oldugu gibi yeniden kullaniliyor.
+        validateAccessTransformers = true
+        runs {
+            client { client() }
+            // Test profili Fabric tarafiyla ayni bayraklari tasir.
+            testClient {
+                client()
+                systemProperty 'candy.debug', 'true'
+                systemProperty 'candy.nolock', 'true'
+            }
+        }
+        mods {
+            candy {
+                sourceSet sourceSets.main
+            }
         }
     }
 }
@@ -47,11 +99,26 @@ loom {
 // Kapanis icinde property() task'a delege olur, projeye degil — disarida yakala.
 def modSurum = version
 def mcDep = property('minecraft_dep')
+// minecraft_dep Fabric'in semver araligi (~1.21.7). NeoForge Maven araligi
+// bekliyor ve "~" ifadesini AYRISTIRAMAZ -- ayni degeri ikisine de vermek
+// yukleme aninda patlardi, derleme hatasi vermeden. O yuzden ikinci bir
+// deger uretiliyor: ~1.21.7 == ">=1.21.7 <1.22" == [1.21.7,1.22).
+def mcDepNeo = "[${property('minecraft_version')},1.22)"
 processResources {
     inputs.property "version", modSurum
     inputs.property "minecraft_dep", mcDep
-    filesMatching("fabric.mod.json") {
-        expand "version": modSurum, "minecraft_dep": mcDep
+    inputs.property "minecraft_dep_neo", mcDepNeo
+    filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
+        expand "version": modSurum, "minecraft_dep": mcDep, "minecraft_dep_neo": mcDepNeo
+    }
+    // Her jar YALNIZCA kendi loader'inin metadata'sini tasir. Ikisi birden kalirsa
+    // NeoForge jar'i kendini Fabric moduymus gibi de ilan eder (ve tersi); coklu
+    // loader destekleyen launcher'lar bunu yanlis tarafa yukleyebilir ve hata
+    // derlemede degil kullanicinin oyununda cikar.
+    if (loader == 'fabric') {
+        exclude "META-INF/neoforge.mods.toml"
+    } else {
+        exclude "fabric.mod.json"
     }
 }
 
@@ -69,10 +136,21 @@ jar {
     from("LICENSE") { rename { "${it}_${base.archivesName.get()}" } }
 }
 
+// Fabric ve NeoForge jar'lari ayni adi tasiyamaz. Ayni surum+MC icin ikisi de
+// "candy-8.4.1+1.21.11.jar" uretiyordu: indiren hangisi oldugunu anlayamaz ve
+// tumunuTopla biri digerinin uzerine yazar. NeoForge jar'ina "-neoforge" eki
+// konuyor; Fabric adi degismiyor (README'de belgelenen ad o).
+if (loader != 'fabric') {
+    tasks.named('jar') { archiveClassifier = loader }
+    tasks.named('sourcesJar') { archiveClassifier = "${loader}-sources" }
+}
+
 // Her düğümün jar'ı kök build/libs altında toplanır — dağıtımı tek yerden yapmak için.
+// Fabric'te dagitilan jar remapJar'in cikti; NeoForge'da remap yok, jar dogrudan.
+def dagitimJar = loader == 'fabric' ? tasks.named('remapJar') : tasks.named('jar')
 tasks.register('tumunuTopla', Copy) {
-    dependsOn tasks.named('remapJar')
-    from tasks.named('remapJar')
+    dependsOn dagitimJar
+    from dagitimJar
     into rootProject.layout.buildDirectory.dir('libs')
 }
 
@@ -99,23 +177,46 @@ tasks.register('yazCp') {
 // Dolayisiyla belirsiz adlar aliciya capalanir ("player.getPos()"), ciplak birakilmaz.
 // Yeni bir entity degiskeni eklenirse buraya kurali da eklemek gerekir; eksikse
 // 1.21.11 derlemesi o satirda yuksek sesle patlar, sessiz kalmaz.
+// Kurallar Mojang adlarina gore yeniden yazildi. Yarn'daki iki kural BURADA YOK ve
+// olmamasi dogru: Entity.getWorld/getPos ikilisi Yarn'da 1.21.9'da yeniden adlandirilmisti,
+// Mojang ise iki surumde de level()/position() diyor — yani o iki kural Yarn'in kendi
+// yeniden adlandirmasiydi, Minecraft'in degil. Mojang tarafi onlari ucuruyor.
+//
+// Karsiliginda Mojang'in Yarn'in sakladigi yeniden adlandirmalari var: ResourceLocation
+// -> Identifier (70 kullanim) ve PlayerRenderState -> AvatarRenderState. Yarn iki surumde
+// de Identifier/PlayerEntityRenderState dedigi icin bunlar eski kural listesinde yoktu.
+//
+// Liste tahminle degil, OLCUMLE cikarildi: iki dugumun Mercury ile gocurulmus agaclari
+// (migrateMappings, 1.21.7 ve 1.21.11) birebir karsilastirildi; asagidakiler iki agac
+// arasinda farklilasan butun sembollerdir.
 stonecutter {
+    // Loader sabitleri: kaynakta `//? if fabric {` / `//? if neoforge {` kullanilabilir.
+    // Dal (branch) DEGIL — paylasilan src/ agaci tek, yalnizca satirlar aciliyor/kapaniyor.
+    constants.match(loader, 'fabric', 'neoforge')
+
     replacements.string(current.parsed >= '1.21.9') {
-        replace '.getWorld()', '.getEntityWorld()'
-        replace 'net.minecraft.client.util.SkinTextures', 'net.minecraft.entity.player.SkinTextures'
-        // NOT: '.getSkinTextures()' icin kural YOK. Ad yalnizca
-        // AbstractClientPlayerEntity'de getSkin'e dondu; PlayerListEntry ve
-        // DefaultSkinHelper iki surumde de getSkinTextures tasiyor. Tek ayrilan cagri
-        // (MeYuz) //? if directive'i ile cozuldu — bkz. client/MeYuz.java.
+        // Sinif yeniden adlandirmalari. Candy'de ayni adi tasiyan kendi sinifi yok,
+        // mixin method= dizgilerinde de gecmiyorlar (dogrulandi), o yuzden ciplak.
+        replace 'ResourceLocation', 'Identifier'
+        replace 'PlayerRenderState', 'AvatarRenderState'
+        // ResourceKey.location() -> identifier(). 'location' cok yaygin bir ad, bu yuzden
+        // ciplak DEGIL; uc gercek alicinin hepsi capalandi.
+        replace '.dimension().location()', '.dimension().identifier()'
+        replace 'key.location()', 'key.identifier()'
+        replace 'worldKey.location()', 'worldKey.identifier()'
         // authlib 7: GameProfile record oldu. getGameProfile() ile capalandi ki ayni adi
         // tasiyan baska siniflar (Entity.getName gibi) etkilenmesin.
         replace '.getGameProfile().getName()', '.getGameProfile().name()'
         replace '.getGameProfile().getProperties()', '.getGameProfile().properties()'
-        // Entity.getPos -> getEntityPos. Chunk.getPos iki surumde de ayni kaldigi icin
-        // ciplak '.getPos()' DEGIL, entity alicilarina capalanmis desenler:
-        replace 'player.getPos()', 'player.getEntityPos()'
-        replace 'oyuncu.getPos()', 'oyuncu.getEntityPos()'
-        replace 'mob.getPos()', 'mob.getEntityPos()'
-        replace 'this.getPos()', 'this.getEntityPos()'
+        // Mixin hedef dizgileri (@Inject method = "..."). Ikisi de src/ icinde tek kullanim.
+        replace 'getGameInformation', 'getLeftText'
+        replace 'setupFog', 'applyFog'
+        // Paket tasimalari. Hepsi tam nitelikli, her biri src/ icinde tek kullanim.
+        replace 'net.minecraft.client.model.PlayerModel', 'net.minecraft.client.model.player.PlayerModel'
+        replace 'net.minecraft.client.resources.PlayerSkin', 'net.minecraft.world.entity.player.PlayerSkin'
+        replace 'net.minecraft.world.entity.animal.Cat', 'net.minecraft.world.entity.animal.feline.Cat'
+        replace 'net.minecraft.world.entity.animal.horse.AbstractHorse', 'net.minecraft.world.entity.animal.equine.AbstractHorse'
+        replace 'net.minecraft.world.entity.monster.Spider', 'net.minecraft.world.entity.monster.spider.Spider'
+        replace 'net.minecraft.world.entity.npc.Villager', 'net.minecraft.world.entity.npc.villager.Villager'
     }
 }

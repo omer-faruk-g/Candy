@@ -2,14 +2,13 @@ package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.TruePersonality;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import java.util.Collections;
 
 /**
@@ -25,17 +24,17 @@ public final class DunyaGecisi {
     private DunyaGecisi() {}
 
     /** Oyuncuyu seçilen kurul dünyasına al. */
-    public static void gir(MinecraftServer server, ServerPlayerEntity player,
+    public static void gir(MinecraftServer server, ServerPlayer player,
                            TruePersonality tp, KurulDunya dunya) {
-        ServerWorld hedef = server.getWorld(dunya.anahtar);
+        ServerLevel hedef = server.getLevel(dunya.anahtar);
         if (hedef == null) {
             Candy.LOG.warn("[Candy] kurul dünyası yüklenmemiş: {}", dunya.id);
             return;
         }
         // Dönüş koordinatı: şu anki overworld konumu
-        ServerWorld ow = server.getOverworld();
-        BlockPos donus = player.getWorld() == ow
-            ? player.getBlockPos()
+        ServerLevel ow = server.overworld();
+        BlockPos donus = player.level() == ow
+            ? player.blockPosition()
             : new BlockPos((int) player.getX(), 80, (int) player.getZ());
         tp.kurulDonusPoz = donus.asLong();
 
@@ -47,32 +46,32 @@ public final class DunyaGecisi {
         BlockState zemin = platformBlok(dunya);
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
-                hedef.setBlockState(new BlockPos(x + dx, y - 1, z + dz), zemin, 0x2);
+                hedef.setBlock(new BlockPos(x + dx, y - 1, z + dz), zemin, 0x2);
                 // Üstünü aç (barrier dünyada bile durabileceği bir cep)
-                hedef.setBlockState(new BlockPos(x + dx, y, z + dz), Blocks.AIR.getDefaultState(), 0x2);
-                hedef.setBlockState(new BlockPos(x + dx, y + 1, z + dz), Blocks.AIR.getDefaultState(), 0x2);
+                hedef.setBlock(new BlockPos(x + dx, y, z + dz), Blocks.AIR.defaultBlockState(), 0x2);
+                hedef.setBlock(new BlockPos(x + dx, y + 1, z + dz), Blocks.AIR.defaultBlockState(), 0x2);
             }
         }
 
-        player.teleport(hedef, x + 0.5, y, z + 0.5, Collections.emptySet(),
-            player.getYaw(), player.getPitch(), false);
+        player.teleportTo(hedef, x + 0.5, y, z + 0.5, Collections.emptySet(),
+            player.getYRot(), player.getXRot(), false);
         player.setHealth(player.getMaxHealth());
 
         tp.kurulDunyaId = dunya.name();
         tp.kurulSonDunya = dunya.name();
-        tp.kurulDunyaGirisTick = ow.getTime();
+        tp.kurulDunyaGirisTick = ow.getGameTime();
         Candy.LOG.info("[Candy] KURUL DÜNYA[{}] → {} @({}, {}, {})",
             player.getName().getString(), dunya.id, x, y, z);
     }
 
     /** Oyuncuyu overworld'e geri döndür. */
-    public static void don(MinecraftServer server, ServerPlayerEntity player, TruePersonality tp) {
-        ServerWorld ow = server.getOverworld();
-        BlockPos d = BlockPos.fromLong(tp.kurulDonusPoz);
+    public static void don(MinecraftServer server, ServerPlayer player, TruePersonality tp) {
+        ServerLevel ow = server.overworld();
+        BlockPos d = BlockPos.of(tp.kurulDonusPoz);
         int x = d.getX(), z = d.getZ();
-        int y = ow.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
-        player.teleport(ow, x + 0.5, y, z + 0.5, Collections.emptySet(),
-            player.getYaw(), player.getPitch(), false);
+        int y = ow.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+        player.teleportTo(ow, x + 0.5, y, z + 0.5, Collections.emptySet(),
+            player.getYRot(), player.getXRot(), false);
         player.setHealth(player.getMaxHealth());
         tp.kurulDunyaId = null;
         tp.kurulDunyaGirisTick = 0L;
@@ -93,11 +92,11 @@ public final class DunyaGecisi {
 
     private static BlockState platformBlok(KurulDunya d) {
         return switch (d.sekil) {
-            case KOR -> Blocks.BARRIER.getDefaultState();
-            case KORIDOR -> Blocks.SMOOTH_STONE.getDefaultState();
-            case ME -> Blocks.GRASS_BLOCK.getDefaultState();
-            case SKYGRID -> Blocks.STONE.getDefaultState();
-            default -> Blocks.COBBLESTONE.getDefaultState();
+            case KOR -> Blocks.BARRIER.defaultBlockState();
+            case KORIDOR -> Blocks.SMOOTH_STONE.defaultBlockState();
+            case ME -> Blocks.GRASS_BLOCK.defaultBlockState();
+            case SKYGRID -> Blocks.STONE.defaultBlockState();
+            default -> Blocks.COBBLESTONE.defaultBlockState();
         };
     }
 }

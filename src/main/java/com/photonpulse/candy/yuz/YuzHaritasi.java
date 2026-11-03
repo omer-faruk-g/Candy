@@ -5,19 +5,18 @@ import com.google.gson.JsonParser;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.MapColor;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.MapIdComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.map.MapState;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.saveddata.maps.MapId;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -60,16 +59,16 @@ public class YuzHaritasi {
 
     public static void register() {
         paletHazirla();
-        ServerTickEvents.END_SERVER_TICK.register(YuzHaritasi::onTick);
+        SunucuTick.END_SERVER_TICK.register(YuzHaritasi::onTick);
         Candy.LOG.info("[Candy] YuzHaritasi aktif — {} (v3.0)",
             DEBUG ? "DEBUG (20sn)" : "3.5 dk kontrol, 5 dk cooldown, %15");
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.bossOldurulmeTick > 0) continue; // WIN 30dk sessizlik
@@ -82,8 +81,8 @@ public class YuzHaritasi {
     }
 
     /** Oyuncunun yüzünden harita üret ve envanterine bırak (async skin çekimi). */
-    public static void olustur(ServerPlayerEntity player) {
-        MinecraftServer server = player.getWorld().getServer();
+    public static void olustur(ServerPlayer player) {
+        MinecraftServer server = player.level().getServer();
         if (server == null) return;
         String skinUrl = skinUrlBul(player);
 
@@ -111,7 +110,7 @@ public class YuzHaritasi {
     }
 
     /** GameProfile textures property'sinden skin URL'sini çöz (yoksa null). */
-    private static String skinUrlBul(ServerPlayerEntity player) {
+    private static String skinUrlBul(ServerPlayer player) {
         try {
             var props = player.getGameProfile().getProperties().get("textures");
             for (var prop : props) {
@@ -159,11 +158,11 @@ public class YuzHaritasi {
     }
 
     /** 8x8 yüzü 128x128 kilitli haritaya çiz + "I SEE YOU" ekle, envantere ver. */
-    private static void haritaVer(ServerPlayerEntity player, int[][] yuz) {
-        ServerWorld world = (ServerWorld) player.getWorld();
-        MapIdComponent id = world.increaseAndGetMapId();
-        MapState state = MapState.of((byte) 0, true, world.getRegistryKey());
-        world.putMapState(id, state);
+    private static void haritaVer(ServerPlayer player, int[][] yuz) {
+        ServerLevel world = (ServerLevel) player.level();
+        MapId id = world.getFreeMapId();
+        MapItemSavedData state = MapItemSavedData.createForClient((byte) 0, true, world.dimension());
+        world.setMapData(id, state);
 
         byte[] c = state.colors; // 128*128
 
@@ -184,14 +183,14 @@ public class YuzHaritasi {
         byte kirmizi = rgbToByte(0xE01010);
         yaziyiCiz(c, "I SEE YOU", 108, 2, kirmizi);
 
-        state.markDirty();
+        state.setDirty();
 
         ItemStack harita = new ItemStack(Items.FILLED_MAP);
-        harita.set(DataComponentTypes.MAP_ID, id);
-        harita.set(DataComponentTypes.CUSTOM_NAME,
-            Text.literal("???").formatted(Formatting.DARK_RED, Formatting.ITALIC));
+        harita.set(DataComponents.MAP_ID, id);
+        harita.set(DataComponents.CUSTOM_NAME,
+            Component.literal("???").withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC));
 
-        player.giveItemStack(harita);
+        player.addItem(harita);
         Candy.LOG.info("[Candy] YuzHaritasi: {} envanterine yüz haritası bırakıldı",
             player.getName().getString());
     }
@@ -240,10 +239,10 @@ public class YuzHaritasi {
         java.util.List<int[]> liste = new java.util.ArrayList<>();
         for (int idx = 1; idx < 64; idx++) {
             MapColor mc;
-            try { mc = MapColor.get(idx); } catch (Throwable e) { continue; }
-            if (mc == null || mc == MapColor.CLEAR) continue;
-            int rgb = mc.color; // 0xRRGGBB taban
-            byte b = mc.getRenderColorByte(MapColor.Brightness.NORMAL);
+            try { mc = MapColor.byId(idx); } catch (Throwable e) { continue; }
+            if (mc == null || mc == MapColor.NONE) continue;
+            int rgb = mc.col; // 0xRRGGBB taban
+            byte b = mc.getPackedId(MapColor.Brightness.NORMAL);
             liste.add(new int[]{(rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, b});
         }
         PALET = liste.toArray(new int[0][]);

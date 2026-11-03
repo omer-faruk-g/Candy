@@ -3,31 +3,30 @@ package com.photonpulse.candy.arkadas;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.DoorBlock;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.ActiveTargetGoal;
-import net.minecraft.entity.ai.goal.LookAtEntityGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 /**
  * ArkadasEntity (v8.3) — Candy'nin dünyadaki eli. Oyuncu gibi görünür, oyuncu gibi
@@ -53,11 +52,11 @@ import net.minecraft.world.World;
  * yarısı yapılmış hâli "bot takılmış" gibi görünür, korkutucu değil.
  *
  * <h3>ÖLÜM</h3>
- * {@link #onDeath} öfkeyi kalıcı hâle getirir ({@code arkadasYasi}) ve
+ * {@link #die} öfkeyi kalıcı hâle getirir ({@code arkadasYasi}) ve
  * {@link ArkadasKaydi} üzerinden dünyaya "bir daha gelmeyecek" diye yazar. Oyuncu
  * Candy'yi bir kez gerçekten yaralayabiliyor — ve Candy bunu unutmuyor.
  */
-public class ArkadasEntity extends HostileEntity {
+public class ArkadasEntity extends Monster {
 
     /** Kazma ilerlemesi tutulan blok; yok ise null. */
     private BlockPos kaziBlok = null;
@@ -87,33 +86,33 @@ public class ArkadasEntity extends HostileEntity {
         SALDIR
     }
 
-    public ArkadasEntity(EntityType<? extends ArkadasEntity> type, World world) {
+    public ArkadasEntity(EntityType<? extends ArkadasEntity> type, Level world) {
         super(type, world);
-        this.setPersistent();
+        this.setPersistenceRequired();
         this.setCustomNameVisible(true);
-        this.setCustomName(Text.literal("Arkadaş"));
-        this.experiencePoints = 0;
+        this.setCustomName(Component.literal("Arkadaş"));
+        this.xpReward = 0;
     }
 
-    public static DefaultAttributeContainer.Builder createArkadasAttributes() {
+    public static AttributeSupplier.Builder createArkadasAttributes() {
         // Oyuncu değerleri: 20 HP, oyuncu hızı. KASITLI olarak şişirilmedi —
         // öldürülebilir olması mekaniğin bütün anlamı (bkz. onDeath).
-        return HostileEntity.createHostileAttributes()
-            .add(EntityAttributes.MAX_HEALTH, 20.0)
-            .add(EntityAttributes.MOVEMENT_SPEED, 0.23)
-            .add(EntityAttributes.ATTACK_DAMAGE, 3.0)
-            .add(EntityAttributes.FOLLOW_RANGE, 64.0)
-            .add(EntityAttributes.ARMOR, 2.0)
-            .add(EntityAttributes.KNOCKBACK_RESISTANCE, 0.3);
+        return Monster.createMonsterAttributes()
+            .add(Attributes.MAX_HEALTH, 20.0)
+            .add(Attributes.MOVEMENT_SPEED, 0.23)
+            .add(Attributes.ATTACK_DAMAGE, 3.0)
+            .add(Attributes.FOLLOW_RANGE, 64.0)
+            .add(Attributes.ARMOR, 2.0)
+            .add(Attributes.KNOCKBACK_RESISTANCE, 0.3);
     }
 
     @Override
-    protected void initGoals() {
+    protected void registerGoals() {
         // Melee goal her zaman kayıtlı ama yalnızca SALDIR görevinde hedef veriliyor;
         // hedefsiz MeleeAttackGoal çalışmaz, ayrı bir anahtar gerekmiyor.
-        this.goalSelector.add(1, new MeleeAttackGoal(this, 1.0, true));
-        this.goalSelector.add(3, new LookAtEntityGoal(this, PlayerEntity.class, 32.0f));
-        this.goalSelector.add(4, new WanderAroundFarGoal(this, 0.6));
+        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0, true));
+        this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 32.0f));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.6));
         // targetSelector KASITLI boş: hedef yalnızca ArkadasYonetici verir.
         // ActiveTargetGoal eklemek Arkadaş'ı sıradan bir hostile mob yapardı —
         // oyuncu onu "yeni bir zombi" diye okur, Candy'nin eli olarak okumaz.
@@ -133,12 +132,12 @@ public class ArkadasEntity extends HostileEntity {
     @Override
     public void tick() {
         super.tick();
-        if (!(this.getWorld() instanceof ServerWorld world)) return;
+        if (!(this.level() instanceof ServerLevel world)) return;
         if (koymaSogumasi > 0) koymaSogumasi--;
         if (kapiSogumasi > 0) kapiSogumasi--;
 
         try {
-            PlayerEntity hedefO = yakinOyuncu(world);
+            Player hedefO = yakinOyuncu(world);
             if (hedefO == null) {
                 kaziBlok = null;
                 return;
@@ -155,9 +154,9 @@ public class ArkadasEntity extends HostileEntity {
                 case IZLE -> {
                     kaziBlok = null;
                     // Durup bakmak: navigasyonu kes, yüzü oyuncuya çevir.
-                    if (this.squaredDistanceTo(hedefO) < 36.0) {
+                    if (this.distanceToSqr(hedefO) < 36.0) {
                         this.getNavigation().stop();
-                        this.lookAtEntity(hedefO, 30.0f, 30.0f);
+                        this.lookAt(hedefO, 30.0f, 30.0f);
                     }
                 }
             }
@@ -168,8 +167,8 @@ public class ArkadasEntity extends HostileEntity {
         }
     }
 
-    private PlayerEntity yakinOyuncu(ServerWorld world) {
-        return world.getClosestPlayer(this, 64.0);
+    private Player yakinOyuncu(ServerLevel world) {
+        return world.getNearestPlayer(this, 64.0);
     }
 
     /**
@@ -183,16 +182,16 @@ public class ArkadasEntity extends HostileEntity {
      * <p>Çok oyuncuda hiç uygulanmıyor: orada Candy'nin aracı yavaşlatma değil
      * {@link ArkadasFisilti}.</p>
      */
-    private void yavaslatmaUygula(ServerWorld world, PlayerEntity oyuncu) {
+    private void yavaslatmaUygula(ServerLevel world, Player oyuncu) {
         if (++yavaslatmaSayaci < 20) return;
         yavaslatmaSayaci = 0;
-        if (world.getServer().getPlayerManager().getCurrentPlayerCount() != 1) return;
-        if (!(oyuncu instanceof ServerPlayerEntity sp)) return;
+        if (world.getServer().getPlayerList().getPlayerCount() != 1) return;
+        if (!(oyuncu instanceof ServerPlayer sp)) return;
         if (sp.isCreative() || sp.isSpectator()) return;
-        if (this.squaredDistanceTo(sp) > 256.0) return;         // 16 blok
+        if (this.distanceToSqr(sp) > 256.0) return;         // 16 blok
 
-        sp.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
-            net.minecraft.entity.effect.StatusEffects.SLOWNESS,
+        sp.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.SLOWNESS,
             60,      // 3 sn — yakınlık sürdükçe yenilenir, bırakınca hemen geçer
             0,       // Slowness I
             true,    // ambient: HUD'da parlak ikon yerine soluk
@@ -204,7 +203,7 @@ public class ArkadasEntity extends HostileEntity {
      * Oyuncuya doğru kazar. Sertliğe göre süre harcıyor ve uygun aleti eline alıyor —
      * sesi ve ritmi bir oyuncunun kazmasından ayırt edilemesin.
      */
-    private void kazmayaDevam(ServerWorld world, PlayerEntity oyuncu) {
+    private void kazmayaDevam(ServerLevel world, Player oyuncu) {
         BlockPos hedefYon = yonBloku(oyuncu);
         if (hedefYon == null) return;
 
@@ -221,28 +220,28 @@ public class ArkadasEntity extends HostileEntity {
         }
         // Kırılmaz blokları hiç denemesin (bedrock, barrier, obsidian elle kazılamaz
         // sayılmadı ama sertliği çok yüksek; -1 kırılmaz demek).
-        float sertlik = st.getHardness(world, kaziBlok);
+        float sertlik = st.getDestroySpeed(world, kaziBlok);
         if (sertlik < 0f) {
             kaziBlok = null;
             return;
         }
 
-        this.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+        this.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         kaziIlerleme += 1.0f / Math.max(1.0f, sertlik * 12.0f);
         if (kaziIlerleme >= 1.0f) {
-            world.breakBlock(kaziBlok, true, this);
+            world.destroyBlock(kaziBlok, true, this);
             kaziBlok = null;
             kaziIlerleme = 0f;
         }
     }
 
     /** Oyuncu yönünde, kendi göz hizasındaki ilk katı blok. */
-    private BlockPos yonBloku(PlayerEntity oyuncu) {
-        net.minecraft.util.math.Vec3d yon = oyuncu.getPos().subtract(this.getPos());
-        if (yon.lengthSquared() < 1.0e-4) return null;
+    private BlockPos yonBloku(Player oyuncu) {
+        net.minecraft.world.phys.Vec3 yon = oyuncu.position().subtract(this.position());
+        if (yon.lengthSqr() < 1.0e-4) return null;
         yon = yon.normalize();
-        BlockPos bas = this.getBlockPos().up();
-        BlockPos ileri = bas.add(
+        BlockPos bas = this.blockPosition().above();
+        BlockPos ileri = bas.offset(
             (int) Math.round(Math.signum(yon.x)), 0, (int) Math.round(Math.signum(yon.z)));
         if (ileri.equals(bas)) return null;
         return ileri;
@@ -251,16 +250,16 @@ public class ArkadasEntity extends HostileEntity {
     /** Blok sertliğine uygun aleti eline alır. Envanteri yok; alet "beliriyor". */
     private void aletSec(BlockState st) {
         ItemStack alet;
-        if (st.isIn(net.minecraft.registry.tag.BlockTags.PICKAXE_MINEABLE)) {
+        if (st.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_PICKAXE)) {
             alet = new ItemStack(Items.IRON_PICKAXE);
-        } else if (st.isIn(net.minecraft.registry.tag.BlockTags.AXE_MINEABLE)) {
+        } else if (st.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_AXE)) {
             alet = new ItemStack(Items.IRON_AXE);
-        } else if (st.isIn(net.minecraft.registry.tag.BlockTags.SHOVEL_MINEABLE)) {
+        } else if (st.is(net.minecraft.tags.BlockTags.MINEABLE_WITH_SHOVEL)) {
             alet = new ItemStack(Items.IRON_SHOVEL);
         } else {
             alet = ItemStack.EMPTY;
         }
-        this.equipStack(EquipmentSlot.MAINHAND, alet);
+        this.setItemSlot(EquipmentSlot.MAINHAND, alet);
     }
 
     /**
@@ -271,39 +270,39 @@ public class ArkadasEntity extends HostileEntity {
      * ("neden burada mavi beton var") mekaniği oyuna değil moda bağlar. Tanıdık blok
      * daha ürkütücü: "bunu ben koymadım".</p>
      */
-    private void yolKes(ServerWorld world, PlayerEntity oyuncu) {
+    private void yolKes(ServerLevel world, Player oyuncu) {
         if (koymaSogumasi > 0) return;
-        if (this.squaredDistanceTo(oyuncu) > 400.0) return;     // 20 blok
+        if (this.distanceToSqr(oyuncu) > 400.0) return;     // 20 blok
 
-        net.minecraft.util.math.Vec3d yon = oyuncu.getRotationVec(1.0f);
-        BlockPos onu = oyuncu.getBlockPos().add(
+        net.minecraft.world.phys.Vec3 yon = oyuncu.getViewVector(1.0f);
+        BlockPos onu = oyuncu.blockPosition().offset(
             (int) Math.round(Math.signum(yon.x) * 2), 0,
             (int) Math.round(Math.signum(yon.z) * 2));
 
         // Ayak ve baş hizası boş olmalı; oyuncunun İÇİNE blok koymak onu sıkıştırır
         // ve boğulma hasarı verir — bu bir hata gibi görünür, korku değil.
-        if (onu.equals(oyuncu.getBlockPos())) return;
+        if (onu.equals(oyuncu.blockPosition())) return;
         BlockState s0 = world.getBlockState(onu);
-        if (!s0.isAir() && !s0.isReplaceable()) return;
-        if (!world.getBlockState(onu.down()).isSolidBlock(world, onu.down())) return;
+        if (!s0.isAir() && !s0.canBeReplaced()) return;
+        if (!world.getBlockState(onu.below()).isRedstoneConductor(world, onu.below())) return;
 
-        Block koy = world.getBlockState(onu.down()).getBlock();
+        Block koy = world.getBlockState(onu.below()).getBlock();
         if (koy == Blocks.AIR) koy = Blocks.STONE;
-        world.setBlockState(onu, koy.getDefaultState());
-        this.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+        world.setBlockAndUpdate(onu, koy.defaultBlockState());
+        this.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         koymaSogumasi = 60;
     }
 
     /** Önündeki kapıyı açar — kapalı kapı Arkadaş'ı durdurmasın. */
-    private void kapiAc(ServerWorld world) {
+    private void kapiAc(ServerLevel world) {
         if (kapiSogumasi > 0) return;
-        BlockPos p = this.getBlockPos();
-        for (net.minecraft.util.math.Direction d
-                : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
-            BlockPos k = p.offset(d);
+        BlockPos p = this.blockPosition();
+        for (net.minecraft.core.Direction d
+                : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos k = p.relative(d);
             BlockState st = world.getBlockState(k);
             if (st.getBlock() instanceof DoorBlock door) {
-                if (!st.get(DoorBlock.OPEN)) {
+                if (!st.getValue(DoorBlock.OPEN)) {
                     door.setOpen(this, world, st, k, true);
                     kapiSogumasi = 40;
                     return;
@@ -329,17 +328,17 @@ public class ArkadasEntity extends HostileEntity {
      * tereddüt bırakıyor — ve Candy'de kalıcı bir öfke.</p>
      */
     @Override
-    public void onDeath(DamageSource source) {
+    public void die(DamageSource source) {
         try {
-            if (this.getWorld() instanceof ServerWorld world) {
+            if (this.level() instanceof ServerLevel world) {
                 ArkadasKaydi.olduruldu(world);
 
-                ServerPlayerEntity katil = null;
-                if (source.getAttacker() instanceof ServerPlayerEntity sp) katil = sp;
+                ServerPlayer katil = null;
+                if (source.getEntity() instanceof ServerPlayer sp) katil = sp;
 
                 // Yas bütün oyunculara yazılıyor: Arkadaş dünyada tekti, kaybı
                 // yalnız öldürene değil Candy'nin o dünyadaki bütün ilişkilerine ait.
-                for (ServerPlayerEntity p : world.getServer().getPlayerManager().getPlayerList()) {
+                for (ServerPlayer p : world.getServer().getPlayerList().getPlayers()) {
                     TruePersonality tp = PersonalityManager.get(p);
                     if (tp == null) continue;
                     tp.arkadasYasi = 1.0;
@@ -349,9 +348,9 @@ public class ArkadasEntity extends HostileEntity {
                         tp.arkadasOldurdu = 1;
                         tp.candyOzguven = Math.max(0.0, tp.candyOzguven - 10.0);
                     }
-                    p.sendMessage(Text.translatable("candy.arkadas.oldu")
-                        .formatted(net.minecraft.util.Formatting.DARK_GRAY,
-                                   net.minecraft.util.Formatting.ITALIC), false);
+                    p.displayClientMessage(Component.translatable("candy.arkadas.oldu")
+                        .withStyle(net.minecraft.ChatFormatting.DARK_GRAY,
+                                   net.minecraft.ChatFormatting.ITALIC), false);
                 }
 
                 Candy.LOG.info("[Candy] Arkadaş öldürüldü ({}) — bir daha gelmeyecek",
@@ -360,31 +359,31 @@ public class ArkadasEntity extends HostileEntity {
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Arkadaş ölüm işlenemedi: {}", t.toString());
         }
-        super.onDeath(source);
+        super.die(source);
     }
 
     /** Arkadaş eşya düşürmez — ölümünden kazanç çıkmasın. */
     @Override
-    protected void dropLoot(ServerWorld world, DamageSource source, boolean causedByPlayer) {
+    protected void dropFromLootTable(ServerLevel world, DamageSource source, boolean causedByPlayer) {
         // Kasıtlı boş.
     }
 
     @Override
-    public boolean canImmediatelyDespawn(double distanceSquared) {
+    public boolean removeWhenFarAway(double distanceSquared) {
         return false;   // Kalıcı. Uzaklaşmak kurtarmıyor.
     }
 
     @Override
-    protected void writeCustomData(WriteView view) {
-        super.writeCustomData(view);
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
         view.putString("candyArkadasGorev", gorev.name());
     }
 
     @Override
-    protected void readCustomData(ReadView view) {
-        super.readCustomData(view);
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
         try {
-            gorev = Gorev.valueOf(view.getString("candyArkadasGorev", Gorev.IZLE.name()));
+            gorev = Gorev.valueOf(view.getStringOr("candyArkadasGorev", Gorev.IZLE.name()));
         } catch (Throwable t) {
             gorev = Gorev.IZLE;
         }

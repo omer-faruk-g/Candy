@@ -42,7 +42,8 @@ Kod sende, build GitHub'da. Sonuç: hazır JAR.
 ### Ön gereksinimler
 
 - **Java 21+** — https://adoptium.net/temurin/releases/ (Temurin 21)
-- **İnternet bağlantısı** (ilk build ~500 MB indirir: Gradle, Yarn, Fabric API, Minecraft assets)
+- **İnternet bağlantısı** (ilk build ~500 MB indirir: Gradle, Mojang mapping'leri, Fabric API,
+  Minecraft assets)
 
 ### Java'yı kontrol et
 
@@ -105,10 +106,10 @@ Java 21 kurulu değil veya PATH'te değil. Temurin'i kur, yeniden dene.
 İnternet bağlantısı sorunu veya Fabric Maven'a erişim yok. VPN varsa kapat, tekrar dene.
 
 ### `Yarn mapping version not found`
-`gradle.properties` içindeki `yarn_mappings` değeri güncel değil.
-- https://fabricmc.net/develop/ → 1.21.7 için son build numarasını al
-- `gradle.properties`'te güncelle
-- Tekrar build et
+**Artık çıkmaz.** Build Yarn kullanmıyor; Mojang'ın resmî mapping'lerine geçti
+(`loom.officialMojangMappings()`). Bu hata görünüyorsa elinde göçten önceki bir
+checkout var. `versions/<sürüm>/gradle.properties` içindeki `yarn_mappings` anahtarı
+ölü config — doğrulama/karşılaştırma için duruyor, build okumuyor.
 
 ### `Unsupported class file major version`
 Java 21+ olmalı. Java 17 veya altını kullanıyorsan güncelle.
@@ -149,16 +150,30 @@ Modrinth'e yüklemek istersen: https://docs.modrinth.com/docs/tutorials/publishi
 
 ## Çok sürümlü yapı (Stonecutter 0.9.8)
 
-Proje artık tek sürümlü değil. Kaynak `src/` altında paylaşılıyor; her Minecraft
-sürümü `versions/<sürüm>/` altında bir Gradle düğümü.
+Proje artık tek sürümlü değil. Kaynak `src/` altında paylaşılıyor; her
+Minecraft+loader bileşimi `versions/<düğüm>/` altında bir Gradle düğümü. **Dal
+(branch) yok, yalnızca düğüm** — dal başına ayrı `src/` ağacı üretilirdi.
 
 | Dosya | İş |
 |---|---|
-| `settings.gradle` | Stonecutter eklentisi + düğüm listesi (`versions("1.21.7", "1.21.11")`) |
+| `settings.gradle` | Stonecutter eklentisi + düğüm listesi (4 düğüm: 2 Fabric, 2 NeoForge) |
 | `stonecutter.gradle` | Aktif düğüm (`stonecutter.active`) |
-| `build.gradle` | MERKEZ betik — her düğüm için bir kez çalışır |
-| `versions/<sürüm>/gradle.properties` | O sürümün mc/yarn/loader/fapi değerleri |
+| `build.gradle` | MERKEZ betik — her düğüm için bir kez çalışır, iki loader'ı da çevirir |
+| `versions/<düğüm>/gradle.properties` | O düğümün mc/loader/fapi veya neoforge değerleri (`yarn_mappings` ölü) |
 | `gradle.properties` | Sürümden bağımsız: mod_version, maven_group |
+| `src/main/java` | **Paylaşılan** 206 dosya — dört düğümün hepsi bunu derler |
+| `src/fabric/java`, `src/neoforge/java` | Loader'a özel ince platform katmanı; düğüm yalnızca kendi loader'ının ağacını derler |
+
+Düğümün loader'ı `versions/<düğüm>/gradle.properties` içindeki `loader` anahtarıyla
+seçiliyor. `build.gradle` eklentileri `apply false` ile classpath'e alıp o anahtara
+göre uyguluyor (`fabric-loom` ya da `net.neoforged.moddev`). İkinci bir build betiği
+**bilinçli olarak yok**: `replacements` listesi tek yerde kalmak zorunda, iki kopya
+arasındaki herhangi bir fark aktif düğüm değiştiğinde paylaşılan `src/` ağacını
+yarım çevrilmiş bırakırdı.
+
+`stonecutter.constants.match(loader, 'fabric', 'neoforge')` sayesinde kaynakta
+`//? if fabric {` / `//? if neoforge {` de kullanılabilir — sürüm direktifleriyle
+aynı kurallara tabi (javadoc koymayın).
 
 Running Stonecutter 0.9.8
 Warning: Stonecutter is used with Groovy buildscripts
@@ -300,18 +315,124 @@ Consider enabling configuration cache to speed up this build: https://docs.gradl
 ### Sürüm durumu
 
 - **1.21.7** — yeşil, jar üretiyor.
-- **1.21.11** — yeşil, jar üretiyor. 196 → 42 → 0.
-- **26.x — yok.** Yarn mapping'leri 1.21.11'de duruyor; 26.x Mojang official mapping
-  istiyor, yani 204 sınıftaki her MC sembolünün yeniden adlandırılması. Build işi değil.
+- **1.21.11** — yeşil, jar üretiyor.
+- **26.x — düğüm YOK. Mapping engeli kalktı, yerine JDK 25 engeli çıktı.** Ölçüm
+  aşağıda; kısası: Fabric tarafında eksik yok, engel tamamen araç zincirinde.
+
+#### 26.x — ölçülmüş durum (2026-11-02)
+
+Mojang beş 26.x sürümü yayınladı. Fabric Loader ve Fabric API **hepsi için hazır**:
+
+| Sürüm | Çıkış | Fabric Loader | Fabric API | Java | MC class major | Derlenebilir mi |
+|---|---|---|---|---|---|---|
+| 26.1   | 2026-03-24 | 0.20.1 | 0.145.1+26.1   | 25 | 69 | ❌ |
+| 26.1.1 | 2026-04-01 | 0.20.1 | 0.145.4+26.1.1 | 25 | 69 | ❌ |
+| 26.1.2 | 2026-04-09 | 0.20.1 | 0.155.3+26.1.2 | 25 | 69 | ❌ |
+| 26.2   | 2026-06-16 | 0.20.1 | 0.161.0+26.2   | 25 | 69 | ❌ |
+| 26.3   | 2026-09-15 | 0.20.1 | 0.165.0+26.3   | 25 | 69 | ❌ |
+
+Karşılaştırma: 1.21.7 ve 1.21.11 → Java 21, class major 65.
+
+**Engel: 26.x hattının tamamı Java 25 istiyor.** Bu makinede yalnızca JDK 21 var, ve
+görev gereği Java/loom yükseltmesi yapılmadı. Üç bağımsız ölçüm:
+
+**1. Loom zaten yapılandırma aşamasında reddediyor.** Geçici bir `versions/26.3`
+düğümü eklenip denendi (commit edilmedi):
+
+```
+> Failed to setup Minecraft, java.lang.IllegalStateException:
+  Minecraft 26.3 requires Java 25 but Gradle is using 21
+```
+
+Kaynağa hiç dokunmadan, `compileJava`'ya gelmeden duruyor.
+
+**2. javac 21, MC 26.x bayt kodunu okuyamıyor.** Gerçek 26.3 class dosyaları
+`client.jar`'dan çekilip bu makinenin javac'ına verildi:
+
+```
+bad class file: .../net/minecraft/world/entity/npc/Npc.class
+  class file has wrong version 69.0, should be 65.0
+```
+
+`--release 21` ile ve onsuz aynı. Bu duvar mapping veya API farkı değil, JDK'nın
+kendisi.
+
+**3. 26.x'i destekleyen loom hattı JVM 25 bayt kodu.** Loom jar'larının class major
+sürümü: 1.17.2 → 65, 1.17.21 → 65, **1.18.1 / 1.18.4 / 1.19.3 → 69**. Yani loom 1.18+
+JVM 21'de koşan bir Gradle daemon'ına **yüklenemez bile**.
+
+#### Beklenmeyen bulgu: 26.x hiç mapping yayınlamıyor
+
+Mojang version JSON'unda `downloads` anahtarları:
+
+```
+1.21.11: [client, client_mappings, server, server_mappings]
+26.3:    [client, server]
+```
+
+Sebebi: **Mojang 26.x hattında obfuscation'ı bıraktı.** Jar içeriği sayıldı:
+
+| | class sayısı | `net/minecraft/*` | obfuscated top-level |
+|---|---|---|---|
+| 1.21.11 | 10291 | 33 (%0.3) | 10201 |
+| 26.3 | 11383 | 10737 (%94.3) | **0** |
+
+İki sonucu var:
+
+- `loom.officialMojangMappings()` 26.x'te indirecek bir şey bulamaz — `client_mappings`
+  yok. loom 1.18+ tam olarak bu durum için var.
+- **Ad göçü 26.x için gerçekten bitmiş.** 26.3'ün jar'ı `net/minecraft/world/entity/npc/Npc`
+  gibi gerçek Mojang adlarını taşıyor; Candy'nin kaynağı göçten sonra zaten tam olarak
+  bu adları kullanıyor. 26.x için mapping katmanı **hiç gerekmiyor**.
+
+#### Açmak için gereken
+
+İkisi birlikte, biri yetmez:
+
+1. **JDK 25** — Gradle daemon'ının kendisi onunla koşmalı.
+2. **fabric-loom 1.18+** — `settings.gradle` içindeki `pluginManagement`.
+
+`settings.gradle` bir kez değerlendirildiği için **düğüm başına ayrı loom sürümü
+mümkün değil**: 1.18+'a geçmek 1.21.7 ve 1.21.11 düğümlerini de o loom'a taşır, ikisinin
+yeniden doğrulanması gerekir. Gradle toolchain ile kaçış yolu yok — yalnızca
+`compileJava`'yı JDK 25'e vermek yetmiyor, daemon'ın kendisi loom 1.18+ yükleyebilmek
+için JVM 25 olmak zorunda. Toolchain auto-provisioning da kurulu değil (foojay
+resolver yok).
+
+### Mapping: Mojang resmî adları (Yarn değil)
+
+Build **her düğümde** `loom.officialMojangMappings()` kullanıyor. Yarn hiçbir yerde
+kullanılmıyor. Gerekçe ve göçün nasıl yapıldığı: [MULTILOADER.md](MULTILOADER.md).
+
+Pratikte bilmen gerekenler:
+
+- Kaynaktaki MC adları Mojang adlarıdır: `Level`, `ServerPlayer`, `Gui`,
+  `BuiltInRegistries`, `Entity.level()`, `Entity.position()`.
+- Jar hâlâ **intermediary**'ye remap ediliyor (Fabric'in çalışma zamanı bunu ister);
+  `remapJar` mixin anotasyonlarını da çeviriyor, refmap dosyası yok ve gerekmiyor.
+- Göç `./gradlew :<düğüm>:migrateMappings --mappings "net.minecraft:mappings:<sürüm>"`
+  ile yapıldı — Loom'un kendi task'ı, Mercury (Eclipse JDT) tabanlı, tip duyarlı.
+  Tek bilinen sınırı: **kütüphane metodunu ezen bildirimleri** yeniden adlandırmıyor
+  (gövdedeki `super.x()` çağrısını çeviriyor ama `public void x(` imzasını bırakıyor).
+  Göçte bu 10 bildirimi elle kapattı; `@Override` taşıdıkları için derleyici hepsini
+  yakaladı.
 
 ### Sürüm ayrımı iki mekanizmayla yapılıyor
 
 **1. `build.gradle` → `replacements`** — düz ad değişiklikleri için.
 
 Bu düz metin değişimidir, **alıcı tipini bilmez**. Bir ad iki tarafta da geçerliyse
-(`Chunk.getPos` ile `Entity.getPos` gibi) çıplak desen yanlış sınıfları da vurur —
-ilk denemede 4 hata tam bundan çıktı. Bu yüzden belirsiz adlar alıcıya çapalanır
-(`player.getPos()`), çıplak bırakılmaz.
+çıplak desen yanlış sınıfları da vurur. Bu yüzden belirsiz adlar alıcıya çapalanır
+(`key.location()`, `.dimension().location()`), çıplak bırakılmaz; `ResourceLocation`
+gibi Candy'de tek anlamı olan adlar çıplak kalır.
+
+Kural listesi Mojang adlarına göre yeniden yazıldı ve **ölçümle** çıkarıldı: iki
+düğümün `migrateMappings` ile göçürülmüş ağaçları birebir karşılaştırıldı, listeye
+yalnızca gerçekten farklılaşan semboller girdi. Yarn'dan gelen `Entity.getWorld` /
+`getPos` kuralları **silindi** — onlar Yarn'ın kendi yeniden adlandırmasıydı, Mojang
+iki sürümde de `level()` / `position()` diyor. Karşılığında Yarn'ın sakladığı iki
+gerçek yeniden adlandırma eklendi: `ResourceLocation` → `Identifier` ve
+`PlayerRenderState` → `AvatarRenderState`.
 
 Yönü ters çevirmek çözüm **değil**: aktif düğüm `src/`'yi yerinde derler, replacement
 orada hiç koşmaz. Yani `src/` her zaman **aktif sürümün** adlarını taşımak zorunda.
@@ -357,5 +478,58 @@ düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeni
 
 ## Loader desteği
 
-Şu an yalnızca **Fabric**. NeoForge ve Forge portunun mimari kararı ve ölçülmüş
-kapsamı [MULTILOADER.md](MULTILOADER.md) içinde — karar verildi, kod henüz taşınmadı.
+Fabric ve **NeoForge**, iki MC sürümünde de jar üretiyor ve istemci açılışı
+ölçüldü.
+
+| Loader | 1.21.7 | 1.21.11 |
+|---|---|---|
+| Fabric | ✅ jar + açılış | ✅ jar + açılış |
+| NeoForge | ✅ jar + açılış | ✅ jar + açılış |
+| Forge | ❌ yok | ❌ yok |
+
+NeoForge düğümleri artık varsayılan açık (`candy.neoforge=true`). Kapatmak için
+`gradle.properties` içinde `false` yap ya da `-Pcandy.neoforge=false` geç.
+
+Jar adları çakışmasın diye NeoForge jar'ı `-neoforge` eki taşıyor; Fabric adı
+değişmedi:
+
+```
+candy-8.4.1+1.21.11.jar            <- Fabric
+candy-8.4.1+1.21.11-neoforge.jar   <- NeoForge
+```
+
+Her jar yalnızca kendi loader'ının metadata'sını taşır (`fabric.mod.json` /
+`META-INF/neoforge.mods.toml`), ikisi birden değil.
+
+### Ölçülen açılış sonuçları
+
+Dört düğümün hepsi `runClient` ile ana menüye kadar açıldı, mixin uygulaması
+`-Dmixin.debug.verbose=true` ile sayıldı:
+
+| Düğüm | Sonuç | Mixin | Hata |
+|---|---|---|---|
+| fabric 1.21.7 | ana menü | 10/11 | 0 |
+| fabric 1.21.11 | ana menü | 10/11 | 0 |
+| neoforge 1.21.7 | ana menü | 11/11 | 0 |
+| neoforge 1.21.11 | ana menü | 11/11 | 0 |
+
+Fabric'teki 10/11 eksiklik değil: `CommandManagerMixin`'in hedefi
+`net.minecraft.commands.Commands` ana menüde hiç yüklenmiyor, o yüzden bu test
+onu kapsamıyor. Doğrulamak için dünyaya girmek gerekir.
+
+**Açılış testi oynanabilirlik testi değil.** 1.21.11 `SurumKapisi` tarafından
+hâlâ "test edilmemiş" sayılıyor. Ayrıntı ve bilinen kusurlar:
+[MULTILOADER.md](MULTILOADER.md).
+
+NeoForge portu bir kez denendi ve engele çarptı; **o engelin yarısı artık kalktı:**
+
+- **ModDevGradle/NeoGradle** — NeoForge Mojang resmî adlarına derleniyor, Candy'nin
+  kaynağı o zaman Yarn adlarını taşıyordu (143 dosya, 156 ayrı sınıf adı). **Bu neden
+  ortadan kalktı:** kaynak Mojang adlarına göçtü. Yol açık ama **henüz denenmedi** —
+  tabloya ✅ yazmak için NeoForge'un gerçekten jar üretmesi gerekiyor.
+- **Architectury Loom** (Yarn adlarını koruyan tek yoldu) — kurulum çalıştı, sonra
+  Minecraft'ı Yarn'a remap ederken upstream çakışmasında durdu
+  (`InGameHud.renderHotbar`, 1.21.7 ve 1.21.11'de aynı). **Artık ilgisiz:** Yarn'ı
+  korumaya ihtiyaç yok.
+
+Ayrıntı, doğrulama yöntemi ve sıradaki adımlar: [MULTILOADER.md](MULTILOADER.md).

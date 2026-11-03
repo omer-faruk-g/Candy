@@ -4,8 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.photonpulse.candy.Candy;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,7 +31,7 @@ public class PersonalityManager {
      * Ör: <world>/candy/
      */
     public static void sunucuBaslat(MinecraftServer server) {
-        Path worldPath = server.getSavePath(net.minecraft.util.WorldSavePath.ROOT);
+        Path worldPath = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
         candyKlasoru = worldPath.resolve("candy");
         try {
             Files.createDirectories(candyKlasoru);
@@ -54,8 +53,8 @@ public class PersonalityManager {
     /**
      * Oyuncu için TruePersonality al. Yoksa diskten yükle, o da yoksa yeni oluştur.
      */
-    public static TruePersonality get(ServerPlayerEntity player) {
-        return get(player.getUuid());
+    public static TruePersonality get(ServerPlayer player) {
+        return get(player.getUUID());
     }
 
     public static TruePersonality get(UUID uuid) {

@@ -2,11 +2,10 @@ package com.photonpulse.candy.core;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
 import java.util.Random;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Kehanet (v3.2) — Candy'nin öngörü motoru. Reaktiften ÖNGÖRÜCÜYE geçiş.
@@ -35,7 +34,7 @@ public class Kehanet {
      * IcDusunce'den her niyet güncellemesinde (~2 sn) çağrılır.
      * @param gercekNiyet o an gözlenen gerçek niyet ("bilinmiyor" ise atla)
      */
-    public static void gozlemle(ServerPlayerEntity player, TruePersonality tp,
+    public static void gozlemle(ServerPlayer player, TruePersonality tp,
                                 String gercekNiyet, long simdi) {
         if (gercekNiyet == null || "bilinmiyor".equals(gercekNiyet)) return;
 
@@ -71,13 +70,13 @@ public class Kehanet {
                 double sasirma = tp.kehanetOlasilik * 100.0;
                 tp.sasirmaSeviyesi = Math.min(100, tp.sasirmaSeviyesi + sasirma * 0.6);
                 if (tp.sasirmaSeviyesi > 55) {
-                    java.util.UUID id = player.getUuid();
+                    java.util.UUID id = player.getUUID();
                     long sonY = sonSasirmaYorum.getOrDefault(id, -99999L);
                     if (simdi - sonY > SASIRMA_COOLDOWN && tp.bossOldurulmeTick == 0
                             && RNG.nextDouble() < 0.25) {
                         sonSasirmaYorum.put(id, simdi);
-                        player.sendMessage(Text.translatable("candy.sasirma." + RNG.nextInt(2))
-                                .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+                        player.displayClientMessage(Component.translatable("candy.sasirma." + RNG.nextInt(2))
+                                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
                         Candy.LOG.info("[Candy] Kehanet ŞAŞIRMA[{}] öngörü={} gerçek={}",
                                 player.getName().getString(), tp.kehanetNiyet, gercekNiyet);
                     }
@@ -122,13 +121,13 @@ public class Kehanet {
         tp.kehanetTick = simdi;
     }
 
-    private static void ifsaEt(ServerPlayerEntity player, String niyet) {
+    private static void ifsaEt(ServerPlayer player, String niyet) {
         String key = switch (niyet) {
             case "kaziyor", "insa_ediyor", "kaciyor", "savasiyor",
                  "bekliyor", "donuyor", "kesfediyor" -> "candy.kehanet." + niyet;
             default -> "candy.kehanet.genel";
         };
-        player.sendMessage(Text.translatable(key).formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+        player.displayClientMessage(Component.translatable(key).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
         CandyBasarimlar.tetikle(player, "zihnimi_okudun");
         Candy.LOG.info("[Candy] Kehanet İFŞA[{}] niyet={} (güven={}%)",
                 player.getName().getString(), niyet, String.format("%.0f", player == null ? 0 :

@@ -3,11 +3,13 @@ package com.photonpulse.candy.client;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.meta.UygulamaListesi;
 import com.photonpulse.candy.net.UygulamaPayload;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+//?}
+import com.photonpulse.candy.platform.IstemciBaglanti;
+import com.photonpulse.candy.platform.IstemciAg;
+import com.photonpulse.candy.platform.AgKayit;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,19 +36,21 @@ import java.util.concurrent.ThreadLocalRandom;
  * {@link CandyMixinConfig#uygulamaSezgisi} false ise süreç listesi <b>hiç okunmaz</b>.
  * Tarama oturum başına bir kez, sunucuya bağlanırken, ayrı bir daemon thread'de yapılır.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class UygulamaGonder {
 
     private UygulamaGonder() {}
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playC2S().register(UygulamaPayload.ID, UygulamaPayload.CODEC);
+            AgKayit.playC2S().register(UygulamaPayload.ID, UygulamaPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Uygulama C2S zaten kayıtlı: {}", t.getMessage());
         }
 
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+        IstemciBaglanti.JOIN.register(client -> {
             if (!CandyMixinConfig.uygulamaSezgisi) return;
             Thread t = new Thread(() -> {
                 final int indeks = tara();
@@ -54,8 +58,8 @@ public final class UygulamaGonder {
                 // Ağ gönderimi ana thread'de olmalı.
                 client.execute(() -> {
                     try {
-                        if (ClientPlayNetworking.canSend(UygulamaPayload.ID)) {
-                            ClientPlayNetworking.send(new UygulamaPayload(indeks));
+                        if (IstemciAg.canSend(UygulamaPayload.ID)) {
+                            IstemciAg.send(new UygulamaPayload(indeks));
                         }
                     } catch (Throwable ignored) {}
                 });

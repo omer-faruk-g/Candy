@@ -3,14 +3,14 @@ package com.photonpulse.candy.meta;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.tag.FluidTags;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * KonumKaydirma (v8.3) — oyuncunun XYZ'sini sessizce kaydırır.
@@ -85,7 +85,7 @@ public final class KonumKaydirma {
     private static int sayac = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(KonumKaydirma::onTick);
+        SunucuTick.END_SERVER_TICK.register(KonumKaydirma::onTick);
         Candy.LOG.info("[Candy] KonumKaydirma aktif — sessiz küçük kaydırma");
     }
 
@@ -93,7 +93,7 @@ public final class KonumKaydirma {
         if (++sayac < ARALIK) return;
         sayac = 0;
         try {
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (tp == null) continue;
                 // Oynanan süreyi burada biriktiriyoruz — dünya tick'i değil OYUNCU tick'i.
@@ -105,7 +105,7 @@ public final class KonumKaydirma {
         }
     }
 
-    private static void denemeYap(ServerPlayerEntity player, TruePersonality tp) {
+    private static void denemeYap(ServerPlayer player, TruePersonality tp) {
         if (tp.perdeKademe < MIN_KADEME) return;
         double ofke = Math.max(0.0, Math.min(1.0, tp.candyOfke));
         if (ofke < OFKE_ESIGI) return;
@@ -117,16 +117,16 @@ public final class KonumKaydirma {
         double ihtimal = 0.10 + ofke * 0.25 + sure * 0.20;
         if (Math.random() >= ihtimal) return;
 
-        if (!(player.getWorld() instanceof ServerWorld world)) return;
+        if (!(player.level() instanceof ServerLevel world)) return;
 
         int menzil = MIN_MESAFE + (int) Math.round((MAKS_MESAFE - MIN_MESAFE) * sure);
-        BlockPos hedef = guvenliKonum(world, player.getBlockPos(), menzil);
+        BlockPos hedef = guvenliKonum(world, player.blockPosition(), menzil);
         if (hedef == null) return;
 
         // Bakış açısı KORUNUYOR: kafayı da çevirmek apaçık bir müdahale olur,
         // oyuncu "bir şey beni döndürdü" der. Sessiz kalması için yalnızca konum.
-        player.teleport(world, hedef.getX() + 0.5, hedef.getY(), hedef.getZ() + 0.5,
-            java.util.Collections.emptySet(), player.getYaw(), player.getPitch(), false);
+        player.teleportTo(world, hedef.getX() + 0.5, hedef.getY(), hedef.getZ() + 0.5,
+            java.util.Collections.emptySet(), player.getYRot(), player.getXRot(), false);
 
         tp.kaydirmaSayisi++;
         tp.kaydirmaSonTick = tp.toplamOynananTick;
@@ -143,19 +143,19 @@ public final class KonumKaydirma {
      * <p>Buradaki her şart bir ölüm ya da apaçık hata senaryosunu kapatıyor; biri
      * eksik olsa mekanik "korkutucu" değil "bozuk" olurdu.</p>
      */
-    private static boolean uygunDurum(ServerPlayerEntity player) {
+    private static boolean uygunDurum(ServerPlayer player) {
         if (!player.isAlive()) return false;
         if (player.isSpectator() || player.isCreative()) return false;
-        if (!player.isOnGround()) return false;              // havada = düşme ölümü
-        if (player.hasVehicle()) return false;               // at/kayık kopar
+        if (!player.onGround()) return false;              // havada = düşme ölümü
+        if (player.isPassenger()) return false;               // at/kayık kopar
         if (player.isSleeping()) return false;
-        if (player.isGliding()) return false;                // elytra
-        if (player.isClimbing()) return false;
-        if (player.isSwimming() || player.isTouchingWater()) return false;
+        if (player.isFallFlying()) return false;                // elytra
+        if (player.onClimbable()) return false;
+        if (player.isSwimming() || player.isInWater()) return false;
         if (player.isUsingItem()) return false;              // yemek/yay yarıda kalır
         if (player.hurtTime > 0) return false;
-        if (player.age - player.getLastAttackedTime() < HASAR_BEKLEME) return false;
-        if (player.getAttacking() != null) return false;     // savaşın ortası
+        if (player.tickCount - player.getLastHurtByMobTimestamp() < HASAR_BEKLEME) return false;
+        if (player.getLastHurtMob() != null) return false;     // savaşın ortası
         return true;
     }
 
@@ -165,14 +165,14 @@ public final class KonumKaydirma {
      * <p>{@code null} dönmesi normal ve beklenen: dar tünelde, mağarada ya da su
      * kenarında güvenli yer yoktur. O zaman hiçbir şey yapılmıyor.</p>
      */
-    private static BlockPos guvenliKonum(ServerWorld world, BlockPos merkez, int menzil) {
+    private static BlockPos guvenliKonum(ServerLevel world, BlockPos merkez, int menzil) {
         for (int i = 0; i < DENEME; i++) {
             double aci = Math.random() * Math.PI * 2.0;
             double r = MIN_MESAFE + Math.random() * Math.max(1, menzil - MIN_MESAFE);
             int x = merkez.getX() + (int) Math.round(Math.cos(aci) * r);
             int z = merkez.getZ() + (int) Math.round(Math.sin(aci) * r);
 
-            if (!world.isChunkLoaded(ChunkPos.toLong(x >> 4, z >> 4))) continue;
+            if (!world.areEntitiesLoaded(ChunkPos.asLong(x >> 4, z >> 4))) continue;
 
             for (int dy = 0; dy <= MAKS_Y_FARK; dy++) {
                 for (int yon = (dy == 0 ? 0 : -1); yon <= 1; yon += 2) {
@@ -187,9 +187,9 @@ public final class KonumKaydirma {
     }
 
     /** Ayak + baş hava, alt katı zemin, sıvı/ateş yok. */
-    private static boolean guvenliMi(ServerWorld world, BlockPos ayak) {
-        BlockPos bas = ayak.up();
-        BlockPos zemin = ayak.down();
+    private static boolean guvenliMi(ServerLevel world, BlockPos ayak) {
+        BlockPos bas = ayak.above();
+        BlockPos zemin = ayak.below();
 
         BlockState sAyak = world.getBlockState(ayak);
         BlockState sBas = world.getBlockState(bas);
@@ -197,19 +197,19 @@ public final class KonumKaydirma {
 
         if (!sAyak.getCollisionShape(world, ayak).isEmpty()) return false;
         if (!sBas.getCollisionShape(world, bas).isEmpty()) return false;
-        if (!sZemin.isSolidBlock(world, zemin)) return false;
+        if (!sZemin.isRedstoneConductor(world, zemin)) return false;
 
         // Sıvı yok: lava ölüm, su ise "yüzüyorum" sürprizi.
         if (!sAyak.getFluidState().isEmpty()) return false;
         if (!sBas.getFluidState().isEmpty()) return false;
-        if (sZemin.getFluidState().isIn(FluidTags.LAVA)) return false;
+        if (sZemin.getFluidState().is(FluidTags.LAVA)) return false;
 
         // Ateş/magma/kaktüs gibi hasar veren zemin.
-        if (sZemin.getBlock() == net.minecraft.block.Blocks.MAGMA_BLOCK) return false;
-        if (sZemin.getBlock() == net.minecraft.block.Blocks.CACTUS) return false;
-        if (sAyak.getBlock() == net.minecraft.block.Blocks.FIRE) return false;
-        if (sAyak.getBlock() == net.minecraft.block.Blocks.SOUL_FIRE) return false;
-        if (sAyak.getBlock() == net.minecraft.block.Blocks.POWDER_SNOW) return false;
+        if (sZemin.getBlock() == net.minecraft.world.level.block.Blocks.MAGMA_BLOCK) return false;
+        if (sZemin.getBlock() == net.minecraft.world.level.block.Blocks.CACTUS) return false;
+        if (sAyak.getBlock() == net.minecraft.world.level.block.Blocks.FIRE) return false;
+        if (sAyak.getBlock() == net.minecraft.world.level.block.Blocks.SOUL_FIRE) return false;
+        if (sAyak.getBlock() == net.minecraft.world.level.block.Blocks.POWDER_SNOW) return false;
 
         return true;
     }

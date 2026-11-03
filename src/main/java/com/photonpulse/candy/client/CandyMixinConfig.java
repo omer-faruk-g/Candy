@@ -6,7 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.photonpulse.candy.Candy;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -81,7 +81,7 @@ public class CandyMixinConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static Path yol() {
-        return FabricLoader.getInstance().getConfigDir().resolve("candy-mixin.json");
+        return Yukleyici.ayarDizini().resolve("candy-mixin.json");
     }
 
     /** Dosya yolu — {@link KonfigMudahale} aynı dosyaya yazıyor. */

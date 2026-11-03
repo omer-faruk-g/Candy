@@ -1,18 +1,20 @@
 package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.arkadas.ArkadasEntity;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.item.ItemModelManager;
-import net.minecraft.client.render.entity.BipedEntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.MobEntityRenderer;
-import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
-import net.minecraft.client.render.entity.model.EntityModelLayers;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.DefaultSkinHelper;
-import net.minecraft.util.Identifier;
+//?}
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * ArkadasRenderer (v8.3) — Arkadaş'ı oyuncu modeliyle, <b>tamamen siyah</b> çizer.
@@ -31,48 +33,50 @@ import net.minecraft.util.Identifier;
  * çizilir: doku zaten siyah, kısık ışık onu görünmez yapar ve ortada bir şeyin durduğu
  * hiç anlaşılmaz. Burada istenen "göremiyorum" değil, "orada duruyor ve yüzü yok".
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
-public class ArkadasRenderer extends MobEntityRenderer<
-        ArkadasEntity, PlayerEntityRenderState, PlayerEntityModel> {
+//?}
+public class ArkadasRenderer extends MobRenderer<
+        ArkadasEntity, PlayerRenderState, PlayerModel> {
 
-    private static final Identifier DOKU =
-        Identifier.of("candy", "textures/entity/arkadas.png");
+    private static final ResourceLocation DOKU =
+        ResourceLocation.fromNamespaceAndPath("candy", "textures/entity/arkadas.png");
 
-    private final ItemModelManager itemModelManager;
+    private final ItemModelResolver itemModelManager;
 
-    public ArkadasRenderer(EntityRendererFactory.Context ctx) {
-        super(ctx, new PlayerEntityModel(ctx.getPart(EntityModelLayers.PLAYER), false), 0.5f);
-        this.itemModelManager = ctx.getItemModelManager();
+    public ArkadasRenderer(EntityRendererProvider.Context ctx) {
+        super(ctx, new PlayerModel(ctx.bakeLayer(ModelLayers.PLAYER), false), 0.5f);
+        this.itemModelManager = ctx.getItemModelResolver();
         // Elindeki alet görünsün — kazarken kazması, dövüşürken kılıcı. Zırh katmanı
         // KASITLI eklenmedi: Arkadaş'ın envanteri yok, zırh hep boş çizilirdi.
-        this.addFeature(new HeldItemFeatureRenderer<>(this));
+        this.addLayer(new ItemInHandLayer<>(this));
     }
 
     @Override
-    public PlayerEntityRenderState createRenderState() {
-        return new PlayerEntityRenderState();
+    public PlayerRenderState createRenderState() {
+        return new PlayerRenderState();
     }
 
     @Override
-    public void updateRenderState(ArkadasEntity entity, PlayerEntityRenderState state,
+    public void extractRenderState(ArkadasEntity entity, PlayerRenderState state,
                                   float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
+        super.extractRenderState(entity, state, tickDelta);
         // Biped alanları (eldeki eşya dâhil) MobEntityRenderer tarafından doldurulmuyor.
-        BipedEntityRenderer.updateBipedRenderState(entity, state, tickDelta,
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, state, tickDelta,
             this.itemModelManager);
 
-        state.skinTextures = DefaultSkinHelper.getSteve();
-        state.hatVisible = true;
-        state.jacketVisible = true;
-        state.leftSleeveVisible = true;
-        state.rightSleeveVisible = true;
-        state.leftPantsLegVisible = true;
-        state.rightPantsLegVisible = true;
-        state.capeVisible = false;
+        state.skin = DefaultPlayerSkin.getDefaultSkin();
+        state.showHat = true;
+        state.showJacket = true;
+        state.showLeftSleeve = true;
+        state.showRightSleeve = true;
+        state.showLeftPants = true;
+        state.showRightPants = true;
+        state.showCape = false;
     }
 
     @Override
-    public Identifier getTexture(PlayerEntityRenderState state) {
+    public ResourceLocation getTextureLocation(PlayerRenderState state) {
         return DOKU;
     }
 }

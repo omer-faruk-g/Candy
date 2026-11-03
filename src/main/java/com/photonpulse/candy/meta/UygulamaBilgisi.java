@@ -2,10 +2,9 @@ package com.photonpulse.candy.meta;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.UygulamaPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,16 +30,16 @@ public final class UygulamaBilgisi {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playC2S().register(UygulamaPayload.ID, UygulamaPayload.CODEC);
+            AgKayit.playC2S().register(UygulamaPayload.ID, UygulamaPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Uygulama C2S zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(UygulamaPayload.ID, (payload, context) -> {
+        SunucuAg.registerGlobalReceiver(UygulamaPayload.ID, (payload, context) -> {
             try {
                 int i = payload.indeks();
                 if (i < 0 || i >= UygulamaListesi.boyut()) return;   // liste dışı → yut
-                uygulamalar.put(context.player().getUuid(), i);
+                uygulamalar.put(context.player().getUUID(), i);
                 // Log'a İSİM değil indeks: sunucu logu paylaşılabilir bir dosya.
                 Candy.LOG.info("[Candy] Uygulama alindi [{}] #{}",
                     context.player().getName().getString(), i);
@@ -51,9 +50,9 @@ public final class UygulamaBilgisi {
     }
 
     /** Oyuncunun açık uygulamasının okunur adı, ya da null. */
-    public static String ad(ServerPlayerEntity player) {
+    public static String ad(ServerPlayer player) {
         if (player == null) return null;
-        Integer i = uygulamalar.get(player.getUuid());
+        Integer i = uygulamalar.get(player.getUUID());
         return i == null ? null : UygulamaListesi.ad(i);
     }
 

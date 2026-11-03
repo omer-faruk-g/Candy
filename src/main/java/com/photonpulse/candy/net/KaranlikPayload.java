@@ -1,10 +1,10 @@
 package com.photonpulse.candy.net;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * S2C — dünyanın genel ışık kademesi kaç basamak düşük görünecek (0..10).
@@ -12,19 +12,19 @@ import net.minecraft.util.Identifier;
  * Çözülen her şifre bu değeri bir artırır. Client tarafı lightmap'e sabit bir karanlık
  * tabanı ekler, yani tüm blok aydınlatması etkilenir — meşale de güneş de.
  */
-public record KaranlikPayload(int kademe) implements CustomPayload {
+public record KaranlikPayload(int kademe) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<KaranlikPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("candy", "karanlik"));
+    public static final CustomPacketPayload.Type<KaranlikPayload> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("candy", "karanlik"));
 
-    public static final PacketCodec<RegistryByteBuf, KaranlikPayload> CODEC =
-        PacketCodec.tuple(
-            PacketCodecs.VAR_INT, KaranlikPayload::kademe,
+    public static final StreamCodec<RegistryFriendlyByteBuf, KaranlikPayload> CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, KaranlikPayload::kademe,
             KaranlikPayload::new
         );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

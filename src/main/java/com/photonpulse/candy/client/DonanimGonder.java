@@ -4,11 +4,13 @@ import com.mojang.blaze3d.platform.GLX;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.DonanimPayload;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+//?}
+import com.photonpulse.candy.platform.IstemciBaglanti;
+import com.photonpulse.candy.platform.IstemciAg;
+import com.photonpulse.candy.platform.AgKayit;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,26 +26,28 @@ import java.util.List;
  * Join'de bir kez gonderilir. Veri hicbir yere gitmez — sunucu (ayni oyuncuya)
  * "Ben PC'de %s var." diyalogunda gosterir.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public class DonanimGonder {
 
     public static void register() {
         // C2S payload tipini client tarafinda kaydet
         try {
-            PayloadTypeRegistry.playC2S().register(DonanimPayload.ID, DonanimPayload.CODEC);
+            AgKayit.playC2S().register(DonanimPayload.ID, DonanimPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Donanim C2S zaten kayitli (client): {}", t.getMessage());
         }
 
         // Sunucuya baglaninca bir kez gonder
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+        IstemciBaglanti.JOIN.register(client -> {
             client.execute(() -> {
                 try {
                     // Sunucu bu payload'i taniyor mu? (vanilla sunucuya yollamayalim)
-                    if (!ClientPlayNetworking.canSend(DonanimPayload.ID)) return;
+                    if (!IstemciAg.canSend(DonanimPayload.ID)) return;
                     String veri = donanimTopla();
                     if (veri.isBlank()) return;
-                    ClientPlayNetworking.send(new DonanimPayload(veri));
+                    IstemciAg.send(new DonanimPayload(veri));
                     Candy.LOG.info("[Candy] Donanim gonderildi");
                 } catch (Throwable t) {
                     Candy.LOG.debug("[Candy] Donanim gonderilemedi: {}", t.getMessage());

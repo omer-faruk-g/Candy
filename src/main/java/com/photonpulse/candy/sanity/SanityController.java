@@ -4,17 +4,16 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.world.LightType;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.level.LightLayer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,29 +47,29 @@ public class SanityController {
 
     // 1.21.7 SoundEvents sabitlerinin bir kısmı SoundEvent, bir kısmı RegistryEntry<SoundEvent>. Tek tipe indir.
     private static SoundEvent se(Object o) {
-        if (o instanceof RegistryEntry<?> re) return (SoundEvent) re.value();
+        if (o instanceof Holder<?> re) return (SoundEvent) re.value();
         return (SoundEvent) o;
     }
 
     private static final List<SoundEvent> DUSUK_SESLER = List.of(
         se(SoundEvents.AMBIENT_CAVE),
-        se(SoundEvents.ENTITY_ENDERMAN_AMBIENT)
+        se(SoundEvents.ENDERMAN_AMBIENT)
     );
 
     private static final List<SoundEvent> ORTA_SESLER = List.of(
-        se(SoundEvents.ENTITY_ENDERMAN_STARE),
-        se(SoundEvents.ENTITY_WARDEN_HEARTBEAT),
-        se(SoundEvents.BLOCK_DEEPSLATE_BREAK)
+        se(SoundEvents.ENDERMAN_STARE),
+        se(SoundEvents.WARDEN_HEARTBEAT),
+        se(SoundEvents.DEEPSLATE_BREAK)
     );
 
     private static final List<SoundEvent> YUKSEK_SESLER = List.of(
-        se(SoundEvents.ENTITY_WARDEN_ANGRY),
-        se(SoundEvents.ENTITY_ELDER_GUARDIAN_CURSE),
-        se(SoundEvents.ENTITY_ENDER_DRAGON_GROWL)
+        se(SoundEvents.WARDEN_ANGRY),
+        se(SoundEvents.ELDER_GUARDIAN_CURSE),
+        se(SoundEvents.ENDER_DRAGON_GROWL)
     );
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(SanityController::onTick);
+        SunucuTick.END_SERVER_TICK.register(SanityController::onTick);
         Candy.LOG.info("[Candy] SanityController aktif");
     }
 
@@ -78,19 +77,19 @@ public class SanityController {
         tickSayaci++;
 
         if (tickSayaci % TICK_ARALIGI == 0) {
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 efektUygula(player);
             }
         }
 
         if (tickSayaci % AMBIENT_SES_ARALIGI == 0) {
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 ambientSes(player);
             }
         }
     }
 
-    private static void efektUygula(ServerPlayerEntity player) {
+    private static void efektUygula(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
         if (!tp.kurulumTamam) return;
 
@@ -99,7 +98,7 @@ public class SanityController {
 
         // Sadece BLOCK light (meşale/glowstone/vs.) — gökyüzü ışığını YOK say.
         // Böylece gece yüzeyde de tetiklenmez, sadece meşale/yapay ışık YOKSA tetiklenir.
-        int isik = player.getWorld().getLightLevel(LightType.BLOCK, player.getBlockPos());
+        int isik = player.level().getBrightness(LightLayer.BLOCK, player.blockPosition());
         if (isik >= 6) return;   // Meşale var → efekt yok
 
         // Burst-cooldown mantığı:
@@ -107,15 +106,15 @@ public class SanityController {
         //  - Bekleme periyodu → hiçbir şey
         //  - Bekleme bittiğinde → yeni burst başlar
         // Korku yükseldikçe bekleme kısalır — atmosferik anlar sıklaşır.
-        UUID uid = player.getUuid();
-        long simdi = player.getWorld().getTime();
+        UUID uid = player.getUUID();
+        long simdi = player.level().getGameTime();
         Long baslangic = sonBurstBaslangic.get(uid);
 
         if (baslangic != null && simdi - baslangic < BURST_SURE_TICK) {
             // AKTİF BURST — DARKNESS uygula. 60 tick = 3 sn > TICK_ARALIGI (40 tick)
             // olduğundan burst boyunca sürekli refresh olur.
-            player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.DARKNESS, 60, 0, true, false, false));
+            player.addEffect(new MobEffectInstance(
+                MobEffects.DARKNESS, 60, 0, true, false, false));
             return;
         }
 
@@ -125,8 +124,8 @@ public class SanityController {
         long bekleme = (long) (beklemeSuresiTick(k) / agresivlik);
         if (baslangic == null || simdi - baslangic >= BURST_SURE_TICK + bekleme) {
             sonBurstBaslangic.put(uid, simdi);
-            player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.DARKNESS, 60, 0, true, false, false));
+            player.addEffect(new MobEffectInstance(
+                MobEffects.DARKNESS, 60, 0, true, false, false));
         }
     }
 
@@ -149,7 +148,7 @@ public class SanityController {
         tickSayaci = 0;
     }
 
-    private static void ambientSes(ServerPlayerEntity player) {
+    private static void ambientSes(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
         if (!tp.kurulumTamam) return;
 
@@ -188,7 +187,7 @@ public class SanityController {
         double z = player.getZ() + Math.sin(angle) * mesafe;
         double y = player.getY();
 
-        player.getWorld().playSound(null, x, y, z, seciSes,
-            SoundCategory.AMBIENT, ses, pitch);
+        player.level().playSound(null, x, y, z, seciSes,
+            SoundSource.AMBIENT, ses, pitch);
     }
 }

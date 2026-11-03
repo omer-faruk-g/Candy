@@ -1,9 +1,9 @@
 package com.photonpulse.candy.mixin.client;
 
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.render.fog.FogRenderer;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.fog.FogRenderer;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * FogRendererMixin (v3.0 Faz 1.2) — Mirror/Anti-Mirror özel fog rengi.
  *
- * applyFog() Vector4f döner (r, g, b, alpha/distance). Return sonrası player'ın dünyasına
+ * setupFog() Vector4f döner (r, g, b, alpha/distance). Return sonrası player'ın dünyasına
  * göre renk override edilir:
  *   - Mirror: koyu kırmızımsı-kahverengi (Silent Hill "otherworld" hissi)
  *   - Anti-Mirror: koyu mor (uzay boşluğu / kayıp hissi)
@@ -21,15 +21,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(FogRenderer.class)
 public class FogRendererMixin {
 
-    @Inject(method = "applyFog", at = @At("RETURN"))
+    @Inject(method = "setupFog", at = @At("RETURN"))
     private void candy$mirrorFog(
         Camera camera, int viewDistance, boolean thickFog,
-        RenderTickCounter tickCounter, float skyDarkness, ClientWorld world,
+        DeltaTracker tickCounter, float skyDarkness, ClientLevel world,
         CallbackInfoReturnable<Vector4f> cir
     ) {
         try {
             if (world == null) return;
-            String dimId = world.getRegistryKey().getValue().toString();
+            String dimId = world.dimension().location().toString();
             Vector4f col = cir.getReturnValue();
             if (col == null) return;
 

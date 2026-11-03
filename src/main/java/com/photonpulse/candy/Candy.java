@@ -56,9 +56,10 @@ import com.photonpulse.candy.travma.OlumYerleri;
 import com.photonpulse.candy.travma.PetOlumu;
 import com.photonpulse.candy.travma.TotemIptali;
 import com.photonpulse.candy.tree.TreeGrowth;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import com.photonpulse.candy.platform.KayitKapisi;
+import com.photonpulse.candy.platform.SunucuBaglanti;
+import com.photonpulse.candy.platform.SunucuYasamDongusu;
+import net.minecraft.core.registries.Registries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,29 +69,30 @@ import org.slf4j.LoggerFactory;
  * Mod ana entry point. Tüm sistemler burada register edilir.
  * Sıralama önemli: Personality → Observation → Persona → Sign → Disguise → Clone
  */
-public class Candy implements ModInitializer {
+public class Candy {
 
     public static final String MOD_ID = "candy";
     public static final Logger LOG = LoggerFactory.getLogger(MOD_ID);
 
-    @Override
-    public void onInitialize() {
+    public static void onInitialize() {
         LOG.info("[Candy] uyanıyor...");
 
         // v8.4: Sürüm/komşu tespiti her şeyden önce — alt sistemler guvenliMi()'ye bakıyor.
         com.photonpulse.candy.uyum.SurumKapisi.register();
 
         // v0.7: Custom entity — Candy'nin doppelganger'ı (player-shaped, 40 HP)
-        // NOT: EntityType static field'ı init sırasında register olur; explicit çağrı
-        // attribute registry için gerekli.
-        CandyEntities.register();
-        com.photonpulse.candy.item.CandyEfektler.register(); // v3.6 İmanın Gücü efekti
+        // Kayıtlar KayitKapisi üzerinden: Fabric'te çağrıldığı anda çalışır,
+        // NeoForge'da ilgili RegisterEvent'e kadar bekler. NeoForge'da mod
+        // kurucusu çalıştığında BuiltInRegistries zaten donmuş oluyor.
+        KayitKapisi.kaydet(Registries.ENTITY_TYPE, CandyEntities::register);
+        KayitKapisi.kaydet(Registries.MOB_EFFECT,
+            com.photonpulse.candy.item.CandyEfektler::register); // v3.6 İmanın Gücü efekti
 
         // v1.9.2: Custom sound events (murmur)
-        CandySounds.register();
+        KayitKapisi.kaydet(Registries.SOUND_EVENT, CandySounds::register);
 
         // Sunucu yaşam döngüsü
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+        SunucuYasamDongusu.SERVER_STARTED.register(server -> {
             com.photonpulse.candy.beyin.BeyinDeposu.sunucuBaslat(); // v4.0 cihaz-basi beyin
             com.photonpulse.candy.beyin.BeyinMotoru.dunyaIdAyarla(
                 com.photonpulse.candy.beyin.DunyaDogrulayici.dunyaKimligi(server));
@@ -99,7 +101,7 @@ public class Candy implements ModInitializer {
             SimulationManager.sunucuBaslat(server);
             ShadowTreeManager.sunucuBaslat(server);
         });
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+        SunucuYasamDongusu.SERVER_STOPPING.register(server -> {
             PersonalityManager.sunucuKapan();
             com.photonpulse.candy.beyin.BeyinMotoru.sunucuKapan();
             TreeGrowth.sunucuKapan();
@@ -148,7 +150,7 @@ public class Candy implements ModInitializer {
         });
 
         // Oyuncu bağlantı yaşam döngüsü
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             var player = handler.player;
             var tp = PersonalityManager.get(player);
             LOG.info("[Candy] oyuncu geldi: {} (kurulum: {})",
@@ -162,7 +164,7 @@ public class Candy implements ModInitializer {
             // Sadece test botları içindir; üretimde flag kapalı → hiç etkisi yok.
             if (Boolean.getBoolean("candy.autosetup") && !tp.kurulumTamam) {
                 tp.kurulumTamam = true;
-                tp.kurulumTamamTick = server.getOverworld().getTime();
+                tp.kurulumTamamTick = server.overworld().getGameTime();
                 LOG.info("[Candy] AUTOSETUP — kurulum otomatik tamamlandı: {}",
                     player.getName().getString());
             }
@@ -176,10 +178,10 @@ public class Candy implements ModInitializer {
                     var trKitap = Denek239Book.olustur(true);
                     var enKitap = Denek239Book.olustur(false);
                     var inv = player.getInventory();
-                    if (inv.getStack(0).isEmpty()) inv.setStack(0, trKitap);
-                    else player.giveItemStack(trKitap);
-                    if (inv.getStack(1).isEmpty()) inv.setStack(1, enKitap);
-                    else player.giveItemStack(enKitap);
+                    if (inv.getItem(0).isEmpty()) inv.setItem(0, trKitap);
+                    else player.addItem(trKitap);
+                    if (inv.getItem(1).isEmpty()) inv.setItem(1, enKitap);
+                    else player.addItem(enKitap);
                     tp.denek239Verildi = true;
                     com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "denek_239");
                     LOG.info("[Candy] Denek 239 kitapları verildi: {}", player.getName().getString());
@@ -190,18 +192,18 @@ public class Candy implements ModInitializer {
             if (!tp.kuranVerildi) {
                 server.execute(() -> {
                     if (player.isRemoved()) return;
-                    player.giveItemStack(com.photonpulse.candy.item.KuranKitap.olustur());
+                    player.addItem(com.photonpulse.candy.item.KuranKitap.olustur());
                     tp.kuranVerildi = true;
                     LOG.info("[Candy] Kuran-ı Kerim verildi: {}", player.getName().getString());
                 });
             }
         });
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            var uid = handler.player.getUuid();
+        SunucuBaglanti.DISCONNECT.register((handler, server) -> {
+            var uid = handler.player.getUUID();
             // Önce tp'yi güncel tut — cleanup diske yazacak, kayıp olmasın
             var tp = PersonalityManager.get(uid);
-            tp.sonAyrilmaTick = server.getOverworld().getTime();
+            tp.sonAyrilmaTick = server.overworld().getGameTime();
             // v8.2: son görülen dünya tick'ini yaz — sonraki katılış buna bakacak
             com.photonpulse.candy.kacis.KacisSensoru.ayrilis(handler.player);
             // Diske yaz + tüm per-player cache'leri temizle (MP'de birikmesin)
@@ -322,7 +324,8 @@ public class Candy implements ModInitializer {
         AntiMirrorLottery.register();       // Phase 4: 5 sn lottery + mercy reset
 
         // ─── v7: Kurul Dünyaları — 11 beyin her 5dk "seni atayım mı, nereye?" karar verir ───
-        com.photonpulse.candy.dimension.CandyBloklar.register();  // candy:me bloğu (ME dünyası)
+        KayitKapisi.kaydet(Registries.BLOCK,
+            com.photonpulse.candy.dimension.CandyBloklar::register); // candy:me bloğu (ME dünyası)
         DunyaSekillendirici.register();     // 8 dünyanın desenini chunk üretiminde damgalar
         DunyaKurulu.register();             // kurul kararı + DunyaGecisi ışınlama/dönüş
         AnomalyPatches.register();          // Phase 3.5: %10 overworld chunk anomaly
@@ -371,9 +374,11 @@ public class Candy implements ModInitializer {
         com.photonpulse.candy.dev.CandyDevKomut.register();
 
         // ─── v3.1: True RealCandy Boss ───
-        com.photonpulse.candy.boss.GizemliKitapRecipe.register();
+        KayitKapisi.kaydet(Registries.RECIPE_SERIALIZER,
+            com.photonpulse.candy.boss.GizemliKitapRecipe::register);
         com.photonpulse.candy.boss.BossManager.register();
-        com.photonpulse.candy.item.KuranRecipe.register();   // v3.5 Kuran-ı Kerim tarifi
+        KayitKapisi.kaydet(Registries.RECIPE_SERIALIZER,
+            com.photonpulse.candy.item.KuranRecipe::register);  // v3.5 Kuran-ı Kerim tarifi
         com.photonpulse.candy.item.KuranSistemi.register();  // v3.5 Ayetel Kürsi + İmanın Gücü
 
         LOG.info("[Candy] tüm aşamalar aktif — v8.3.0 (Arkadaş | Perde | Şifre | Vagus)");

@@ -6,10 +6,9 @@ import com.photonpulse.candy.beyin.Kurul;
 import com.photonpulse.candy.beyin.UyeSicili;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -87,7 +86,7 @@ public final class Vagus {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(Vagus::onTick);
+        SunucuTick.END_SERVER_TICK.register(Vagus::onTick);
         Candy.LOG.info("[Candy] Vagus kayıtlı — yerel gözlemci (v8.0)");
     }
 
@@ -109,7 +108,7 @@ public final class Vagus {
         if (!ayar.acik) return;
 
         try {
-            sonNabizTick = server.getOverworld().getTime();
+            sonNabizTick = server.overworld().getGameTime();
         } catch (Throwable t) {
             return;                           // overworld yok (kapanış) — bu nabzı atla
         }
@@ -123,7 +122,7 @@ public final class Vagus {
         }
         if (!calisiyor || havada.get()) return;
 
-        ServerPlayerEntity hedef = hedefSec(server);
+        ServerPlayer hedef = hedefSec(server);
         if (hedef == null) return;
         istekAt(server, hedef);
     }
@@ -153,16 +152,16 @@ public final class Vagus {
     }
 
     /** Hız limitini geçmiş, kurulumu tamamlanmış, en uzun süredir beklemiş oyuncu. */
-    private static ServerPlayerEntity hedefSec(MinecraftServer server) {
+    private static ServerPlayer hedefSec(MinecraftServer server) {
         final long simdi = sonNabizTick;
         final long aralik = ayar.aralikTick();
-        ServerPlayerEntity enIyi = null;
+        ServerPlayer enIyi = null;
         long enEski = Long.MAX_VALUE;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (tp == null || !tp.kurulumTamam) continue;
-            Durum d = durum(player.getUuid());
+            Durum d = durum(player.getUUID());
             if (d.sonIstekTick != Long.MIN_VALUE && simdi - d.sonIstekTick < aralik) continue;
             if (d.sonIstekTick < enEski) {
                 enEski = d.sonIstekTick;
@@ -172,8 +171,8 @@ public final class Vagus {
         return enIyi;
     }
 
-    private static void istekAt(MinecraftServer server, ServerPlayerEntity player) {
-        final UUID uid = player.getUuid();
+    private static void istekAt(MinecraftServer server, ServerPlayer player) {
+        final UUID uid = player.getUUID();
         final Durum d = durum(uid);
         final TruePersonality tp = PersonalityManager.get(player);
         if (tp == null) return;

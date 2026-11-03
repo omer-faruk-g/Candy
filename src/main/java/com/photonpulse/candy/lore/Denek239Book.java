@@ -1,13 +1,12 @@
 package com.photonpulse.candy.lore;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.WrittenBookContentComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.text.RawFilteredPair;
-import net.minecraft.text.Text;
-
 import java.util.List;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.network.Filterable;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.WrittenBookContent;
 
 /**
  * Denek239Book — oyuncuya ilk join'de verilen imzalı kitap.
@@ -100,16 +99,16 @@ public class Denek239Book {
     public static ItemStack olusturTam(boolean turkce) {
         List<String> sayfalar = turkce ? TR_TAM : EN_TAM;
         String baslik = turkce ? TR_BASLIK_TAM : EN_BASLIK_TAM;
-        List<RawFilteredPair<Text>> sayfaTextleri = sayfalar.stream()
-            .map(s -> RawFilteredPair.<Text>of((Text) Text.literal(s)))
+        List<Filterable<Component>> sayfaTextleri = sayfalar.stream()
+            .map(s -> Filterable.<Component>passThrough((Component) Component.literal(s)))
             .toList();
-        WrittenBookContentComponent icerik = new WrittenBookContentComponent(
-            RawFilteredPair.of(baslik), YAZAR, 0, sayfaTextleri, true);
+        WrittenBookContent icerik = new WrittenBookContent(
+            Filterable.passThrough(baslik), YAZAR, 0, sayfaTextleri, true);
         ItemStack kitap = new ItemStack(Items.WRITTEN_BOOK);
-        kitap.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, icerik);
-        kitap.set(DataComponentTypes.CUSTOM_NAME,
-            net.minecraft.text.Text.translatable("candy.item.denek239_not")
-                .formatted(net.minecraft.util.Formatting.DARK_RED, net.minecraft.util.Formatting.BOLD));
+        kitap.set(DataComponents.WRITTEN_BOOK_CONTENT, icerik);
+        kitap.set(DataComponents.CUSTOM_NAME,
+            net.minecraft.network.chat.Component.translatable("candy.item.denek239_not")
+                .withStyle(net.minecraft.ChatFormatting.DARK_RED, net.minecraft.ChatFormatting.BOLD));
         return kitap;
     }
 
@@ -117,12 +116,12 @@ public class Denek239Book {
         List<String> sayfalar = turkce ? TR_SAYFALAR : EN_SAYFALAR;
         String baslik = turkce ? TR_BASLIK : EN_BASLIK;
 
-        List<RawFilteredPair<Text>> sayfaTextleri = sayfalar.stream()
-            .map(s -> RawFilteredPair.<Text>of((Text) Text.literal(s)))
+        List<Filterable<Component>> sayfaTextleri = sayfalar.stream()
+            .map(s -> Filterable.<Component>passThrough((Component) Component.literal(s)))
             .toList();
 
-        WrittenBookContentComponent icerik = new WrittenBookContentComponent(
-            RawFilteredPair.of(baslik),
+        WrittenBookContent icerik = new WrittenBookContent(
+            Filterable.passThrough(baslik),
             YAZAR,
             0,
             sayfaTextleri,
@@ -130,7 +129,7 @@ public class Denek239Book {
         );
 
         ItemStack kitap = new ItemStack(Items.WRITTEN_BOOK);
-        kitap.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, icerik);
+        kitap.set(DataComponents.WRITTEN_BOOK_CONTENT, icerik);
         return kitap;
     }
 }

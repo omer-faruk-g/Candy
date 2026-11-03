@@ -1,7 +1,7 @@
 package com.photonpulse.candy.core;
 
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.Box;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.AABB;
 
 /**
  * Psikoloji — oyuncunun kalıcı ruh sağlığı state'i.
@@ -59,7 +59,7 @@ public class Psikoloji {
      *
      * "Bir oyuncu paniklerse takım daha çok görür."
      */
-    public static double grupAgresivlikCarpani(ServerPlayerEntity player) {
+    public static double grupAgresivlikCarpani(ServerPlayer player) {
         TruePersonality tpMain = PersonalityManager.get(player);
         // v3.1 Boss WIN sessizliği — klon spawn dahil susar
         if (tpMain.bossOldurulmeTick > 0) return 0.01;
@@ -67,9 +67,9 @@ public class Psikoloji {
         double ozguvenToplam = tpMain.candyOzguven;
         int sayi = 1;
 
-        Box arama = new Box(player.getBlockPos()).expand(24);
-        for (var diger : player.getWorld().getEntitiesByClass(
-                ServerPlayerEntity.class, arama, p -> p != player)) {
+        AABB arama = new AABB(player.blockPosition()).inflate(24);
+        for (var diger : player.level().getEntitiesOfClass(
+                ServerPlayer.class, arama, p -> p != player)) {
             TruePersonality tpD = PersonalityManager.get(diger);
             if (!tpD.kurulumTamam) continue;
             toplam += kotulukSkoru(tpD);

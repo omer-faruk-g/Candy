@@ -2,10 +2,10 @@ package com.photonpulse.candy.beyin;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.TruePersonality;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * DunyaDogrulayici — beynin oyuncu modelini YENİ bir dünyada sınar.
@@ -40,8 +40,8 @@ public class DunyaDogrulayici {
     /** Dünya kimliği: ad + seed karması. Aynı dünya her açılışta aynı kimliği alır. */
     public static String dunyaKimligi(MinecraftServer server) {
         try {
-            String ad = server.getSaveProperties().getLevelInfo().getLevelName();
-            long seed = server.getOverworld().getSeed();
+            String ad = server.getWorldData().getLevelSettings().levelName();
+            long seed = server.overworld().getSeed();
             long h = (ad == null ? 0 : ad.hashCode()) * 1125899906842597L + seed;
             return String.format("%016x", h);
         } catch (Throwable t) {
@@ -79,7 +79,7 @@ public class DunyaDogrulayici {
     /**
      * Her süpürmede tahminleri puanlar; kör mod bitince kararı verir.
      */
-    public static void supurme(Beyin b, ServerPlayerEntity player, TruePersonality tp) {
+    public static void supurme(Beyin b, ServerPlayer player, TruePersonality tp) {
         if (b == null || b.aktifDunya == null || b.oyuncuHaritasi == null) return;
         Dogrulama d = b.aktifDunya;
         d.toplamSupurme++;
@@ -103,7 +103,7 @@ public class DunyaDogrulayici {
     }
 
     /** Kör mod sonucu: model genelledi mi, yoksa dünyaya mı bağımlıymış? */
-    private static void karar(Beyin b, Dogrulama d, ServerPlayerEntity player, TruePersonality tp) {
+    private static void karar(Beyin b, Dogrulama d, ServerPlayer player, TruePersonality tp) {
         if (d.tahmin < MIN_TAHMIN || d.karariVerildi) return;
         d.karariVerildi = true;
 
@@ -117,7 +117,7 @@ public class DunyaDogrulayici {
         // her üyenin iç durumu tp üzerinden diğer 10 üyenin girdisine karışırdı:
         // komitenin bağımsızlığı, dolayısıyla tüm anlamı yok olurdu.
         final boolean govde = (b.uyeNo == 0);
-        final ServerPlayerEntity sesli = govde ? player : null;
+        final ServerPlayer sesli = govde ? player : null;
 
         if (fark <= GENELLEME_ESIGI) {
             // ── GENELLEDİ: öğrendiğim dünya değil, kişi ──
@@ -188,9 +188,9 @@ public class DunyaDogrulayici {
         }
     }
 
-    private static void sizdir(ServerPlayerEntity player, TruePersonality tp, String anahtar) {
+    private static void sizdir(ServerPlayer player, TruePersonality tp, String anahtar) {
         if (player == null || tp.bossOldurulmeTick > 0) return;
-        player.sendMessage(Text.translatable(anahtar)
-            .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+        player.displayClientMessage(Component.translatable(anahtar)
+            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
     }
 }

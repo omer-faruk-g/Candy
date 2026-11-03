@@ -3,7 +3,7 @@ package com.photonpulse.candy.beyin;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.photonpulse.candy.Candy;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -74,7 +74,7 @@ public class BeyinDeposu {
 
     public static void sunucuBaslat() {
         try {
-            klasor = FabricLoader.getInstance().getGameDir().resolve("candy_beyin");
+            klasor = Yukleyici.oyunDizini().resolve("candy_beyin");
             Files.createDirectories(klasor);
             Candy.LOG.info("[Candy] beyin deposu: {}", klasor);
         } catch (Throwable t) {

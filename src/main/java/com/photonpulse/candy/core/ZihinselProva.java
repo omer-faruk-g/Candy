@@ -6,19 +6,18 @@ import com.photonpulse.candy.entity.CandyEntities;
 import com.photonpulse.candy.sessizlik.SessizlikState;
 import com.photonpulse.candy.simulation.SimulatedPersonality;
 import com.photonpulse.candy.simulation.SimulationManager;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntitySpawnReason;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -88,21 +87,21 @@ public class ZihinselProva {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(ZihinselProva::onTick);
+        SunucuTick.END_SERVER_TICK.register(ZihinselProva::onTick);
         Candy.LOG.info("[Candy] ZihinselProva aktif — hayali test + karar motoru (v3.1)");
     }
 
     private static void onTick(MinecraftServer server) {
         tick++;
         if (tick % ARALIK != 0) return;
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 if (tp.bossOldurulmeTick > 0) continue; // WIN sessizliği
-                UUID id = player.getUuid();
+                UUID id = player.getUUID();
 
                 // 1) Önceki eylemin gerçek sonucunu ölç → öğren (+ Silahlanma Yarışı)
                 geribildirim(player, tp, id, simdi);
@@ -214,7 +213,7 @@ public class ZihinselProva {
                 double fearTahmin = tahminEt(enIyi, tp, sp); // geribildirim korku beklentisi
 
                 // 4) Kararı UYGULA (overworld saati — SessizlikState tutarlılığı için)
-                ServerWorld world = (ServerWorld) player.getWorld();
+                ServerLevel world = (ServerLevel) player.level();
                 uygula(enIyi, player, world, simdi);
                 sonProva.put(id, simdi);
                 float[] izAnlik = (beyin == null || beyin.girdi == null)
@@ -238,7 +237,7 @@ public class ZihinselProva {
     }
 
     /** Önceki eylemden ~10 sn sonra gerçek korku değişimini ölç → öğrenme + Silahlanma. */
-    private static void geribildirim(ServerPlayerEntity player, TruePersonality tp, UUID id, long simdi) {
+    private static void geribildirim(ServerPlayer player, TruePersonality tp, UUID id, long simdi) {
         Bekleyen b = bekleyen.get(id);
         if (b == null) return;
         if (simdi - b.uygulamaTick() < 200) return; // 10 sn bekle
@@ -297,8 +296,8 @@ public class ZihinselProva {
             if (a >= 3 && !tp.emekliMekanikler.contains(ea)) {
                 tp.emekliMekanikler.add(ea);
                 if (tp.bossOldurulmeTick == 0) {
-                    player.sendMessage(Text.translatable("candy.silahlanma." + RNG.nextInt(2))
-                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+                    player.displayClientMessage(Component.translatable("candy.silahlanma." + RNG.nextInt(2))
+                        .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
                 }
                 Candy.LOG.info("[Candy] Silahlanma[{}] '{}' emekliye ayrıldı — oyuncu adapte oldu",
                     player.getName().getString(), ea);
@@ -407,18 +406,18 @@ public class ZihinselProva {
     }
 
     // ─── Eylem uygulama (hafif, kendine yeten) ───
-    private static void uygula(Eylem e, ServerPlayerEntity player, ServerWorld world, long owSimdi) {
+    private static void uygula(Eylem e, ServerPlayer player, ServerLevel world, long owSimdi) {
         switch (e) {
             case KLON_ARKA -> klonSpawn(player, world, false);
             case YAKIN_KLON -> klonSpawn(player, world, true);
             case KARANLIK -> {
-                player.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.DARKNESS, 80, 0, true, false, false));
-                world.playSound(null, player.getBlockPos(),
-                    SoundEvents.AMBIENT_CAVE.value(), SoundCategory.AMBIENT, 1.0f, 0.6f);
+                player.addEffect(new MobEffectInstance(
+                    MobEffects.DARKNESS, 80, 0, true, false, false));
+                world.playSound(null, player.blockPosition(),
+                    SoundEvents.AMBIENT_CAVE.value(), SoundSource.AMBIENT, 1.0f, 0.6f);
             }
-            case SES -> world.playSound(null, player.getBlockPos(),
-                SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.HOSTILE, 0.8f, 0.7f);
+            case SES -> world.playSound(null, player.blockPosition(),
+                SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 0.8f, 0.7f);
             case SESSIZLIK -> SessizlikState.baslat(owSimdi, 400); // 20 sn build-up (overworld saati)
             case SORU -> IcDusunce.soruSor(player);
             // ── v8.2 ──
@@ -434,14 +433,14 @@ public class ZihinselProva {
         }
     }
 
-    private static void klonSpawn(ServerPlayerEntity player, ServerWorld world, boolean yakin) {
+    private static void klonSpawn(ServerPlayer player, ServerLevel world, boolean yakin) {
         // Cap — 8+ klon yakında varken yenisini spawn etme (CloneManager + boss + bu = birikim)
-        var kutu = new net.minecraft.util.math.Box(player.getBlockPos()).expand(24);
-        int mevcut = world.getEntitiesByClass(CandyDoppelEntity.class, kutu,
-            e -> e.isAlive() && e.getCommandTags().contains("candy_clone")).size();
+        var kutu = new net.minecraft.world.phys.AABB(player.blockPosition()).inflate(24);
+        int mevcut = world.getEntitiesOfClass(CandyDoppelEntity.class, kutu,
+            e -> e.isAlive() && e.getTags().contains("candy_clone")).size();
         if (mevcut >= 8) return;
 
-        double yaw = Math.toRadians(player.getYaw());
+        double yaw = Math.toRadians(player.getYRot());
         double mesafe = yakin ? 3.0 : 6.0;
         // yakin = önünde, uzak = arkasında
         double yon = yakin ? 1.0 : -1.0;
@@ -458,12 +457,12 @@ public class ZihinselProva {
         }
         double x = player.getX() - Math.sin(yaw) * mesafe * yon;
         double z = player.getZ() + Math.cos(yaw) * mesafe * yon;
-        BlockPos pos = BlockPos.ofFloored(x, player.getY(), z);
-        var spawned = CandyEntities.DOPPEL.spawn(world, pos, SpawnReason.MOB_SUMMONED);
+        BlockPos pos = BlockPos.containing(x, player.getY(), z);
+        var spawned = CandyEntities.DOPPEL.spawn(world, pos, EntitySpawnReason.MOB_SUMMONED);
         if (spawned instanceof CandyDoppelEntity klon) {
-            klon.setOwnerUuid(player.getUuid());
-            klon.addCommandTag("candy_clone");
-            klon.setPersistent();
+            klon.setOwnerUuid(player.getUUID());
+            klon.addTag("candy_clone");
+            klon.setPersistenceRequired();
         }
     }
 

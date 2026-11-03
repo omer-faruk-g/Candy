@@ -25,7 +25,7 @@ public class SimulationManager {
     private static Path klasor = null;
 
     public static void sunucuBaslat(MinecraftServer server) {
-        Path worldPath = server.getSavePath(net.minecraft.util.WorldSavePath.ROOT);
+        Path worldPath = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
         klasor = worldPath.resolve("candy");
         try {
             Files.createDirectories(klasor);

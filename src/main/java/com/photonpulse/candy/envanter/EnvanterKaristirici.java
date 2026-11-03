@@ -4,12 +4,11 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.item.ItemStack;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -35,12 +34,12 @@ public class EnvanterKaristirici {
 
     private static int tickSayaci = 0;
     private static final Random RNG = new Random();
-    private static final Map<UUID, Vec3d> sonPozisyon = new HashMap<>();
+    private static final Map<UUID, Vec3> sonPozisyon = new HashMap<>();
     private static final Map<UUID, Long> sonHareketTick = new HashMap<>();
     private static final Map<UUID, Long> sonSwapTick = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(EnvanterKaristirici::onTick);
+        SunucuTick.END_SERVER_TICK.register(EnvanterKaristirici::onTick);
         Candy.LOG.info("[Candy] EnvanterKaristirici aktif — AFK sonrası slot swap");
     }
 
@@ -61,13 +60,13 @@ public class EnvanterKaristirici {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            UUID uid = player.getUuid();
-            Vec3d pos = player.getPos();
+        long simdi = server.overworld().getGameTime();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            UUID uid = player.getUUID();
+            Vec3 pos = player.position();
 
             // Hareket takip
-            Vec3d oncekiPos = sonPozisyon.get(uid);
+            Vec3 oncekiPos = sonPozisyon.get(uid);
             if (oncekiPos == null || pos.distanceTo(oncekiPos) > 1.0) {
                 sonPozisyon.put(uid, pos);
                 sonHareketTick.put(uid, simdi);
@@ -100,24 +99,24 @@ public class EnvanterKaristirici {
     /**
      * Main inventory'de 2 rastgele dolu slot bul, yer değişir. Başarılıysa true döner.
      */
-    private static boolean slotSwap(ServerPlayerEntity player) {
+    private static boolean slotSwap(ServerPlayer player) {
         var inv = player.getInventory();
         // Main inventory: slot 9-35 (36 slot toplam envanter, 9-35 arası main)
         int slot1 = -1, slot2 = -1;
         int denemeMax = 20;
         for (int i = 0; i < denemeMax; i++) {
             int s = 9 + RNG.nextInt(27);
-            if (!inv.getStack(s).isEmpty()) {
+            if (!inv.getItem(s).isEmpty()) {
                 if (slot1 == -1) slot1 = s;
                 else if (s != slot1) { slot2 = s; break; }
             }
         }
         if (slot1 == -1 || slot2 == -1) return false;
 
-        ItemStack a = inv.getStack(slot1);
-        ItemStack b = inv.getStack(slot2);
-        inv.setStack(slot1, b);
-        inv.setStack(slot2, a);
+        ItemStack a = inv.getItem(slot1);
+        ItemStack b = inv.getItem(slot2);
+        inv.setItem(slot1, b);
+        inv.setItem(slot2, a);
 
         Candy.LOG.info("[Candy] EnvanterKaristirici: {} slot {}↔{} swap",
             player.getName().getString(), slot1, slot2);

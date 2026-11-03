@@ -3,10 +3,9 @@ package com.photonpulse.candy.meta;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,14 +52,14 @@ public final class ArkaBakis {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(ArkaBakis::onTick);
+        SunucuTick.END_SERVER_TICK.register(ArkaBakis::onTick);
         Candy.LOG.info("[Candy] ArkaBakis aktif — arkaya bakma ekseni ölçülüyor");
     }
 
     private static void onTick(MinecraftServer server) {
         tick++;
         if (tick % ARALIK != 0) return;
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 olcumAl(player);
             } catch (Throwable t) {
@@ -69,9 +68,9 @@ public final class ArkaBakis {
         }
     }
 
-    private static void olcumAl(ServerPlayerEntity player) {
-        UUID id = player.getUuid();
-        float yaw = player.getYaw();
+    private static void olcumAl(ServerPlayer player) {
+        UUID id = player.getUUID();
+        float yaw = player.getYRot();
         Float onceki = oncekiYaw.put(id, yaw);
         if (onceki == null) return;
 
@@ -79,7 +78,7 @@ public final class ArkaBakis {
             pencereBakis.merge(id, 1, Integer::sum);
         }
 
-        long simdi = player.getWorld().getTime();
+        long simdi = player.level().getGameTime();
         long bas = pencereBas.getOrDefault(id, 0L);
         if (bas == 0L) { pencereBas.put(id, simdi); return; }
         if (simdi - bas < PENCERE_TICK) return;

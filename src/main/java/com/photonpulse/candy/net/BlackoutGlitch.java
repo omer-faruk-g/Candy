@@ -4,10 +4,9 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sessizlik.SessizlikState;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -42,12 +41,12 @@ public class BlackoutGlitch {
     private static final Map<UUID, Long> sonTetik = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % KONTROL_ARALIGI != 0) return;
-            long simdi = server.getOverworld().getTime();
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
+            long simdi = server.overworld().getGameTime();
             if (SessizlikState.sessizlikte(simdi)) return;
 
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 if (player.isCreative() || player.isSpectator()) continue;
@@ -55,22 +54,22 @@ public class BlackoutGlitch {
                 if (simdi - tp.kurulumTamamTick < BEKLEME_TICK) continue;
 
                 if (tp.bossOldurulmeTick > 0) continue; // WIN 30dk sessizlik
-                Long son = sonTetik.get(player.getUuid());
+                Long son = sonTetik.get(player.getUUID());
                 long cd = tp.badEndingAktif ? COOLDOWN / 2 : COOLDOWN; // BAD ENDING 2x
                 if (son != null && simdi - son < cd) continue;
 
                 // Aynı client overlay'ini paylaşıyoruz — devam eden camscreen'i kesme
-                if (CamscreenTetikleyici.yakindaTetiklendi(player.getUuid(), simdi, 40L)) continue;
+                if (CamscreenTetikleyici.yakindaTetiklendi(player.getUUID(), simdi, 40L)) continue;
 
                 // DEBUG'da random roll atlanır (test kolaylığı) — diğer şartlar aynen geçerli
                 boolean tetiklenecek = DEBUG || TETIKLEYICI_SAYILAR.contains(1 + RNG.nextInt(100));
                 if (!tetiklenecek) continue;
 
-                sonTetik.put(player.getUuid(), simdi);
+                sonTetik.put(player.getUUID(), simdi);
                 int sureMs = 100 + RNG.nextInt(201); // 100-300ms
 
                 try {
-                    ServerPlayNetworking.send(player, new CamscreenPayload(IDX_BLACKOUT, sureMs));
+                    SunucuAg.send(player, new CamscreenPayload(IDX_BLACKOUT, sureMs));
                 } catch (Throwable t) {
                     continue; // vanilla client — payload bilinmiyor
                 }

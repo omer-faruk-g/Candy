@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import com.photonpulse.candy.Candy;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -55,7 +55,7 @@ public class VagusAyar {
         VagusAyar ayar = new VagusAyar();
         Path yol;
         try {
-            yol = FabricLoader.getInstance().getConfigDir().resolve("candy-vagus.json");
+            yol = Yukleyici.ayarDizini().resolve("candy-vagus.json");
         } catch (Throwable t) {
             ayar.dogrula();
             return ayar;      // ayar dizini yok (headless doğrulama) — varsayılanla devam

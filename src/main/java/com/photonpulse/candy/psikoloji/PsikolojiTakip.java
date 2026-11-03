@@ -4,18 +4,18 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 // Ozguven aynı package — import gerekmez
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.registry.tag.BlockTags;
+import com.photonpulse.candy.platform.CanliOlaylari;
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.BlokOlaylari;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.LightType;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
  * PsikolojiTakip — oyuncunun ruh sağlığını sürekli izleyen sistem.
@@ -55,21 +55,21 @@ public class PsikolojiTakip {
     private static final double YUKSEK_KORKU_ESIK = 70.0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(PsikolojiTakip::onTick);
+        SunucuTick.END_SERVER_TICK.register(PsikolojiTakip::onTick);
 
         // Mob'dan damage yeme
-        ServerLivingEntityEvents.AFTER_DAMAGE.register(
-            (entity, damageSource, baseDamageTaken, damageTaken, blocked) -> {
-                if (!(entity instanceof ServerPlayerEntity player)) return;
-                if (!(damageSource.getAttacker() instanceof HostileEntity)) return;
+        CanliOlaylari.AFTER_DAMAGE.register(
+            (entity, damageSource) -> {
+                if (!(entity instanceof ServerPlayer player)) return;
+                if (!(damageSource.getEntity() instanceof Monster)) return;
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) return;
-                kotulesmeUygula(tp, MOB_DAMAGE_KOTULESTIRME, player.getWorld().getTime());
+                kotulesmeUygula(tp, MOB_DAMAGE_KOTULESTIRME, player.level().getGameTime());
             });
 
         // Blok kırma — elmas / çiçek
-        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
-            if (!(player instanceof ServerPlayerEntity sp)) return;
+        BlokOlaylari.AFTER.register((world, player, pos, state) -> {
+            if (!(player instanceof ServerPlayer sp)) return;
             TruePersonality tp = PersonalityManager.get(sp);
             if (!tp.kurulumTamam) return;
 
@@ -77,7 +77,7 @@ public class PsikolojiTakip {
             if (b == Blocks.DIAMOND_ORE || b == Blocks.DEEPSLATE_DIAMOND_ORE) {
                 iyilesmeUygula(tp, ELMAS_IYILESTIRME);
                 Candy.LOG.debug("[Candy] psikoloji iyileşti (elmas): {}", tp.psikolojiKotulugu);
-            } else if (state.isIn(BlockTags.FLOWERS)) {
+            } else if (state.is(BlockTags.FLOWERS)) {
                 iyilesmeUygula(tp, CICEK_IYILESTIRME);
                 Candy.LOG.debug("[Candy] psikoloji iyileşti (çiçek): {}", tp.psikolojiKotulugu);
             }
@@ -99,23 +99,23 @@ public class PsikolojiTakip {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
 
-            ServerWorld world = (ServerWorld) player.getWorld();
-            var pos = player.getBlockPos();
+            ServerLevel world = (ServerLevel) player.level();
+            var pos = player.blockPosition();
 
             // Cave detection: Y < seaLevel + block light düşük + üstü kapalı
-            int isik = world.getLightLevel(LightType.BLOCK, pos);
+            int isik = world.getBrightness(LightLayer.BLOCK, pos);
             int seaLevel = world.getSeaLevel();
-            int yuzeyY = world.getTopY(Heightmap.Type.WORLD_SURFACE, pos.getX(), pos.getZ());
+            int yuzeyY = world.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
             boolean uzeriKapali = yuzeyY > player.getY() + 3;
             boolean magara = player.getY() < seaLevel && isik < 8 && uzeriKapali;
 
-            long timeOfDay = world.getTimeOfDay() % 24000L;
+            long timeOfDay = world.getDayTime() % 24000L;
             boolean gunduz = timeOfDay < 12000L;
 
             // ── Kötüleştiriciler ──

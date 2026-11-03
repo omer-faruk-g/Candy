@@ -1,0 +1,39 @@
+# Candy — NeoForge metadata.
+# ${version} ve ${minecraft_dep_neo} bekliyor. minecraft_dep DEGIL: o Fabric'in
+# semver araligi (~1.21.7) ve NeoForge onu ayristiramaz.
+# processResources ikisini de expand ediyor (build.gradle).
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "CC-BY-NC-SA-4.0"
+issueTrackerURL = "https://github.com/omer-faruk-g/Candy/issues"
+
+[[mods]]
+modId = "candy"
+version = "${version}"
+displayName = "Candy"
+authors = "PhotonPulse"
+displayURL = "https://github.com/omer-faruk-g/Candy"
+description = '''
+An entity trying to find out what it is. It is watching you. Psychological
+horror: flashing, sudden loud sounds, chat and HUD interference, world damage.
+See README before installing. | Kendini bulmaya calisan bir varlik. Seni izliyor.
+'''
+
+# Mixin yapilandirmasi Fabric ile ayni dosya; kaynak zaten Mojang resmi
+# adlarini tasidigi icin refmap gerekmiyor.
+[[mixins]]
+config = "candy.mixins.json"
+
+[[dependencies.candy]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.candy]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_dep_neo}"
+ordering = "NONE"
+side = "BOTH"

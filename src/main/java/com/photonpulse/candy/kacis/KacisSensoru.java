@@ -3,15 +3,14 @@ package com.photonpulse.candy.kacis;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.GameMode;
-
+import net.minecraft.world.level.GameType;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,25 +63,25 @@ public final class KacisSensoru {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playC2S().register(KacisPayload.ID, KacisPayload.CODEC);
+            AgKayit.playC2S().register(KacisPayload.ID, KacisPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Kacis C2S zaten kayıtlı: {}", t.getMessage());
         }
-        ServerPlayNetworking.registerGlobalReceiver(KacisPayload.ID, (payload, context) -> {
+        SunucuAg.registerGlobalReceiver(KacisPayload.ID, (payload, context) -> {
             // İstemciden gelen SAYI, metin değil — hiçbir kişisel veri taşımıyor.
             int f3 = Math.max(0, Math.min(20_000, payload.f3Tick()));
             if (f3 <= 0) return;
-            ServerPlayerEntity player = context.player();
+            ServerPlayer player = context.player();
             context.server().execute(() -> olay(player, "f3", DARBE * Math.min(1.0, f3 / 1200.0)));
         });
-        ServerTickEvents.END_SERVER_TICK.register(KacisSensoru::onTick);
+        SunucuTick.END_SERVER_TICK.register(KacisSensoru::onTick);
         Candy.LOG.info("[Candy] KacisSensoru aktif — kaçış arayışı ekseni ölçülüyor");
     }
 
     private static void onTick(MinecraftServer server) {
         tick++;
         if (tick % ARALIK != 0) return;
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 tara(player);
             } catch (Throwable t) {
@@ -91,18 +90,18 @@ public final class KacisSensoru {
         }
     }
 
-    private static void tara(ServerPlayerEntity player) {
+    private static void tara(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
         if (tp == null || !tp.kurulumTamam) return;
-        ServerWorld world = (ServerWorld) player.getWorld();
+        ServerLevel world = (ServerLevel) player.level();
 
         double anlik = 0.0;
-        GameMode mod = player.interactionManager.getGameMode();
-        if (mod == GameMode.CREATIVE || mod == GameMode.SPECTATOR) anlik += 0.6;
-        else if (mod == GameMode.ADVENTURE) anlik += 0.2;
+        GameType mod = player.gameMode.getGameModeForPlayer();
+        if (mod == GameType.CREATIVE || mod == GameType.SPECTATOR) anlik += 0.6;
+        else if (mod == GameType.ADVENTURE) anlik += 0.2;
         if (world.getDifficulty() == Difficulty.PEACEFUL) anlik += 0.4;
 
-        UUID id = player.getUuid();
+        UUID id = player.getUUID();
         double birikmis = darbeler.getOrDefault(id, 0.0);
         darbeler.put(id, birikmis * SONUM);
 
@@ -122,13 +121,13 @@ public final class KacisSensoru {
     }
 
     /** Tek seferlik kaçış olayı — darbe olarak eksene girer. */
-    public static void olay(ServerPlayerEntity player, String tur, double siddet) {
+    public static void olay(ServerPlayer player, String tur, double siddet) {
         try {
             if (player == null) return;
             TruePersonality tp = PersonalityManager.get(player);
             if (tp == null) return;
             tp.kacisDenemesi++;
-            darbeler.merge(player.getUuid(), Math.max(0.0, siddet), Double::sum);
+            darbeler.merge(player.getUUID(), Math.max(0.0, siddet), Double::sum);
             Candy.LOG.debug("[Candy] Kacis olayi: {} → {} (toplam {})",
                 player.getName().getString(), tur, tp.kacisDenemesi);
         } catch (Throwable t) {
@@ -137,7 +136,7 @@ public final class KacisSensoru {
     }
 
     /** Cheat komutu denemesi — {@code CommandManagerMixin} çağırır. */
-    public static void komutDenemesi(ServerPlayerEntity player) {
+    public static void komutDenemesi(ServerPlayer player) {
         olay(player, "komut", DARBE);
     }
 
@@ -149,13 +148,13 @@ public final class KacisSensoru {
      * yüklü değilken oynanmıştır. Adanmış sunucuda saat oyuncu yokken de ilerlediği
      * için bu çıkarım orada geçersiz — kasıtlı olarak atlanıyor.</p>
      */
-    public static void katilis(ServerPlayerEntity player) {
+    public static void katilis(ServerPlayer player) {
         try {
             TruePersonality tp = PersonalityManager.get(player);
             if (tp == null) return;
-            ServerWorld world = (ServerWorld) player.getWorld();
+            ServerLevel world = (ServerLevel) player.level();
             MinecraftServer server = world.getServer();
-            long simdi = world.getTime();
+            long simdi = world.getGameTime();
 
             if (server.isSingleplayer() && tp.sonGorulenDunyaTick > 0
                 && simdi - tp.sonGorulenDunyaTick > MODSUZ_ESIK) {
@@ -173,12 +172,12 @@ public final class KacisSensoru {
     }
 
     /** Ayrılışta son görülen tick'i yaz — bir sonraki katılış buna bakacak. */
-    public static void ayrilis(ServerPlayerEntity player) {
+    public static void ayrilis(ServerPlayer player) {
         try {
             TruePersonality tp = PersonalityManager.get(player);
-            if (tp != null) tp.sonGorulenDunyaTick = player.getWorld().getTime();
+            if (tp != null) tp.sonGorulenDunyaTick = player.level().getGameTime();
         } catch (Throwable ignored) {}
-        if (player != null) darbeler.remove(player.getUuid());
+        if (player != null) darbeler.remove(player.getUUID());
     }
 
     public static void oyuncuAyrildi(UUID uuid) { darbeler.remove(uuid); }

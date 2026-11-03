@@ -6,7 +6,7 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 
 import java.util.HashMap;
@@ -36,7 +36,7 @@ public class Discontent {
     private static int tickSayaci = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(Discontent::onTick);
+        SunucuTick.END_SERVER_TICK.register(Discontent::onTick);
         Candy.LOG.info("[Candy] Discontent aktif");
     }
 
@@ -44,7 +44,7 @@ public class Discontent {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
         for (Map.Entry<UUID, TruePersonality> e : PersonalityManager.tumOyuncular().entrySet()) {
             UUID uid = e.getKey();
             TruePersonality tp = e.getValue();

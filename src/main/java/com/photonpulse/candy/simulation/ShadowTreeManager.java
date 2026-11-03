@@ -7,7 +7,7 @@ import com.photonpulse.candy.core.JsonDepo;
 import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
@@ -36,12 +36,12 @@ public class ShadowTreeManager {
     private static Path klasor = null;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(ShadowTreeManager::onTick);
+        SunucuTick.END_SERVER_TICK.register(ShadowTreeManager::onTick);
         Candy.LOG.info("[Candy] ShadowTreeManager aktif");
     }
 
     public static void sunucuBaslat(MinecraftServer server) {
-        Path worldPath = server.getSavePath(net.minecraft.util.WorldSavePath.ROOT);
+        Path worldPath = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
         klasor = worldPath.resolve("candy");
         try {
             Files.createDirectories(klasor);
@@ -138,7 +138,7 @@ public class ShadowTreeManager {
     private static void onTick(MinecraftServer server) {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI == 0) {
-            long simdi = server.getOverworld().getTime();
+            long simdi = server.overworld().getGameTime();
             for (Map.Entry<UUID, ShadowTree> e : cache.entrySet()) {
                 UUID uid = e.getKey();
                 ShadowTree st = e.getValue();

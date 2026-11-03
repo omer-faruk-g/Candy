@@ -4,10 +4,10 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.net.KaranlikPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuBaglanti;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Karanlik (v8.1) — ışık kademesini client'a yollayan sunucu tarafı.
@@ -28,14 +28,14 @@ public final class Karanlik {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(KaranlikPayload.ID, KaranlikPayload.CODEC);
+            AgKayit.playS2C().register(KaranlikPayload.ID, KaranlikPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Karanlik payload zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             try {
-                ServerPlayerEntity player = handler.getPlayer();
+                ServerPlayer player = handler.getPlayer();
                 TruePersonality tp = PersonalityManager.get(player);
                 if (tp.isikDusumu > 0) gonder(player, tp.isikDusumu);
             } catch (Throwable ignored) {}
@@ -45,9 +45,9 @@ public final class Karanlik {
     }
 
     /** Kademeyi oyuncunun client'ına yollar. Vanilla client'ta sessizce düşer. */
-    public static void gonder(ServerPlayerEntity player, int kademe) {
+    public static void gonder(ServerPlayer player, int kademe) {
         try {
-            ServerPlayNetworking.send(player, new KaranlikPayload(kademe));
+            SunucuAg.send(player, new KaranlikPayload(kademe));
         } catch (Throwable ignored) {
             // Client bu payload'ı bilmiyor (vanilla) — karanlık yalnızca modlu client'ta.
         }

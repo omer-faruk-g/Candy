@@ -5,15 +5,14 @@ import com.photonpulse.candy.audio.CandySounds;
 import com.photonpulse.candy.basarim.CandyBasarimlar;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.CanliOlaylari;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import java.util.Random;
 import java.util.UUID;
 
@@ -39,12 +38,12 @@ public class OlumYerleri {
 
     public static void register() {
         // Player ölümü — konumu kaydet
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            if (!(entity instanceof ServerPlayerEntity player)) return;
+        CanliOlaylari.AFTER_DEATH.register((entity, source) -> {
+            if (!(entity instanceof ServerPlayer player)) return;
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) return;
 
-            BlockPos p = player.getBlockPos();
+            BlockPos p = player.blockPosition();
             int[] konum = new int[]{p.getX(), p.getY(), p.getZ()};
 
             // Halihazırda 8 blok içinde başka bir ölüm yeri varsa onu birleştir (yeni entry açma)
@@ -67,16 +66,16 @@ public class OlumYerleri {
         });
 
         // Proximity kontrolü
-        ServerTickEvents.END_SERVER_TICK.register(OlumYerleri::onTick);
+        SunucuTick.END_SERVER_TICK.register(OlumYerleri::onTick);
 
         Candy.LOG.info("[Candy] OlumYerleri aktif — travma hafızası (v3.0)");
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.olumYerleri.isEmpty()) continue;
@@ -108,14 +107,14 @@ public class OlumYerleri {
 
             if (tekrar >= TRAVMA_ESIGI) {
                 // Travma döngüsü — reverse bhoot + özel mesaj
-                player.sendMessage(Text.translatable("candy.olum_yeri.tekrar")
-                    .formatted(net.minecraft.util.Formatting.DARK_RED,
-                               net.minecraft.util.Formatting.ITALIC), false);
+                player.displayClientMessage(Component.translatable("candy.olum_yeri.tekrar")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_RED,
+                               net.minecraft.ChatFormatting.ITALIC), false);
                 try {
-                    ServerWorld dunya = (ServerWorld) player.getWorld();
+                    ServerLevel dunya = (ServerLevel) player.level();
                     // Reverse hissi için pitch düşür
-                    dunya.playSound(null, player.getBlockPos(),
-                        CandySounds.BHOOT, SoundCategory.AMBIENT, 0.6f, 0.55f);
+                    dunya.playSound(null, player.blockPosition(),
+                        CandySounds.BHOOT, SoundSource.AMBIENT, 0.6f, 0.55f);
                 } catch (Throwable ignored) {}
                 CandyBasarimlar.tetikle(player, "travma_dongusu");
                 Candy.LOG.info("[Candy] OlumYerleri: {} travma döngüsü @{} ({}. ziyaret)",
@@ -123,9 +122,9 @@ public class OlumYerleri {
             } else {
                 // Normal hatırlatma — 4 varyant
                 int idx = 1 + RNG.nextInt(4);
-                player.sendMessage(Text.translatable("candy.olum_yeri." + idx)
-                    .formatted(net.minecraft.util.Formatting.GRAY,
-                               net.minecraft.util.Formatting.ITALIC), false);
+                player.displayClientMessage(Component.translatable("candy.olum_yeri." + idx)
+                    .withStyle(net.minecraft.ChatFormatting.GRAY,
+                               net.minecraft.ChatFormatting.ITALIC), false);
                 Candy.LOG.info("[Candy] OlumYerleri: {} hatırlatma {} @{}",
                     player.getName().getString(), idx, yakin);
             }

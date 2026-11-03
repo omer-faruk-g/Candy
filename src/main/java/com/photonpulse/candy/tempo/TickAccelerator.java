@@ -5,11 +5,11 @@ import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.ServerTickManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.ServerTickRateManager;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * TickAccelerator — Veri Açlığı Sistemi (Sistem 2).
@@ -43,7 +43,7 @@ public class TickAccelerator {
     private static float sonLogladigimTPS = NORMAL_TPS;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(TickAccelerator::onTick);
+        SunucuTick.END_SERVER_TICK.register(TickAccelerator::onTick);
         Candy.LOG.info("[Candy] TickAccelerator aktif — kaynayan kurbağa");
     }
 
@@ -62,10 +62,10 @@ public class TickAccelerator {
 
         // En "istekli" oyuncuya göre hedef TPS
         double enYuksekIhtiyac = 0;
-        ServerPlayerEntity hedefOyuncu = null;
+        ServerPlayer hedefOyuncu = null;
         double hedefDerinlik = 0, hedefSabir = 0;
 
-        for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             double derinlik = derinlikOrani(p);
             double sabir = sabirSeviyesi(p);
             double ihtiyac = derinlik * sabir;
@@ -85,8 +85,8 @@ public class TickAccelerator {
         }
 
         // Mevcut → hedef asymptotik kayma
-        ServerTickManager tm = server.getTickManager();
-        float mevcutTPS = tm.getTickRate();
+        ServerTickRateManager tm = server.tickRateManager();
+        float mevcutTPS = tm.tickrate();
         float yeniTPS = (float) TruePersonality.kayma(mevcutTPS, hedefTPS, KAYMA_HIZI);
 
         // Yuvarlama gürültüsünü engelle — ama çok küçük delta'lar için de uygula,
@@ -109,18 +109,18 @@ public class TickAccelerator {
      * derinlikOrani = (denizSeviyesi - Y) / (denizSeviyesi - dunyaTabaniY), clamp 0..1
      * Yüzey/üstü = 0, bedrock = 1.
      */
-    private static double derinlikOrani(ServerPlayerEntity player) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+    private static double derinlikOrani(ServerPlayer player) {
+        ServerLevel world = (ServerLevel) player.level();
         int deniz = world.getSeaLevel();
-        int taban = world.getBottomY();
+        int taban = world.getMinY();
         double pay = deniz - player.getY();
         double payda = deniz - taban;
         if (payda <= 0) return 0;
         return Math.max(0, Math.min(1, pay / payda));
     }
 
-    private static double sabirSeviyesi(ServerPlayerEntity player) {
-        TreeNode tepki = TreeGrowth.get(player.getUuid()).nodes.get(TreeBranch.TEPKI.id);
+    private static double sabirSeviyesi(ServerPlayer player) {
+        TreeNode tepki = TreeGrowth.get(player.getUUID()).nodes.get(TreeBranch.TEPKI.id);
         if (tepki == null) return 0.5;
         return Math.max(0, Math.min(1, 1.0 - tepki.aktiflik));
     }

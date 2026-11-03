@@ -1,10 +1,10 @@
 package com.photonpulse.candy.net;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * C2S — client, gerçek donanım "parça" listesini sunucuya bildirir.
@@ -13,19 +13,19 @@ import net.minecraft.util.Identifier;
  *
  * Veri HİÇBİR YERE gönderilmez — sadece aynı oyuncuya oyun içi gösterilir.
  */
-public record DonanimPayload(String veri) implements CustomPayload {
+public record DonanimPayload(String veri) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<DonanimPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("candy", "donanim"));
+    public static final CustomPacketPayload.Type<DonanimPayload> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("candy", "donanim"));
 
-    public static final PacketCodec<RegistryByteBuf, DonanimPayload> CODEC =
-        PacketCodec.tuple(
-            PacketCodecs.STRING, DonanimPayload::veri,
+    public static final StreamCodec<RegistryFriendlyByteBuf, DonanimPayload> CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8, DonanimPayload::veri,
             DonanimPayload::new
         );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

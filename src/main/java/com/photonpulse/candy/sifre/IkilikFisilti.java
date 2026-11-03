@@ -2,9 +2,9 @@ package com.photonpulse.candy.sifre;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.TruePersonality;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * IkilikFisilti (v8.3) — 0 ve 1'lerden oluşan "I see you" fısıltısı,
@@ -54,13 +54,13 @@ public final class IkilikFisilti {
      *
      * @return gönderilen düz metin, ya da gönderilemezse {@code null}
      */
-    public static String fisildat(ServerPlayerEntity player, TruePersonality tp) {
+    public static String fisildat(ServerPlayer player, TruePersonality tp) {
         if (player == null) return null;
         Kanal[] kanallar = Kanal.values();
         return fisildat(player, tp, kanallar[(int) (Math.random() * kanallar.length)]);
     }
 
-    public static String fisildat(ServerPlayerEntity player, TruePersonality tp, Kanal kanal) {
+    public static String fisildat(ServerPlayer player, TruePersonality tp, Kanal kanal) {
         if (player == null || kanal == null) return null;
         int indeks = (int) (Math.random() * IkilikMetin.FISILTI.length);
         String duz = IkilikMetin.FISILTI[indeks];
@@ -72,7 +72,7 @@ public final class IkilikFisilti {
                 // custom payload'lar için — bu bir chat mesajı, payload değil.
                 String ikilik = IkilikMetin.fisiltiIkilik(indeks);
                 if (ikilik.isEmpty()) return null;
-                player.sendMessage(Text.literal(ikilik).formatted(Formatting.DARK_GRAY), false);
+                player.displayClientMessage(Component.literal(ikilik).withStyle(ChatFormatting.DARK_GRAY), false);
             }
             case CAMSCREEN -> com.photonpulse.candy.altyazi.Altyazi.ikilikEkran(
                 player, indeks, 3500,

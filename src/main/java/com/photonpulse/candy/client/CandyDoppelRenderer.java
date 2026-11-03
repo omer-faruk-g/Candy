@@ -1,35 +1,36 @@
 package com.photonpulse.candy.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.photonpulse.candy.entity.CandyDoppelEntity;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.item.ItemModelManager;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.PlayerListEntry;
+//?}
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.PlayerInfo;
 //? if >=1.21.9 {
-/*import net.minecraft.client.render.command.OrderedRenderCommandQueue;
-import net.minecraft.client.render.state.CameraRenderState;
-import net.minecraft.client.render.entity.model.EquipmentModelData;
+/*import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.ArmorModelSet;
+import net.minecraft.client.renderer.state.CameraRenderState;
 */
 //?}
 //? if <1.21.9 {
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.renderer.MultiBufferSource;
 //?}
-import net.minecraft.client.render.entity.BipedEntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.MobEntityRenderer;
-import net.minecraft.client.render.entity.feature.ArmorFeatureRenderer;
-import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.model.EntityModelLayers;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.DefaultSkinHelper;
-import net.minecraft.client.util.SkinTextures;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.client.resources.PlayerSkin;
+import net.minecraft.resources.ResourceLocation;
 import java.util.UUID;
 
 /**
@@ -42,88 +43,90 @@ import java.util.UUID;
  * PlayerEntityModel invariant olarak BipedEntityModel<PlayerEntityRenderState>'e bağlı.
  * Owner UUID artık state'te değil, updateRenderState anında entity'den okunuyor.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
-public class CandyDoppelRenderer extends MobEntityRenderer<
-        CandyDoppelEntity, PlayerEntityRenderState, PlayerEntityModel> {
+//?}
+public class CandyDoppelRenderer extends MobRenderer<
+        CandyDoppelEntity, PlayerRenderState, PlayerModel> {
 
-    private final ItemModelManager itemModelManager;
+    private final ItemModelResolver itemModelManager;
 
-    public CandyDoppelRenderer(EntityRendererFactory.Context ctx) {
-        super(ctx, new PlayerEntityModel(ctx.getPart(EntityModelLayers.PLAYER), false), 0.5f);
-        this.itemModelManager = ctx.getItemModelManager();
+    public CandyDoppelRenderer(EntityRendererProvider.Context ctx) {
+        super(ctx, new PlayerModel(ctx.bakeLayer(ModelLayers.PLAYER), false), 0.5f);
+        this.itemModelManager = ctx.getItemModelResolver();
         // Armor renderer — doppel senin zırhını gösterir.
         // 1.21.9: iç/dış zırh ayrı EntityModelLayer olmaktan çıktı, tek bir
         // EquipmentModelData (PLAYER_EQUIPMENT) slot başına model taşıyor.
         //? if >=1.21.9 {
-        /*this.addFeature(new ArmorFeatureRenderer<>(this,
-            EquipmentModelData.mapToEntityModel(EntityModelLayers.PLAYER_EQUIPMENT,
-                ctx.getEntityModels(), BipedEntityModel::new),
+        /*this.addLayer(new HumanoidArmorLayer<>(this,
+            ArmorModelSet.bake(ModelLayers.PLAYER_ARMOR,
+                ctx.getModelSet(), HumanoidModel::new),
             ctx.getEquipmentRenderer()));
         */
         //?}
         //? if <1.21.9 {
-        this.addFeature(new ArmorFeatureRenderer<>(this,
-            new BipedEntityModel<>(ctx.getPart(EntityModelLayers.PLAYER_INNER_ARMOR)),
-            new BipedEntityModel<>(ctx.getPart(EntityModelLayers.PLAYER_OUTER_ARMOR)),
+        this.addLayer(new HumanoidArmorLayer<>(this,
+            new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
+            new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
             ctx.getEquipmentRenderer()));
         //?}
         // Held item renderer — main hand'daki silahı gösterir
-        this.addFeature(new HeldItemFeatureRenderer<>(this));
+        this.addLayer(new ItemInHandLayer<>(this));
     }
 
     @Override
-    public PlayerEntityRenderState createRenderState() {
-        return new PlayerEntityRenderState();
+    public PlayerRenderState createRenderState() {
+        return new PlayerRenderState();
     }
 
     @Override
-    public void updateRenderState(CandyDoppelEntity entity, PlayerEntityRenderState state, float tickDelta) {
-        super.updateRenderState(entity, state, tickDelta);
+    public void extractRenderState(CandyDoppelEntity entity, PlayerRenderState state, float tickDelta) {
+        super.extractRenderState(entity, state, tickDelta);
 
         // KRİTİK: biped state + armor slotları + hand item state hepsini birden doldur.
         // MobEntityRenderer.updateRenderState BipedEntityRenderState alanlarını doldurmuyor:
         // equippedHeadStack, equippedChestStack, equippedLegsStack, equippedFeetStack,
         // rightHandItemState, leftHandItemState — hepsi burada set edilir.
         // Bu olmadan armor + main hand item render edilmiyor.
-        BipedEntityRenderer.updateBipedRenderState(entity, state, tickDelta, this.itemModelManager);
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, state, tickDelta, this.itemModelManager);
 
         UUID owner = entity.getOwnerUuid().orElse(null);
 
         // Skin fetch — PlayerListEntry client'ın gördüğü oyuncuların texture'larını cache'liyor.
-        SkinTextures skin = null;
+        PlayerSkin skin = null;
         if (owner != null) {
-            ClientPlayNetworkHandler handler = MinecraftClient.getInstance().getNetworkHandler();
+            ClientPacketListener handler = Minecraft.getInstance().getConnection();
             if (handler != null) {
-                PlayerListEntry entry = handler.getPlayerListEntry(owner);
-                if (entry != null) skin = entry.getSkinTextures();
+                PlayerInfo entry = handler.getPlayerInfo(owner);
+                if (entry != null) skin = entry.getSkin();
             }
         }
         if (skin == null) {
-            skin = owner != null ? DefaultSkinHelper.getSkinTextures(owner) : DefaultSkinHelper.getSteve();
+            skin = owner != null ? DefaultPlayerSkin.get(owner) : DefaultPlayerSkin.getDefaultSkin();
         }
-        state.skinTextures = skin;
+        state.skin = skin;
 
         // Player-specific fields — model'in çalışması için makul default'lar
-        state.hatVisible = true;
-        state.jacketVisible = true;
-        state.leftSleeveVisible = true;
-        state.rightSleeveVisible = true;
-        state.leftPantsLegVisible = true;
-        state.rightPantsLegVisible = true;
-        state.capeVisible = false;
+        state.showHat = true;
+        state.showJacket = true;
+        state.showLeftSleeve = true;
+        state.showRightSleeve = true;
+        state.showLeftPants = true;
+        state.showRightPants = true;
+        state.showCape = false;
     }
 
     // 1.21.9: SkinTextures.texture() yerine body(), ve artık doğrudan Identifier
     // değil AssetInfo.TextureAsset dönüyor — yolu texturePath() veriyor.
     @Override
-    public Identifier getTexture(PlayerEntityRenderState state) {
-        if (state.skinTextures == null) return DefaultSkinHelper.getTexture();
+    public ResourceLocation getTextureLocation(PlayerRenderState state) {
+        if (state.skin == null) return DefaultPlayerSkin.getDefaultTexture();
         //? if >=1.21.9 {
-        /*return state.skinTextures.body().texturePath();
+        /*return state.skin.body().texturePath();
         */
         //?}
         //? if <1.21.9 {
-        return state.skinTextures.texture();
+        return state.skin.texture();
         //?}
     }
 
@@ -135,17 +138,17 @@ public class CandyDoppelRenderer extends MobEntityRenderer<
      */
     //? if >=1.21.9 {
     /*@Override
-    public void render(PlayerEntityRenderState state, MatrixStack matrices,
-                       OrderedRenderCommandQueue queue, CameraRenderState camera) {
-        state.light = 0x00600060;
-        super.render(state, matrices, queue, camera);
+    public void submit(PlayerRenderState state, PoseStack matrices,
+                       SubmitNodeCollector queue, CameraRenderState camera) {
+        state.lightCoords = 0x00600060;
+        super.submit(state, matrices, queue, camera);
     }
     */
     //?}
     //? if <1.21.9 {
     @Override
-    public void render(PlayerEntityRenderState state, MatrixStack matrices,
-                       VertexConsumerProvider provider, int light) {
+    public void render(PlayerRenderState state, PoseStack matrices,
+                       MultiBufferSource provider, int light) {
         super.render(state, matrices, provider, 0x00600060);
     }
     //?}

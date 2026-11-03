@@ -3,16 +3,15 @@ package com.photonpulse.candy.real;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.network.DisconnectionInfo;
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.SunucuBaglanti;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.DisconnectionDetails;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,30 +54,30 @@ public class RealCandy {
     private static final Set<UUID> donenler = new HashSet<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(RealCandy::onTick);
+        SunucuTick.END_SERVER_TICK.register(RealCandy::onTick);
 
         // Disconnect state'i Candy.java DISCONNECT handler'ında merkezi yönetiliyor
         // (tp.sonAyrilmaTick + donenler işaretlemesi orada). Cache temizliği
         // sırası kritik — bu handler ayrı kalsa dp yazımı kaybolabilirdi.
 
         // Join'de eğer daha önce ayrılmışsa "Döndün." mesajı
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            UUID uid = handler.player.getUuid();
+        SunucuBaglanti.JOIN.register((handler, server) -> {
+            UUID uid = handler.player.getUUID();
             // Grace period: her join'de yeni sayaç — kick'ten hemen sonra tekrar kick olmasın
-            katilmaTick.put(uid, server.getOverworld().getTime());
+            katilmaTick.put(uid, server.overworld().getGameTime());
             if (donenler.contains(uid)) {
                 donenler.remove(uid);
                 // Ayrılma üzerinden geçen süreye göre mesaj değişebilir
                 TruePersonality tp = PersonalityManager.get(uid);
-                long simdi = server.getOverworld().getTime();
+                long simdi = server.overworld().getGameTime();
                 long fark = simdi - tp.sonAyrilmaTick;
 
                 // Sunucu tarafından direkt mesaj — 1 saniye gecikmeli
                 server.execute(() -> {
                     if (!handler.player.isRemoved()) {
                         String key = (fark < 1200) ? "candy.chat.return" : "candy.chat.return_again";
-                        handler.player.sendMessage(
-                            Text.translatable(key).formatted(Formatting.DARK_GRAY, Formatting.ITALIC),
+                        handler.player.displayClientMessage(
+                            Component.translatable(key).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC),
                             false);
                     }
                 });
@@ -109,20 +108,20 @@ public class RealCandy {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
+        long simdi = server.overworld().getGameTime();
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
 
             if (!tp.kurulumTamam) continue;
             if (tp.korkuSkoru < ATMA_ESIGI) continue;
 
             // Grace period — join sonrası JOIN_GRACE_TICK dolmadan atma yok
-            Long katilma = katilmaTick.get(player.getUuid());
+            Long katilma = katilmaTick.get(player.getUUID());
             if (katilma != null && simdi - katilma < JOIN_GRACE_TICK) continue;
 
             // Cooldown kontrolü
-            Long sonAt = sonAtma.get(player.getUuid());
+            Long sonAt = sonAtma.get(player.getUUID());
             if (sonAt != null && simdi - sonAt < COOLDOWN_TICK) continue;
 
             // Görün + at
@@ -134,32 +133,32 @@ public class RealCandy {
      * Gerçek Candy görünür, oyuncuyu atar, kaçar.
      * Tek yaptığı bu.
      */
-    private static void atma(ServerPlayerEntity player, long simdi) {
-        UUID uid = player.getUuid();
+    private static void atma(ServerPlayer player, long simdi) {
+        UUID uid = player.getUUID();
         TruePersonality tp = PersonalityManager.get(player);
 
         // Görünme sesi — çok yakın, güçlü. RegistryEntry olarak geçiyoruz.
-        player.getWorld().playSound(null,
+        player.level().playSound(null,
             player.getX(), player.getY(), player.getZ(),
-            SoundEvents.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE,
+            SoundEvents.WARDEN_EMERGE, SoundSource.HOSTILE,
             1.0f, 0.5f);
 
         // v1.7.3: Chat mesajı yok — Candy sadece tabelalardan konuşur.
         // Ses + disconnect yeterli atmosfer.
 
         // Kısa gecikme sonrası disconnect
-        MinecraftServer server = player.getWorld().getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) return;
 
         // 15 tick sonra at
         Candy.LOG.info("[Candy] Gerçek Candy göründü: {} atılıyor", player.getName().getString());
 
         server.execute(() -> {
-            if (player.networkHandler == null || player.isRemoved()) return;
-            Text sebep = Text.translatable("candy.chat.ellipsis")
-                .formatted(Formatting.DARK_GRAY, Formatting.ITALIC);
-            player.networkHandler.disconnect(
-                new DisconnectionInfo(sebep, Optional.empty(), Optional.empty()));
+            if (player.connection == null || player.isRemoved()) return;
+            Component sebep = Component.translatable("candy.chat.ellipsis")
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);
+            player.connection.disconnect(
+                new DisconnectionDetails(sebep, Optional.empty(), Optional.empty()));
         });
 
         // Cooldown başlat

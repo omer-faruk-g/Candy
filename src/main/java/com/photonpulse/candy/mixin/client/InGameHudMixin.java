@@ -4,18 +4,18 @@ import com.photonpulse.candy.client.CamscreenState;
 import com.photonpulse.candy.client.CandyMixinConfig;
 import com.photonpulse.candy.client.HastalikState;
 import com.photonpulse.candy.client.IntensityState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Random;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 /**
  * InGameHudMixin — HUD üzerine rastgele "Candy" fısıltısı çizer (v1.5.0-mixin).
@@ -24,7 +24,7 @@ import java.util.Random;
  * 15 frame boyunca soluk gri "candy" veya "?" yazısı gösterir.
  * Player'ın gözünün ucundan bir şey geçer hissi.
  */
-@Mixin(InGameHud.class)
+@Mixin(Gui.class)
 public class InGameHudMixin {
 
     private static final Random CANDY_RNG = new Random();
@@ -38,61 +38,61 @@ public class InGameHudMixin {
     private static String candy$flashYazi = "";
 
     @Inject(method = "render", at = @At("TAIL"))
-    private void candy$flashOverlay(DrawContext ctx, RenderTickCounter counter, CallbackInfo ci) {
+    private void candy$flashOverlay(GuiGraphics ctx, DeltaTracker counter, CallbackInfo ci) {
         try {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc == null || mc.player == null || mc.textRenderer == null) return;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null || mc.font == null) return;
 
             // v1.8.0: Depresyon gri overlay — atmosferi soluk yapar
             if (HastalikState.var() && "depresyon".equals(HastalikState.get())) {
-                int w0 = ctx.getScaledWindowWidth();
-                int h0 = ctx.getScaledWindowHeight();
+                int w0 = ctx.guiWidth();
+                int h0 = ctx.guiHeight();
                 ctx.fill(0, 0, w0, h0, 0x50808080); // semi-transparent gray
             }
 
             // v3.1: Boss Faz 8 countdown — sağ üstte kırmızı geri sayım
             if (com.photonpulse.candy.client.BossCountdownState.aktif()) {
                 int sn = com.photonpulse.candy.client.BossCountdownState.getSaniye();
-                int w2 = ctx.getScaledWindowWidth();
+                int w2 = ctx.guiWidth();
                 String zaman = String.format("%d:%02d", sn / 60, sn % 60);
-                Text ctd = Text.translatable("candy.boss.countdown", zaman);
+                Component ctd = Component.translatable("candy.boss.countdown", zaman);
                 // Süre azaldıkça kızar
-                Formatting renk = sn <= 30 ? Formatting.DARK_RED
-                    : sn <= 60 ? Formatting.RED
-                    : sn <= 120 ? Formatting.GOLD : Formatting.YELLOW;
-                Text metin = ctd.copy().formatted(renk, Formatting.BOLD);
-                int tw = mc.textRenderer.getWidth(metin);
-                ctx.drawText(mc.textRenderer, metin, w2 - tw - 6, 6, 0xFFFFFFFF, true);
+                ChatFormatting renk = sn <= 30 ? ChatFormatting.DARK_RED
+                    : sn <= 60 ? ChatFormatting.RED
+                    : sn <= 120 ? ChatFormatting.GOLD : ChatFormatting.YELLOW;
+                Component metin = ctd.copy().withStyle(renk, ChatFormatting.BOLD);
+                int tw = mc.font.width(metin);
+                ctx.drawString(mc.font, metin, w2 - tw - 6, 6, 0xFFFFFFFF, true);
             }
 
             // v8.2: ALTYAZI KANALI — vanilla altyazı kutusunun yerinde, onun görünümüyle.
             // Oyuncu chat'e güvenmeyi bırakmış olabilir; altyazıya yalnızca oyunun kendi
             // sesleri düşer, oraya bakarken şüphe etmiyor.
             if (com.photonpulse.candy.client.AltyaziState.aktif()) {
-                int w3 = ctx.getScaledWindowWidth();
-                int h3 = ctx.getScaledWindowHeight();
+                int w3 = ctx.guiWidth();
+                int h3 = ctx.guiHeight();
                 int idx3 = com.photonpulse.candy.client.AltyaziState.indeks();
                 float a3 = com.photonpulse.candy.client.AltyaziState.alfa();
                 int op = Math.max(0, Math.min(255, (int) (a3 * 255)));
-                Text alt = Text.translatable("candy.altyazi." + idx3);
-                int tw3 = mc.textRenderer.getWidth(alt);
+                Component alt = Component.translatable("candy.altyazi." + idx3);
+                int tw3 = mc.font.width(alt);
                 // Vanilla altyazı kutusu: sağ kenardan 2px içeri, hotbar'ın üstünde.
                 int bx = w3 - tw3 - 6;
                 int by = h3 - 40;
                 ctx.fill(bx - 2, by - 2, bx + tw3 + 2, by + 10,
                     ((op * 3 / 4) << 24));                       // yarı saydam siyah kutu
-                ctx.drawText(mc.textRenderer, alt, bx, by, (op << 24) | 0xFFFFFF, false);
+                ctx.drawString(mc.font, alt, bx, by, (op << 24) | 0xFFFFFF, false);
             }
 
             // v8.3: İKİLİK FISILTI — siyah üzerine yalnızca 0 ve 1. Terminal AÇILMADI
             // (kullanıcının kendi kuralı); aynı estetik pencere içinde veriliyor.
             if (com.photonpulse.candy.client.IkilikEkranState.aktif()) {
-                int w4 = ctx.getScaledWindowWidth();
-                int h4 = ctx.getScaledWindowHeight();
+                int w4 = ctx.guiWidth();
+                int h4 = ctx.guiHeight();
                 float a4 = com.photonpulse.candy.client.IkilikEkranState.alfa();
                 int op4 = Math.max(0, Math.min(255, (int) (a4 * 255)));
                 String bit = com.photonpulse.candy.client.IkilikEkranState.metin();
-                Text bitT = Text.literal(bit);
+                Component bitT = Component.literal(bit);
 
                 if (com.photonpulse.candy.client.IkilikEkranState.kanal() == 0) {
                     // Tam ekran: siyah zemin + ortada tek satır. Dizi ekrana sığmazsa
@@ -105,7 +105,7 @@ public class InGameHudMixin {
                     StringBuilder sb = new StringBuilder();
                     for (String bayt : bit.split(" ")) {
                         String deneme = sb.length() == 0 ? bayt : sb + " " + bayt;
-                        if (mc.textRenderer.getWidth(deneme) > enGenis && sb.length() > 0) {
+                        if (mc.font.width(deneme) > enGenis && sb.length() > 0) {
                             satirlar.add(sb.toString());
                             sb.setLength(0);
                             sb.append(bayt);
@@ -117,35 +117,35 @@ public class InGameHudMixin {
                     if (sb.length() > 0) satirlar.add(sb.toString());
                     int bas = h4 / 2 - (satirlar.size() * 10) / 2;
                     for (int i = 0; i < satirlar.size(); i++) {
-                        Text st = Text.literal(satirlar.get(i));
-                        int sw = mc.textRenderer.getWidth(st);
-                        ctx.drawText(mc.textRenderer, st, (w4 - sw) / 2, bas + i * 10,
+                        Component st = Component.literal(satirlar.get(i));
+                        int sw = mc.font.width(st);
+                        ctx.drawString(mc.font, st, (w4 - sw) / 2, bas + i * 10,
                             renk4, false);
                     }
                 } else {
                     // Köşe: altyazı kalıbı, kutulu.
-                    int tw4 = mc.textRenderer.getWidth(bitT);
+                    int tw4 = mc.font.width(bitT);
                     int bx4 = w4 - tw4 - 6;
                     int by4 = h4 - 54;
                     ctx.fill(bx4 - 2, by4 - 2, bx4 + tw4 + 2, by4 + 10,
                         ((op4 * 3 / 4) << 24));
-                    ctx.drawText(mc.textRenderer, bitT, bx4, by4,
+                    ctx.drawString(mc.font, bitT, bx4, by4,
                         (op4 << 24) | 0xC0C0C0, false);
                 }
             }
 
             // v1.9.0: Hastalık HUD — sol-alt köşede küçük italik semptom (subtle)
             if (HastalikState.var()) {
-                int h0 = ctx.getScaledWindowHeight();
-                Text hastalik = Text.translatable("candy.hastalik.hud." + HastalikState.get())
-                    .formatted(Formatting.ITALIC, Formatting.GRAY);
-                ctx.drawText(mc.textRenderer, hastalik, 4, h0 - 12, 0xAA888888, false);
+                int h0 = ctx.guiHeight();
+                Component hastalik = Component.translatable("candy.hastalik.hud." + HastalikState.get())
+                    .withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY);
+                ctx.drawString(mc.font, hastalik, 4, h0 - 12, 0xAA888888, false);
             }
 
             // v1.6.0/1: Camscreen overlay — HUD flash'tan önce, en üstte
             if (CandyMixinConfig.camscreen && CamscreenState.aktif()) {
-                int w = ctx.getScaledWindowWidth();
-                int h = ctx.getScaledWindowHeight();
+                int w = ctx.guiWidth();
+                int h = ctx.guiHeight();
                 int idx = CamscreenState.getTextIndex();
 
                 // v3.0: idx=7 = BlackoutGlitch — 0.1-0.3sn saf siyah, fade YOK (ani glitch,
@@ -166,13 +166,13 @@ public class InGameHudMixin {
                 if (idx <= 3 || idx == 6) {
                     // TEXT variant
                     String key = "candy.camscreen." + idx;
-                    Text metin = Text.translatable(key)
-                        .formatted(Formatting.WHITE, Formatting.ITALIC, Formatting.BOLD);
-                    int textW = mc.textRenderer.getWidth(metin);
+                    Component metin = Component.translatable(key)
+                        .withStyle(ChatFormatting.WHITE, ChatFormatting.ITALIC, ChatFormatting.BOLD);
+                    int textW = mc.font.width(metin);
                     int textX = (w - textW) / 2;
                     int textY = h / 3;
                     int textAlpha = (alphaByte << 24) | 0xFFFFFF;
-                    ctx.drawText(mc.textRenderer, metin, textX, textY, textAlpha, true);
+                    ctx.drawString(mc.font, metin, textX, textY, textAlpha, true);
                 } else {
                     // IMAGE variant (4=smiley, 5=neverdie, 8=mask, 9=sssss) — full screen scale
                     String dosya = switch (idx) {
@@ -181,11 +181,11 @@ public class InGameHudMixin {
                         case 9 -> "camscreen_sssss.png";
                         default -> "camscreen_neverdie.png"; // 5
                     };
-                    net.minecraft.util.Identifier tex =
-                        net.minecraft.util.Identifier.of("candy", "textures/gui/" + dosya);
+                    net.minecraft.resources.ResourceLocation tex =
+                        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("candy", "textures/gui/" + dosya);
                     try {
-                        ctx.drawTexture(
-                            net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
+                        ctx.blit(
+                            net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                             tex, 0, 0, 0f, 0f, w, h, w, h);
                     } catch (Throwable t) {
                         // Texture bulunamadıysa fallback: sadece siyah + kısa text
@@ -194,9 +194,9 @@ public class InGameHudMixin {
                             case 9 -> "sssss";
                             default -> "Candy is never die";
                         };
-                        Text f = Text.literal(fb).formatted(Formatting.WHITE, Formatting.BOLD);
-                        int fw = mc.textRenderer.getWidth(f);
-                        ctx.drawText(mc.textRenderer, f, (w - fw) / 2, h / 3,
+                        Component f = Component.literal(fb).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD);
+                        int fw = mc.font.width(f);
+                        ctx.drawString(mc.font, f, (w - fw) / 2, h / 3,
                             (alphaByte << 24) | 0xFFFFFF, true);
                     }
                 }
@@ -213,8 +213,8 @@ public class InGameHudMixin {
 
             if (candy$flashKalanFrame <= 0 && CANDY_RNG.nextDouble() < 0.005) {
                 candy$flashKalanFrame = 15;
-                int w = ctx.getScaledWindowWidth();
-                int h = ctx.getScaledWindowHeight();
+                int w = ctx.guiWidth();
+                int h = ctx.guiHeight();
                 candy$flashX = CANDY_RNG.nextInt(Math.max(1, w - 50));
                 candy$flashY = CANDY_RNG.nextInt(Math.max(1, h - 20));
                 candy$flashYazi = FLASH_METIN[CANDY_RNG.nextInt(FLASH_METIN.length)];
@@ -223,8 +223,8 @@ public class InGameHudMixin {
             if (candy$flashKalanFrame > 0) {
                 int alpha = Math.min(255, candy$flashKalanFrame * 15);
                 int renk = (alpha << 24) | 0x707070;
-                ctx.drawText(mc.textRenderer,
-                    Text.literal(candy$flashYazi).formatted(Formatting.ITALIC),
+                ctx.drawString(mc.font,
+                    Component.literal(candy$flashYazi).withStyle(ChatFormatting.ITALIC),
                     candy$flashX, candy$flashY, renk, false);
                 candy$flashKalanFrame--;
             }

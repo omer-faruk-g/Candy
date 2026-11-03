@@ -3,9 +3,8 @@ package com.photonpulse.candy.sifre;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.SplittableRandom;
 
 /**
@@ -43,10 +42,10 @@ public final class SifreMotoru {
     private static final SplittableRandom RNG = new SplittableRandom();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % ARALIK_TICK != 0) return;
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % ARALIK_TICK != 0) return;
             if (!SifreAyar.al().acik) return;
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 try {
                     oyuncuAdimi(player);
                 } catch (Throwable t) {
@@ -57,7 +56,7 @@ public final class SifreMotoru {
         Candy.LOG.info("[Candy] SifreMotoru aktif — ikilik şifre dağıtımı");
     }
 
-    private static void oyuncuAdimi(ServerPlayerEntity player) {
+    private static void oyuncuAdimi(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
         if (!tp.kurulumTamam) return;
         if (baski(tp) < ESIK) return;

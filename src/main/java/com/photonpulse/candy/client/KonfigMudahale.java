@@ -2,8 +2,10 @@ package com.photonpulse.candy.client;
 
 import com.google.gson.JsonPrimitive;
 import com.photonpulse.candy.Candy;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 
 import java.util.Random;
 
@@ -34,7 +36,9 @@ import java.util.Random;
  *   <li>Terminal yok, OS komutu yok, pencere açma yok — kullanıcının koyduğu sınır.</li>
  * </ul>
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class KonfigMudahale {
 
     private KonfigMudahale() {}

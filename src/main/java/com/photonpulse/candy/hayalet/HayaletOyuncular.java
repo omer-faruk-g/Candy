@@ -3,24 +3,23 @@ package com.photonpulse.candy.hayalet;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.SignBlockEntity;
-import net.minecraft.block.entity.SignText;
-import net.minecraft.registry.tag.BlockTags;
+import com.photonpulse.candy.platform.DunyaDegisimi;
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.SohbetOlaylari;
+import com.photonpulse.candy.platform.SunucuBaglanti;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.entity.SignText;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -92,38 +91,38 @@ public class HayaletOyuncular {
 
     public static void register() {
         // İlk oyuncu — fake join başlat
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        SunucuBaglanti.JOIN.register((handler, server) -> {
             if (joinYazildi || joinBekleyenTick > 0) return;
-            joinBekleyenTick = server.getOverworld().getTime() + 60L;
+            joinBekleyenTick = server.overworld().getGameTime() + 60L;
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(HayaletOyuncular::onTick);
+        SunucuTick.END_SERVER_TICK.register(HayaletOyuncular::onTick);
 
         // v1.4.6: player chat mesajı → cevap kuyruğuna ekle (%25)
-        ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
+        SohbetOlaylari.CHAT_MESSAGE.register((sender, hamMetin, sunulanMetin) -> {
             if (RNG.nextDouble() > 0.25) return;
-            String isim = secilebilirHayalet(sender.getWorld().getTime());
+            String isim = secilebilirHayalet(sender.level().getGameTime());
             if (isim == null) return;
             String cevap = cevapKey(RNG.nextInt(CEVAP_SAYI));
-            long trigger = sender.getWorld().getTime() + 100L + RNG.nextInt(200); // 5-15 sn
+            long trigger = sender.level().getGameTime() + 100L + RNG.nextInt(200); // 5-15 sn
             cevapKuyrugu.add(new PendingCevap(trigger, isim, cevap));
         });
 
         // v1.4.6: portal geçiş — %20 karıştırma, 5 dk cooldown
-        ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
+        DunyaDegisimi.AFTER_PLAYER_CHANGE_WORLD.register(
             (player, origin, destination) -> {
                 // Sadece nether ↔ overworld geçişleri
                 boolean netherPortal =
-                    (origin.getRegistryKey() == World.NETHER && destination.getRegistryKey() == World.OVERWORLD)
-                    || (origin.getRegistryKey() == World.OVERWORLD && destination.getRegistryKey() == World.NETHER);
+                    (origin.dimension() == Level.NETHER && destination.dimension() == Level.OVERWORLD)
+                    || (origin.dimension() == Level.OVERWORLD && destination.dimension() == Level.NETHER);
                 if (!netherPortal) return;
 
-                long simdi = destination.getTime();
-                Long son = portalCooldown.get(player.getUuid());
+                long simdi = destination.getGameTime();
+                Long son = portalCooldown.get(player.getUUID());
                 if (son != null && simdi - son < 6000L) return; // 5 dk
                 if (RNG.nextDouble() > 0.20) return;
 
-                portalCooldown.put(player.getUuid(), simdi);
+                portalCooldown.put(player.getUUID(), simdi);
 
                 // 200-800 blok random yer
                 int mesafe = 200 + RNG.nextInt(600);
@@ -137,30 +136,30 @@ public class HayaletOyuncular {
                 );
 
                 // Overworld ise yüzey Y
-                if (destination.getRegistryKey() == World.OVERWORLD) {
-                    int y = destination.getTopY(
-                        net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, yeni.getX(), yeni.getZ());
+                if (destination.dimension() == Level.OVERWORLD) {
+                    int y = destination.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, yeni.getX(), yeni.getZ());
                     yeni = new BlockPos(yeni.getX(), y + 1, yeni.getZ());
                 } else {
                     // Nether — güvenli Y ara (5-115 arasında hava + altı katı)
                     BlockPos guvenli = netherGuvenliY(destination, yeni.getX(), yeni.getZ());
                     if (guvenli == null) {
-                        portalCooldown.remove(player.getUuid()); // cooldown iade
+                        portalCooldown.remove(player.getUUID()); // cooldown iade
                         return;
                     }
                     yeni = guvenli;
                 }
 
-                player.teleport(destination, yeni.getX() + 0.5, yeni.getY(),
+                player.teleportTo(destination, yeni.getX() + 0.5, yeni.getY(),
                     yeni.getZ() + 0.5, java.util.Collections.emptySet(),
-                    player.getYaw(), player.getPitch(), false);
+                    player.getYRot(), player.getXRot(), false);
                 Candy.LOG.info("[Candy] PortalKarisikligi[{}] → {}",
                     player.getName().getString(), yeni);
 
                 // Sonra Steve/Alex chat: "sen neredesin"
                 String isim = RNG.nextBoolean() ? "Steve" : "Alex";
-                if (hayaletAktifMi(isim, destination.getTime())) {
-                    long trigger = destination.getTime() + 60L;
+                if (hayaletAktifMi(isim, destination.getGameTime())) {
+                    long trigger = destination.getGameTime() + 60L;
                     cevapKuyrugu.add(new PendingCevap(trigger, isim, "candy.hayalet.portal_soru"));
                 }
             });
@@ -169,8 +168,8 @@ public class HayaletOyuncular {
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getPlayerManager().getPlayerList().isEmpty()) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getPlayerList().getPlayers().isEmpty()) return;
+        long simdi = server.overworld().getGameTime();
 
         // v1.9.0: sessizlik protokolü — tüm hayalet aktivitesi susulur
         if (com.photonpulse.candy.sessizlik.SessizlikState.sessizlikte(simdi)) return;
@@ -277,7 +276,7 @@ public class HayaletOyuncular {
         }
 
         // 7) Sign check
-        if (server.getTicks() % SIGN_CHECK_ARALIGI == 0) {
+        if (server.getTickCount() % SIGN_CHECK_ARALIGI == 0) {
             tabelalariKontrolEt(server);
         }
     }
@@ -305,23 +304,23 @@ public class HayaletOyuncular {
     }
 
     private static void fakeJoin(MinecraftServer server, String isim) {
-        Text msg = Text.translatable("multiplayer.player.joined", isim).formatted(Formatting.YELLOW);
-        server.getPlayerManager().broadcast(msg, false);
+        Component msg = Component.translatable("multiplayer.player.joined", isim).withStyle(ChatFormatting.YELLOW);
+        server.getPlayerList().broadcastSystemMessage(msg, false);
         Candy.LOG.info("[Candy] Hayalet[{}] joined", isim);
     }
 
     private static void fakeLeave(MinecraftServer server, String isim) {
-        Text msg = Text.translatable("multiplayer.player.left", isim).formatted(Formatting.YELLOW);
-        server.getPlayerManager().broadcast(msg, false);
+        Component msg = Component.translatable("multiplayer.player.left", isim).withStyle(ChatFormatting.YELLOW);
+        server.getPlayerList().broadcastSystemMessage(msg, false);
     }
 
     /** v1.9.12: mesaj artık lang key — player'ın dilinde çevrilir. */
     private static void fakeChat(MinecraftServer server, String isim, String langKey) {
-        Text formatli = Text.literal("<" + isim + "> ")
-            .append(Text.translatable(langKey));
-        server.getPlayerManager().broadcast(formatli, false);
+        Component formatli = Component.literal("<" + isim + "> ")
+            .append(Component.translatable(langKey));
+        server.getPlayerList().broadcastSystemMessage(formatli, false);
         Candy.LOG.info("[Candy] Hayalet[{}]: {}", isim, langKey);
-        for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             var tp = PersonalityManager.get(p);
             if (tp.kurulumTamam && !tp.hayaletChatGorulduMu) {
                 tp.hayaletChatGorulduMu = true;
@@ -332,16 +331,16 @@ public class HayaletOyuncular {
 
     /** Koordinat mesajı — lang key %s içerir, koord string olarak gelir. */
     private static void fakeChatArg(MinecraftServer server, String isim, String langKey, Object arg) {
-        Text formatli = Text.literal("<" + isim + "> ")
-            .append(Text.translatable(langKey, arg));
-        server.getPlayerManager().broadcast(formatli, false);
+        Component formatli = Component.literal("<" + isim + "> ")
+            .append(Component.translatable(langKey, arg));
+        server.getPlayerList().broadcastSystemMessage(formatli, false);
         Candy.LOG.info("[Candy] Hayalet[{}]: {} ({})", isim, langKey, arg);
     }
 
     /** Vanilla death.attack.* lang key kullanır → oyuncu diline göre otomatik çevrilir. */
     private static void fakeVanillaDeath(MinecraftServer server, String langKey, Object... args) {
-        Text msg = Text.translatable(langKey, args);
-        server.getPlayerManager().broadcast(msg, false);
+        Component msg = Component.translatable(langKey, args);
+        server.getPlayerList().broadcastSystemMessage(msg, false);
         Candy.LOG.info("[Candy] Hayalet ölüm: {}", msg.getString());
     }
 
@@ -362,16 +361,16 @@ public class HayaletOyuncular {
         int olumIdx = RNG.nextInt(OLUM_SAYI);
         switch (olumIdx) {
             case 0 -> fakeVanillaDeath(server, "death.attack.mob", isim,
-                Text.translatable("entity.minecraft.zombie"));
+                Component.translatable("entity.minecraft.zombie"));
             case 1 -> fakeVanillaDeath(server, "death.attack.lava", isim);
             case 2 -> fakeVanillaDeath(server, "death.attack.drown", isim);
             case 3 -> fakeVanillaDeath(server, "death.attack.explosion", isim,
-                Text.translatable("entity.minecraft.creeper"));
+                Component.translatable("entity.minecraft.creeper"));
             case 4 -> fakeVanillaDeath(server, "death.attack.fall", isim);
             case 5 -> fakeVanillaDeath(server, "death.attack.arrow", isim,
-                Text.translatable("entity.minecraft.skeleton"));
+                Component.translatable("entity.minecraft.skeleton"));
             case 6 -> fakeVanillaDeath(server, "death.attack.mob", isim,
-                Text.translatable("entity.minecraft.enderman"));
+                Component.translatable("entity.minecraft.enderman"));
             default -> fakeVanillaDeath(server, "death.attack.generic", isim);
         }
         fakeLeave(server, isim);
@@ -396,18 +395,18 @@ public class HayaletOyuncular {
      * @return gönderildiyse true (parça yoksa false → normal mesaja düş).
      */
     private static boolean donanimMesaji(MinecraftServer server, String isim) {
-        var players = server.getPlayerManager().getPlayerList();
+        var players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) return false;
-        ServerPlayerEntity hedef = players.get(RNG.nextInt(players.size()));
+        ServerPlayer hedef = players.get(RNG.nextInt(players.size()));
         String parca = com.photonpulse.candy.meta.DonanimBilgisi.rastgeleParca(hedef);
         if (parca == null || parca.isBlank()) return false;
         // v8.1: ÖZEL mesaj — eskiden broadcast'ti ve çok oyunculuda bir oyuncunun GPU'su
         // diğerlerine sızıyordu. Kişisel veri yalnızca sahibine gösterilir (sehirMesaji ile
         // aynı kural). Log'a da parça adı DEĞİL, yalnızca oyuncu adı yazılır.
-        hedef.sendMessage(
-            net.minecraft.text.Text.literal("<" + isim + "> ")
-                .append(net.minecraft.text.Text.translatable("candy.hayalet.donanim", parca))
-                .formatted(net.minecraft.util.Formatting.YELLOW), false);
+        hedef.displayClientMessage(
+            net.minecraft.network.chat.Component.literal("<" + isim + "> ")
+                .append(net.minecraft.network.chat.Component.translatable("candy.hayalet.donanim", parca))
+                .withStyle(net.minecraft.ChatFormatting.YELLOW), false);
         Candy.LOG.info("[Candy] Hayalet[{}] donanim (private): {}",
             isim, hedef.getName().getString());
         return true;
@@ -425,15 +424,15 @@ public class HayaletOyuncular {
      * @return gönderildiyse true (eşleşme yoksa false → normal mesaja düş)
      */
     private static boolean uygulamaMesaji(MinecraftServer server, String isim) {
-        var players = server.getPlayerManager().getPlayerList();
+        var players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) return false;
-        ServerPlayerEntity hedef = players.get(RNG.nextInt(players.size()));
+        ServerPlayer hedef = players.get(RNG.nextInt(players.size()));
         String ad = com.photonpulse.candy.meta.UygulamaBilgisi.ad(hedef);
         if (ad == null || ad.isBlank()) return false;
-        hedef.sendMessage(
-            net.minecraft.text.Text.literal("<" + isim + "> ")
-                .append(net.minecraft.text.Text.translatable("candy.hayalet.uygulama", ad))
-                .formatted(net.minecraft.util.Formatting.YELLOW), false);
+        hedef.displayClientMessage(
+            net.minecraft.network.chat.Component.literal("<" + isim + "> ")
+                .append(net.minecraft.network.chat.Component.translatable("candy.hayalet.uygulama", ad))
+                .withStyle(net.minecraft.ChatFormatting.YELLOW), false);
         Candy.LOG.info("[Candy] Hayalet[{}] uygulama (private): {}",
             isim, hedef.getName().getString());
         return true;
@@ -446,15 +445,15 @@ public class HayaletOyuncular {
      * @return gönderildiyse true (şehir yoksa false → normal mesaja düş).
      */
     private static boolean sehirMesaji(MinecraftServer server) {
-        var players = server.getPlayerManager().getPlayerList();
+        var players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) return false;
-        ServerPlayerEntity hedef = players.get(RNG.nextInt(players.size()));
+        ServerPlayer hedef = players.get(RNG.nextInt(players.size()));
         String sehir = com.photonpulse.candy.meta.SehirBilgisi.sehir(hedef);
         if (sehir == null || sehir.isBlank()) return false;
-        hedef.sendMessage(
-            net.minecraft.text.Text.literal("<Alex> ")
-                .append(net.minecraft.text.Text.translatable("candy.hayalet.sehir", sehir))
-                .formatted(net.minecraft.util.Formatting.YELLOW), false);
+        hedef.displayClientMessage(
+            net.minecraft.network.chat.Component.literal("<Alex> ")
+                .append(net.minecraft.network.chat.Component.translatable("candy.hayalet.sehir", sehir))
+                .withStyle(net.minecraft.ChatFormatting.YELLOW), false);
         Candy.LOG.info("[Candy] Hayalet[Alex] sehir (private): {}", hedef.getName().getString());
         return true;
     }
@@ -463,11 +462,11 @@ public class HayaletOyuncular {
      * Koordinat mesajı + o koordinata gerçek küçük yapı bırak.
      */
     private static void koordinatBirakVeSoyle(MinecraftServer server, String isim) {
-        var players = server.getPlayerManager().getPlayerList();
+        var players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) return;
-        ServerPlayerEntity player = players.get(RNG.nextInt(players.size()));
-        ServerWorld world = (ServerWorld) player.getWorld();
-        if (world.getRegistryKey() != World.OVERWORLD) return;
+        ServerPlayer player = players.get(RNG.nextInt(players.size()));
+        ServerLevel world = (ServerLevel) player.level();
+        if (world.dimension() != Level.OVERWORLD) return;
 
         // 100-300 blok yatay ofset
         int mesafe = 100 + RNG.nextInt(200);
@@ -475,41 +474,41 @@ public class HayaletOyuncular {
         int mx = player.getBlockX() + (int) (Math.cos(aci) * mesafe);
         int mz = player.getBlockZ() + (int) (Math.sin(aci) * mesafe);
 
-        if (!world.isChunkLoaded(mx >> 4, mz >> 4)) {
+        if (!world.hasChunk(mx >> 4, mz >> 4)) {
             // Chunk yok, sadece söyle ama yapı yok
             String key = koordKey(RNG.nextInt(KOORDINAT_SAYI));
             fakeChatArg(server, isim, key, mx + " " + player.getBlockY() + " " + mz);
             return;
         }
 
-        int my = world.getTopY(net.minecraft.world.Heightmap.Type.WORLD_SURFACE, mx, mz);
+        int my = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, mx, mz);
         BlockPos yuzey = new BlockPos(mx, my, mz);
 
         // 2x2 plank platform + torch + sign
         boolean birseyKondu = false;
         for (int dx = 0; dx < 2; dx++) {
             for (int dz = 0; dz < 2; dz++) {
-                BlockPos p = yuzey.add(dx, 0, dz);
+                BlockPos p = yuzey.offset(dx, 0, dz);
                 if (world.getBlockState(p).isAir()) {
-                    world.setBlockState(p, Blocks.OAK_PLANKS.getDefaultState());
+                    world.setBlockAndUpdate(p, Blocks.OAK_PLANKS.defaultBlockState());
                     birseyKondu = true;
                 }
             }
         }
-        BlockPos ustPos = yuzey.up();
+        BlockPos ustPos = yuzey.above();
         if (world.getBlockState(ustPos).isAir()) {
-            world.setBlockState(ustPos, Blocks.TORCH.getDefaultState());
+            world.setBlockAndUpdate(ustPos, Blocks.TORCH.defaultBlockState());
         }
-        BlockPos signPos = yuzey.add(1, 1, 0);
+        BlockPos signPos = yuzey.offset(1, 1, 0);
         if (world.getBlockState(signPos).isAir()) {
-            world.setBlockState(signPos, Blocks.OAK_SIGN.getDefaultState());
+            world.setBlockAndUpdate(signPos, Blocks.OAK_SIGN.defaultBlockState());
             BlockEntity be = world.getBlockEntity(signPos);
             if (be instanceof SignBlockEntity sign) {
                 SignText metin = new SignText();
-                metin = metin.withMessage(0, Text.literal(isim));
-                metin = metin.withMessage(1, Text.literal("was here"));
+                metin = metin.setMessage(0, Component.literal(isim));
+                metin = metin.setMessage(1, Component.literal("was here"));
                 sign.setText(metin, true);
-                sign.markDirty();
+                sign.setChanged();
             }
         }
 
@@ -521,26 +520,26 @@ public class HayaletOyuncular {
     }
 
     private static void dunyayiDegistir(MinecraftServer server) {
-        var players = server.getPlayerManager().getPlayerList();
+        var players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) return;
-        ServerPlayerEntity player = players.get(RNG.nextInt(players.size()));
+        ServerPlayer player = players.get(RNG.nextInt(players.size()));
         if (player.isCreative() || player.isSpectator()) return;
 
-        ServerWorld world = (ServerWorld) player.getWorld();
+        ServerLevel world = (ServerLevel) player.level();
         // Sadece overworld — nether/end'de yüzey Y güvenilir değil
-        if (world.getRegistryKey() != World.OVERWORLD) return;
-        BlockPos base = player.getBlockPos();
+        if (world.dimension() != Level.OVERWORLD) return;
+        BlockPos base = player.blockPosition();
 
         int mesafe = 40 + RNG.nextInt(50);
         double aci = RNG.nextDouble() * Math.PI * 2;
         int mx = base.getX() + (int) (Math.cos(aci) * mesafe);
         int mz = base.getZ() + (int) (Math.sin(aci) * mesafe);
 
-        if (!world.isChunkLoaded(mx >> 4, mz >> 4)) return;
+        if (!world.hasChunk(mx >> 4, mz >> 4)) return;
 
-        int my = world.getTopY(net.minecraft.world.Heightmap.Type.WORLD_SURFACE, mx, mz);
+        int my = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, mx, mz);
         BlockPos yuzey = new BlockPos(mx, my, mz);
-        BlockPos altYuzey = yuzey.down();
+        BlockPos altYuzey = yuzey.below();
 
         int aksiyon = RNG.nextInt(9);
         String isim = RNG.nextBoolean() ? "Steve" : "Alex";
@@ -563,16 +562,16 @@ public class HayaletOyuncular {
      * Nether'da güvenli Y bul: 10-115 arasında hava, altı katı.
      * null dönerse teleport iptal edilir.
      */
-    private static BlockPos netherGuvenliY(ServerWorld dunya, int x, int z) {
-        if (!dunya.isChunkLoaded(x >> 4, z >> 4)) return null;
+    private static BlockPos netherGuvenliY(ServerLevel dunya, int x, int z) {
+        if (!dunya.hasChunk(x >> 4, z >> 4)) return null;
         for (int tekrar = 0; tekrar < 30; tekrar++) {
             int y = 10 + RNG.nextInt(105);
             BlockPos p = new BlockPos(x, y, z);
             var st = dunya.getBlockState(p);
-            var alt = dunya.getBlockState(p.down());
-            var ust = dunya.getBlockState(p.up());
+            var alt = dunya.getBlockState(p.below());
+            var ust = dunya.getBlockState(p.above());
             if (st.isAir() && ust.isAir() && !alt.isAir()
-                && alt.isSolidBlock(dunya, p.down())
+                && alt.isRedstoneConductor(dunya, p.below())
                 && alt.getFluidState().isEmpty()) {
                 return p;
             }
@@ -580,114 +579,114 @@ public class HayaletOyuncular {
         return null;
     }
 
-    private static void agacKes(ServerWorld world, BlockPos yuzey, String isim) {
+    private static void agacKes(ServerLevel world, BlockPos yuzey, String isim) {
         for (int r = 0; r < 8; r++) {
-            BlockPos p = yuzey.up(r);
-            if (world.getBlockState(p).isIn(BlockTags.LOGS)) {
-                world.breakBlock(p, true);
+            BlockPos p = yuzey.above(r);
+            if (world.getBlockState(p).is(BlockTags.LOGS)) {
+                world.destroyBlock(p, true);
                 Candy.LOG.info("[Candy] Hayalet[{}] {} log kırdı", isim, p);
                 return;
             }
         }
         if (world.getBlockState(yuzey).isAir()) {
-            world.setBlockState(yuzey, Blocks.OAK_LOG.getDefaultState());
+            world.setBlockAndUpdate(yuzey, Blocks.OAK_LOG.defaultBlockState());
             Candy.LOG.info("[Candy] Hayalet[{}] {} oak log koydu", isim, yuzey);
         }
     }
 
-    private static void insaatYap(ServerWorld world, BlockPos yuzey, String isim) {
-        if (world.getBlockState(yuzey).isAir() && world.getBlockState(yuzey.up()).isAir()) {
-            world.setBlockState(yuzey, Blocks.OAK_PLANKS.getDefaultState());
-            world.setBlockState(yuzey.up(), Blocks.OAK_PLANKS.getDefaultState());
+    private static void insaatYap(ServerLevel world, BlockPos yuzey, String isim) {
+        if (world.getBlockState(yuzey).isAir() && world.getBlockState(yuzey.above()).isAir()) {
+            world.setBlockAndUpdate(yuzey, Blocks.OAK_PLANKS.defaultBlockState());
+            world.setBlockAndUpdate(yuzey.above(), Blocks.OAK_PLANKS.defaultBlockState());
             Candy.LOG.info("[Candy] Hayalet[{}] {} inşaat", isim, yuzey);
         }
     }
 
-    private static void tasKaz(ServerWorld world, BlockPos altYuzey, String isim) {
+    private static void tasKaz(ServerLevel world, BlockPos altYuzey, String isim) {
         for (int d = 0; d < 5; d++) {
-            BlockPos p = altYuzey.down(d);
+            BlockPos p = altYuzey.below(d);
             Block b = world.getBlockState(p).getBlock();
             if (b == Blocks.STONE || b == Blocks.COAL_ORE || b == Blocks.IRON_ORE
                 || b == Blocks.DEEPSLATE || b == Blocks.DEEPSLATE_COAL_ORE
                 || b == Blocks.DEEPSLATE_IRON_ORE) {
-                world.breakBlock(p, true);
+                world.destroyBlock(p, true);
                 Candy.LOG.info("[Candy] Hayalet[{}] {} kazma", isim, p);
                 return;
             }
         }
     }
 
-    private static void mesaleKoy(ServerWorld world, BlockPos yuzey, BlockPos altYuzey, String isim) {
+    private static void mesaleKoy(ServerLevel world, BlockPos yuzey, BlockPos altYuzey, String isim) {
         if (world.getBlockState(yuzey).isAir()
             && !world.getBlockState(altYuzey).isAir()
-            && world.getBlockState(altYuzey).isSolidBlock(world, altYuzey)) {
-            world.setBlockState(yuzey, Blocks.TORCH.getDefaultState());
+            && world.getBlockState(altYuzey).isRedstoneConductor(world, altYuzey)) {
+            world.setBlockAndUpdate(yuzey, Blocks.TORCH.defaultBlockState());
             Candy.LOG.info("[Candy] Hayalet[{}] {} meşale koydu", isim, yuzey);
         }
     }
 
-    private static void netherPortalDeneme(ServerWorld world, BlockPos yuzey, String isim) {
+    private static void netherPortalDeneme(ServerLevel world, BlockPos yuzey, String isim) {
         for (int dx = 0; dx < 4; dx++) {
-            BlockPos p = yuzey.add(dx, 0, 0);
+            BlockPos p = yuzey.offset(dx, 0, 0);
             if (!world.getBlockState(p).isAir() && world.getBlockState(p).getBlock() != Blocks.GRASS_BLOCK
                 && world.getBlockState(p).getBlock() != Blocks.DIRT) return;
-            world.setBlockState(p, Blocks.OBSIDIAN.getDefaultState());
+            world.setBlockAndUpdate(p, Blocks.OBSIDIAN.defaultBlockState());
         }
         for (int dy = 1; dy <= 4; dy++) {
-            world.setBlockState(yuzey.add(0, dy, 0), Blocks.OBSIDIAN.getDefaultState());
-            world.setBlockState(yuzey.add(3, dy, 0), Blocks.OBSIDIAN.getDefaultState());
+            world.setBlockAndUpdate(yuzey.offset(0, dy, 0), Blocks.OBSIDIAN.defaultBlockState());
+            world.setBlockAndUpdate(yuzey.offset(3, dy, 0), Blocks.OBSIDIAN.defaultBlockState());
         }
         for (int dx = 0; dx < 4; dx++) {
-            world.setBlockState(yuzey.add(dx, 4, 0), Blocks.OBSIDIAN.getDefaultState());
+            world.setBlockAndUpdate(yuzey.offset(dx, 4, 0), Blocks.OBSIDIAN.defaultBlockState());
         }
         for (int dy = 1; dy <= 3; dy++) {
             for (int dx = 1; dx <= 2; dx++) {
-                BlockPos ic = yuzey.add(dx, dy, 0);
+                BlockPos ic = yuzey.offset(dx, dy, 0);
                 if (world.getBlockState(ic).isAir()) {
-                    world.setBlockState(ic, Blocks.FIRE.getDefaultState());
+                    world.setBlockAndUpdate(ic, Blocks.FIRE.defaultBlockState());
                 }
             }
         }
         Candy.LOG.info("[Candy] Hayalet[{}] {} nether portal", isim, yuzey);
     }
 
-    private static void spawnerAra(ServerWorld world, BlockPos merkez, String isim) {
+    private static void spawnerAra(ServerLevel world, BlockPos merkez, String isim) {
         for (int i = 0; i < 30; i++) {
             int dx = RNG.nextInt(33) - 16;
             int dy = RNG.nextInt(33) - 16;
             int dz = RNG.nextInt(33) - 16;
-            BlockPos p = merkez.add(dx, dy, dz);
-            if (!world.isChunkLoaded(p.getX() >> 4, p.getZ() >> 4)) continue;
+            BlockPos p = merkez.offset(dx, dy, dz);
+            if (!world.hasChunk(p.getX() >> 4, p.getZ() >> 4)) continue;
             if (world.getBlockState(p).getBlock() == Blocks.SPAWNER) {
-                world.breakBlock(p, true);
+                world.destroyBlock(p, true);
                 Candy.LOG.info("[Candy] Hayalet[{}] {} spawner kırdı", isim, p);
                 return;
             }
         }
     }
 
-    private static void sandikYagmala(ServerWorld world, ServerPlayerEntity player, String isim) {
-        BlockPos merkez = player.getBlockPos();
+    private static void sandikYagmala(ServerLevel world, ServerPlayer player, String isim) {
+        BlockPos merkez = player.blockPosition();
         for (int i = 0; i < 40; i++) {
             int dx = RNG.nextInt(65) - 32;
             int dy = RNG.nextInt(17) - 8;
             int dz = RNG.nextInt(65) - 32;
-            BlockPos p = merkez.add(dx, dy, dz);
-            if (!world.isChunkLoaded(p.getX() >> 4, p.getZ() >> 4)) continue;
+            BlockPos p = merkez.offset(dx, dy, dz);
+            if (!world.hasChunk(p.getX() >> 4, p.getZ() >> 4)) continue;
             BlockEntity be = world.getBlockEntity(p);
-            if (be instanceof net.minecraft.block.entity.ChestBlockEntity chest) {
-                int slotSayisi = chest.size();
+            if (be instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest) {
+                int slotSayisi = chest.getContainerSize();
                 int calinacak = 1 + RNG.nextInt(2);
                 int calinan = 0;
                 for (int deneme = 0; deneme < 10 && calinan < calinacak; deneme++) {
                     int slot = RNG.nextInt(slotSayisi);
-                    if (!chest.getStack(slot).isEmpty()) {
-                        chest.setStack(slot, net.minecraft.item.ItemStack.EMPTY);
+                    if (!chest.getItem(slot).isEmpty()) {
+                        chest.setItem(slot, net.minecraft.world.item.ItemStack.EMPTY);
                         calinan++;
                     }
                 }
                 if (calinan > 0) {
-                    chest.markDirty();
+                    chest.setChanged();
                     Candy.LOG.info("[Candy] Hayalet[{}] {} sandık yağma ({} item)",
                         isim, p, calinan);
                 }
@@ -696,10 +695,10 @@ public class HayaletOyuncular {
         }
     }
 
-    private static void koyYagmala(ServerWorld world, ServerPlayerEntity player, String isim) {
-        var koyluler = world.getEntitiesByClass(
-            net.minecraft.entity.passive.VillagerEntity.class,
-            new net.minecraft.util.math.Box(player.getBlockPos()).expand(80),
+    private static void koyYagmala(ServerLevel world, ServerPlayer player, String isim) {
+        var koyluler = world.getEntitiesOfClass(
+            net.minecraft.world.entity.npc.Villager.class,
+            new net.minecraft.world.phys.AABB(player.blockPosition()).inflate(80),
             v -> v.isAlive());
         if (koyluler.isEmpty()) return;
         var kurban = koyluler.get(RNG.nextInt(koyluler.size()));
@@ -710,16 +709,16 @@ public class HayaletOyuncular {
                 ? kurban.getCustomName().getString()
                 : "Villager";
             // Instant kill — damage yeterli, ölüm event'i düzgün tetiklensin
-            kurban.damage(world, world.getDamageSources().generic(), 1000.0f);
+            kurban.hurtServer(world, world.damageSources().generic(), 1000.0f);
             // Fake zombie death message
-            Text fakeMsg = Text.translatable("death.attack.mob", koyluAdi,
-                Text.translatable("entity.minecraft.zombie"));
-            world.getServer().getPlayerManager().broadcast(fakeMsg, false);
+            Component fakeMsg = Component.translatable("death.attack.mob", koyluAdi,
+                Component.translatable("entity.minecraft.zombie"));
+            world.getServer().getPlayerList().broadcastSystemMessage(fakeMsg, false);
 
             // Tüm player'lara villager kill sayacı artır (kim'in yakınındaysa)
-            for (ServerPlayerEntity p : world.getServer().getPlayerManager().getPlayerList()) {
-                if (p.getWorld() != world) continue;
-                if (p.squaredDistanceTo(kurban) > 128 * 128) continue;
+            for (ServerPlayer p : world.getServer().getPlayerList().getPlayers()) {
+                if (p.level() != world) continue;
+                if (p.distanceToSqr(kurban) > 128 * 128) continue;
                 TruePersonality tp = PersonalityManager.get(p);
                 tp.oldurulenKoyluSayisi++;
                 if (tp.oldurulenKoyluSayisi >= 5) {
@@ -727,10 +726,10 @@ public class HayaletOyuncular {
                 }
             }
             Candy.LOG.info("[Candy] Hayalet[{}] köylü ÖLDÜRDÜ @ {} (fake zombie)",
-                isim, kurban.getBlockPos());
+                isim, kurban.blockPosition());
         } else {
-            kurban.damage(world, world.getDamageSources().generic(), 4.0f);
-            Candy.LOG.info("[Candy] Hayalet[{}] köylü hasar @ {}", isim, kurban.getBlockPos());
+            kurban.hurtServer(world, world.damageSources().generic(), 4.0f);
+            Candy.LOG.info("[Candy] Hayalet[{}] köylü hasar @ {}", isim, kurban.blockPosition());
         }
     }
 
@@ -741,23 +740,23 @@ public class HayaletOyuncular {
      * Chest'e loot ve %40 ihtimalle yırtık sayfa.
      */
     private static void eveDonme(MinecraftServer server) {
-        var players = server.getPlayerManager().getPlayerList();
+        var players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) return;
-        ServerPlayerEntity player = players.get(RNG.nextInt(players.size()));
-        ServerWorld world = (ServerWorld) player.getWorld();
-        if (world.getRegistryKey() != World.OVERWORLD) return;
+        ServerPlayer player = players.get(RNG.nextInt(players.size()));
+        ServerLevel world = (ServerLevel) player.level();
+        if (world.dimension() != Level.OVERWORLD) return;
 
         String isim = RNG.nextBoolean() ? "Steve" : "Alex";
-        if (!hayaletAktifMi(isim, world.getTime())) return;
+        if (!hayaletAktifMi(isim, world.getGameTime())) return;
 
         // 1) Yakında bell ara (köy merkezi) — 30 random sample
         BlockPos bell = null;
-        BlockPos base = player.getBlockPos();
+        BlockPos base = player.blockPosition();
         for (int i = 0; i < 30; i++) {
             int mx = base.getX() + RNG.nextInt(400) - 200;
             int mz = base.getZ() + RNG.nextInt(400) - 200;
-            if (!world.isChunkLoaded(mx >> 4, mz >> 4)) continue;
-            int my = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, mx, mz);
+            if (!world.hasChunk(mx >> 4, mz >> 4)) continue;
+            int my = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, mx, mz);
             for (int dy = -12; dy <= 4; dy++) {
                 BlockPos p = new BlockPos(mx, my + dy, mz);
                 if (world.getBlockState(p).getBlock() == Blocks.BELL) {
@@ -778,7 +777,7 @@ public class HayaletOyuncular {
             int dx = RNG.nextInt(81) - 40;
             int dy = RNG.nextInt(21) - 10;
             int dz = RNG.nextInt(81) - 40;
-            BlockPos p = bell.add(dx, dy, dz);
+            BlockPos p = bell.offset(dx, dy, dz);
             var st = world.getBlockState(p);
             var b = st.getBlock();
             if (b == Blocks.OAK_DOOR || b == Blocks.SPRUCE_DOOR
@@ -786,7 +785,7 @@ public class HayaletOyuncular {
                 || b == Blocks.DARK_OAK_DOOR || b == Blocks.JUNGLE_DOOR
                 || b == Blocks.MANGROVE_DOOR || b == Blocks.CHERRY_DOOR) {
                 // Sadece alt yarısı (double-tall block) — deduplicate
-                if (!kapilar.contains(p) && !kapilar.contains(p.up()) && !kapilar.contains(p.down())) {
+                if (!kapilar.contains(p) && !kapilar.contains(p.above()) && !kapilar.contains(p.below())) {
                     kapilar.add(p);
                 }
             }
@@ -798,7 +797,7 @@ public class HayaletOyuncular {
         double enYakin = Double.MAX_VALUE;
         for (int i = 0; i < kapilar.size(); i++) {
             for (int j = i + 1; j < kapilar.size(); j++) {
-                double m = kapilar.get(i).getSquaredDistance(kapilar.get(j));
+                double m = kapilar.get(i).distSqr(kapilar.get(j));
                 if (m > 9 && m < enYakin && m < 400) { // min 3 blok, max 20 blok
                     enYakin = m;
                     k1 = kapilar.get(i);
@@ -818,20 +817,20 @@ public class HayaletOyuncular {
             BlockPos p = hat.get(i);
             // Zeminde durup 2 blok üste plank koy (duvar)
             for (int h = 0; h < 2; h++) {
-                BlockPos wp = p.up(h);
+                BlockPos wp = p.above(h);
                 if (world.getBlockState(wp).isAir()
-                    || world.getBlockState(wp).isReplaceable()) {
+                    || world.getBlockState(wp).canBeReplaced()) {
                     // Ortaya kapı bırak, kalanı plank
                     if (i == ortaIdx && h == 0) {
                         // Kapı için yer bırak, alt+üst hava
-                        world.setBlockState(wp, Blocks.AIR.getDefaultState());
+                        world.setBlockAndUpdate(wp, Blocks.AIR.defaultBlockState());
                         continue;
                     }
                     if (i == ortaIdx && h == 1) {
-                        world.setBlockState(wp, Blocks.AIR.getDefaultState());
+                        world.setBlockAndUpdate(wp, Blocks.AIR.defaultBlockState());
                         continue;
                     }
-                    world.setBlockState(wp, Blocks.OAK_PLANKS.getDefaultState());
+                    world.setBlockAndUpdate(wp, Blocks.OAK_PLANKS.defaultBlockState());
                     konulanBlok++;
                 }
             }
@@ -843,56 +842,56 @@ public class HayaletOyuncular {
         // düz açık geçit daha temiz görünür)
 
         // 6) Dekorasyon — duvar yanında rastgele boş yerde
-        BlockPos dekorMerkez = hat.get(ortaIdx).add(RNG.nextInt(3) - 1, 0, RNG.nextInt(3) - 1);
+        BlockPos dekorMerkez = hat.get(ortaIdx).offset(RNG.nextInt(3) - 1, 0, RNG.nextInt(3) - 1);
 
         // Crafting table
-        BlockPos ct = dekorMerkez.add(2, 0, 0);
+        BlockPos ct = dekorMerkez.offset(2, 0, 0);
         if (world.getBlockState(ct).isAir())
-            world.setBlockState(ct, Blocks.CRAFTING_TABLE.getDefaultState());
+            world.setBlockAndUpdate(ct, Blocks.CRAFTING_TABLE.defaultBlockState());
 
         // Chest + loot
-        BlockPos chestPos = dekorMerkez.add(-2, 0, 0);
+        BlockPos chestPos = dekorMerkez.offset(-2, 0, 0);
         if (world.getBlockState(chestPos).isAir()) {
-            world.setBlockState(chestPos, Blocks.CHEST.getDefaultState());
+            world.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
             var be = world.getBlockEntity(chestPos);
-            if (be instanceof net.minecraft.block.entity.ChestBlockEntity chest) {
-                chest.setStack(0, new net.minecraft.item.ItemStack(net.minecraft.item.Items.BREAD, 3));
-                chest.setStack(1, new net.minecraft.item.ItemStack(net.minecraft.item.Items.IRON_INGOT, 2));
-                chest.setStack(2, new net.minecraft.item.ItemStack(net.minecraft.item.Items.STICK, 5));
+            if (be instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest) {
+                chest.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 3));
+                chest.setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 2));
+                chest.setItem(2, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK, 5));
                 if (RNG.nextDouble() < 0.4) {
-                    chest.setStack(3,
+                    chest.setItem(3,
                         com.photonpulse.candy.lore.YirtikSayfa.olustur(RNG.nextInt(5)));
                 }
-                chest.markDirty();
+                chest.setChanged();
             }
         }
 
         // Torch (duvarın 2 tarafına)
-        BlockPos t1 = dekorMerkez.up(2);
+        BlockPos t1 = dekorMerkez.above(2);
         if (world.getBlockState(t1).isAir())
-            world.setBlockState(t1, Blocks.TORCH.getDefaultState());
+            world.setBlockAndUpdate(t1, Blocks.TORCH.defaultBlockState());
 
         // Sign
-        BlockPos signPos = dekorMerkez.add(0, 1, 1);
+        BlockPos signPos = dekorMerkez.offset(0, 1, 1);
         if (world.getBlockState(signPos).isAir()) {
-            world.setBlockState(signPos, Blocks.OAK_SIGN.getDefaultState());
+            world.setBlockAndUpdate(signPos, Blocks.OAK_SIGN.defaultBlockState());
             var be = world.getBlockEntity(signPos);
             if (be instanceof SignBlockEntity sign) {
                 SignText metin = new SignText();
-                metin = metin.withMessage(0, Text.literal("Steve & Alex"));
-                metin = metin.withMessage(1, Text.translatable("candy.hayalet.ev.sign"));
+                metin = metin.setMessage(0, Component.literal("Steve & Alex"));
+                metin = metin.setMessage(1, Component.translatable("candy.hayalet.ev.sign"));
                 sign.setText(metin, true);
-                sign.markDirty();
+                sign.setChanged();
             }
         }
 
         // Ekstra dekorasyon — furnace veya barrel (%50)
         if (RNG.nextDouble() < 0.5) {
-            BlockPos ekPos = dekorMerkez.add(0, 0, 2);
+            BlockPos ekPos = dekorMerkez.offset(0, 0, 2);
             if (world.getBlockState(ekPos).isAir()) {
-                world.setBlockState(ekPos,
-                    RNG.nextBoolean() ? Blocks.FURNACE.getDefaultState()
-                                      : Blocks.BARREL.getDefaultState());
+                world.setBlockAndUpdate(ekPos,
+                    RNG.nextBoolean() ? Blocks.FURNACE.defaultBlockState()
+                                      : Blocks.BARREL.defaultBlockState());
             }
         }
 
@@ -927,31 +926,31 @@ public class HayaletOyuncular {
         return pts;
     }
 
-    private static void mobSavas(ServerWorld world, ServerPlayerEntity player, String isim) {
-        var mobs = world.getEntitiesByClass(
-            net.minecraft.entity.mob.HostileEntity.class,
-            new net.minecraft.util.math.Box(player.getBlockPos()).expand(60),
+    private static void mobSavas(ServerLevel world, ServerPlayer player, String isim) {
+        var mobs = world.getEntitiesOfClass(
+            net.minecraft.world.entity.monster.Monster.class,
+            new net.minecraft.world.phys.AABB(player.blockPosition()).inflate(60),
             m -> m.isAlive());
         if (mobs.isEmpty()) return;
         var hedef = mobs.get(RNG.nextInt(mobs.size()));
-        hedef.damage(world, world.getDamageSources().generic(), 6.0f);
-        Candy.LOG.info("[Candy] Hayalet[{}] mob @ {}", isim, hedef.getBlockPos());
+        hedef.hurtServer(world, world.damageSources().generic(), 6.0f);
+        Candy.LOG.info("[Candy] Hayalet[{}] mob @ {}", isim, hedef.blockPosition());
     }
 
     private static void tabelalariKontrolEt(MinecraftServer server) {
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
 
-            ServerWorld world = (ServerWorld) player.getWorld();
-            BlockPos merkez = player.getBlockPos();
+            ServerLevel world = (ServerLevel) player.level();
+            BlockPos merkez = player.blockPosition();
             Set<Long> cevaplanan = cevaplananTabelalar.computeIfAbsent(
-                player.getUuid(), k -> new HashSet<>());
+                player.getUUID(), k -> new HashSet<>());
 
             for (int dx = -16; dx <= 16; dx += 4) {
                 for (int dz = -16; dz <= 16; dz += 4) {
                     for (int dy = -8; dy <= 8; dy += 4) {
-                        BlockPos p = merkez.add(dx, dy, dz);
+                        BlockPos p = merkez.offset(dx, dy, dz);
                         BlockEntity be = world.getBlockEntity(p);
                         if (!(be instanceof SignBlockEntity sign)) continue;
                         if (cevaplanan.contains(p.asLong())) continue;
@@ -974,17 +973,17 @@ public class HayaletOyuncular {
                                 && onYuz.getMessages(false)[3].getString().isEmpty();
 
                             SignText yeni = new SignText();
-                            yeni = yeni.withMessage(0, Text.translatable("candy.hayalet.gaslight.0"));
-                            yeni = yeni.withMessage(1, Text.translatable("candy.hayalet.gaslight.1"));
-                            yeni = yeni.withMessage(2, Text.translatable("candy.hayalet.gaslight.2"));
-                            yeni = yeni.withMessage(3, Text.translatable("candy.hayalet.gaslight.3"));
+                            yeni = yeni.setMessage(0, Component.translatable("candy.hayalet.gaslight.0"));
+                            yeni = yeni.setMessage(1, Component.translatable("candy.hayalet.gaslight.1"));
+                            yeni = yeni.setMessage(2, Component.translatable("candy.hayalet.gaslight.2"));
+                            yeni = yeni.setMessage(3, Component.translatable("candy.hayalet.gaslight.3"));
 
                             if (arkaBos) {
                                 sign.setText(yeni, false); // arka yüz
-                                sign.markDirty();
+                                sign.setChanged();
                             } else if (onBos) {
                                 sign.setText(yeni, true); // ön yüz
-                                sign.markDirty();
+                                sign.setChanged();
                             }
                             // İki yüz de doluysa — dokunma, sadece kaydet
                             cevaplanan.add(p.asLong());
@@ -1000,7 +999,7 @@ public class HayaletOyuncular {
 
     private static String metinYuz(SignText t) {
         StringBuilder sb = new StringBuilder();
-        for (Text line : t.getMessages(false)) {
+        for (Component line : t.getMessages(false)) {
             sb.append(line.getString()).append(' ');
         }
         return sb.toString();

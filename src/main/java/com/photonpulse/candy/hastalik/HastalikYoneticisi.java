@@ -4,18 +4,17 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.net.HastalikPayload;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.Random;
 
 /**
@@ -38,14 +37,14 @@ public class HastalikYoneticisi {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(HastalikPayload.ID, HastalikPayload.CODEC);
+            AgKayit.playS2C().register(HastalikPayload.ID, HastalikPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Hastalik payload zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % TICK_ARALIGI != 0) return;
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % TICK_ARALIGI != 0) return;
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 try { kontrol(player); }
                 catch (Throwable t) { Candy.LOG.debug("[Candy] hastalik kontrol: {}", t.getMessage()); }
             }
@@ -54,8 +53,8 @@ public class HastalikYoneticisi {
         // v1.9.15 fix: Ölümden sonra hastalık + korku sıfırla
         //   Bug: player kalp krizinden ölür → respawn → korku hâlâ ≥ 85 + hastalikBaslangicTick
         //   çok eski → panikSuresi > 7 dk → tekrar ölür → sonsuz döngü.
-        net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN
-            .register((oldPlayer, newPlayer, alive) -> {
+        com.photonpulse.candy.platform.OyuncuOlaylari.AFTER_RESPAWN
+            .register((newPlayer, alive) -> {
                 try {
                     var tp = PersonalityManager.get(newPlayer);
                     tp.aktifHastalik = "";
@@ -65,7 +64,7 @@ public class HastalikYoneticisi {
                     tp.ilkKarartmaBaslangicTick = 0L;
                     // Client'a bildir
                     try {
-                        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(
+                        com.photonpulse.candy.platform.SunucuAg.send(
                             newPlayer, new HastalikPayload(""));
                     } catch (Throwable ignored) {}
                     Candy.LOG.info("[Candy] Ölüm sonrası hastalik reset → {}",
@@ -78,20 +77,20 @@ public class HastalikYoneticisi {
         Candy.LOG.info("[Candy] HastalikYoneticisi aktif — 8 psikolojik hastalık");
     }
 
-    private static void kontrol(ServerPlayerEntity player) {
+    private static void kontrol(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
         if (!tp.kurulumTamam) return;
         if (player.isCreative() || player.isSpectator()) return;
 
         String eski = tp.aktifHastalik == null ? "" : tp.aktifHastalik;
-        String yeni = hesapla(tp, player.getWorld().getTime());
+        String yeni = hesapla(tp, player.level().getGameTime());
 
         if (!yeni.equals(eski)) {
             // Değişiklik var
             if (eski.isEmpty() && !yeni.isEmpty()) {
                 // Yeni hastalık — Candy güçlenir. Tek satır atmosferik semptom.
-                bildir(player, "candy.hastalik.kaptin." + yeni, Formatting.DARK_GRAY);
-                tp.hastalikBaslangicTick = player.getWorld().getTime();
+                bildir(player, "candy.hastalik.kaptin." + yeni, ChatFormatting.DARK_GRAY);
+                tp.hastalikBaslangicTick = player.level().getGameTime();
                 tp.candyOzguven = Math.min(100, tp.candyOzguven + 15);
                 tp.kaptigiHastaliklar.add(yeni);
                 com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "icindeki_birsey");
@@ -104,14 +103,14 @@ public class HastalikYoneticisi {
                     String.format("%.1f", tp.candyOzguven));
             } else if (!eski.isEmpty() && yeni.isEmpty()) {
                 // İyileşti — efektleri manuel silmiyoruz (potion çalmasın), 10 sn'de kendi söner
-                bildir(player, "candy.hastalik.iyilesti." + eski, Formatting.GREEN);
+                bildir(player, "candy.hastalik.iyilesti." + eski, ChatFormatting.GREEN);
                 com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(player, "iyilesme");
                 Candy.LOG.info("[Candy] {} iyileşti ({})",
                     player.getName().getString(), eski);
             } else if (!eski.isEmpty() && !yeni.isEmpty()) {
                 // Farklı hastalığa geçti — sadece yeni semptom, tedavi bilgisi yok
-                bildir(player, "candy.hastalik.kaptin." + yeni, Formatting.DARK_GRAY);
-                tp.hastalikBaslangicTick = player.getWorld().getTime();
+                bildir(player, "candy.hastalik.kaptin." + yeni, ChatFormatting.DARK_GRAY);
+                tp.hastalikBaslangicTick = player.level().getGameTime();
                 tp.candyOzguven = Math.min(100, tp.candyOzguven + 15);
                 tp.kaptigiHastaliklar.add(yeni);
                 if (tp.kaptigiHastaliklar.size() >= 8) {
@@ -152,7 +151,7 @@ public class HastalikYoneticisi {
      * Vanilla status effect ile hastalık hissi.
      * Süre 200 tick (10 sn) — check aralığı 5 sn olduğu için sürekli refresh.
      */
-    private static void uygulaEfekt(ServerPlayerEntity player, String hastalik) {
+    private static void uygulaEfekt(ServerPlayer player, String hastalik) {
         int sure = 200;
         switch (hastalik) {
             case "panik" -> {
@@ -162,55 +161,55 @@ public class HastalikYoneticisi {
                 //   7+ dk: kalp krizi → custom damage type ile ölüm
                 com.photonpulse.candy.core.TruePersonality tp2 =
                     com.photonpulse.candy.core.PersonalityManager.get(player);
-                long simdi = player.getWorld().getTime();
+                long simdi = player.level().getGameTime();
                 long panikSuresi = simdi - tp2.hastalikBaslangicTick;
 
                 if (panikSuresi < 6000L) {
                     // İlk 5 dk — sadece adrenalin
-                    uygula(player, StatusEffects.SPEED, sure, 0);
+                    uygula(player, MobEffects.SPEED, sure, 0);
                     if (RNG.nextDouble() < 0.3)
-                        uygula(player, StatusEffects.NAUSEA, 60, 0);
+                        uygula(player, MobEffects.NAUSEA, 60, 0);
                 } else if (panikSuresi < 8400L) {
                     // 5-7 dk — kalp tükeniyor, WITHER III
-                    uygula(player, StatusEffects.SPEED, sure, 0);
-                    uygula(player, StatusEffects.WITHER, sure, 2);
+                    uygula(player, MobEffects.SPEED, sure, 0);
+                    uygula(player, MobEffects.WITHER, sure, 2);
                     if (RNG.nextDouble() < 0.5)
-                        uygula(player, StatusEffects.NAUSEA, 60, 0);
+                        uygula(player, MobEffects.NAUSEA, 60, 0);
                 } else {
                     // 7+ dk — kalp krizi
                     kalpKrizi(player);
                 }
             }
             case "sizofreni" -> {
-                uygula(player, StatusEffects.DARKNESS, sure, 0);
+                uygula(player, MobEffects.DARKNESS, sure, 0);
                 if (RNG.nextDouble() < 0.15) {
                     // Rastgele korkutucu ses
-                    ((ServerWorld) player.getWorld()).playSound(
-                        null, player.getBlockPos(),
-                        SoundEvents.ENTITY_WARDEN_NEARBY_CLOSE,
-                        SoundCategory.AMBIENT, 0.8f, 0.6f);
+                    ((ServerLevel) player.level()).playSound(
+                        null, player.blockPosition(),
+                        SoundEvents.WARDEN_NEARBY_CLOSE,
+                        SoundSource.AMBIENT, 0.8f, 0.6f);
                 }
             }
             case "kisilik" -> {
-                uygula(player, StatusEffects.MINING_FATIGUE, sure, 0);
-                uygula(player, StatusEffects.WEAKNESS, sure, 0);
+                uygula(player, MobEffects.MINING_FATIGUE, sure, 0);
+                uygula(player, MobEffects.WEAKNESS, sure, 0);
             }
             case "depresyon" -> {
-                uygula(player, StatusEffects.SLOWNESS, sure, 0);
-                uygula(player, StatusEffects.MINING_FATIGUE, sure, 0);
+                uygula(player, MobEffects.SLOWNESS, sure, 0);
+                uygula(player, MobEffects.MINING_FATIGUE, sure, 0);
             }
             case "stres" -> {
-                uygula(player, StatusEffects.WEAKNESS, sure, 0);
-                uygula(player, StatusEffects.HUNGER, sure, 0);
+                uygula(player, MobEffects.WEAKNESS, sure, 0);
+                uygula(player, MobEffects.HUNGER, sure, 0);
             }
             case "anksiyete" -> {
                 if (RNG.nextDouble() < 0.25)
-                    uygula(player, StatusEffects.NAUSEA, 60, 0);
+                    uygula(player, MobEffects.NAUSEA, 60, 0);
             }
             case "bipolar" -> {
-                long day = player.getWorld().getTime() / 24000L;
-                if (day % 2 == 0) uygula(player, StatusEffects.SPEED, sure, 0);
-                else uygula(player, StatusEffects.SLOWNESS, sure, 0);
+                long day = player.level().getGameTime() / 24000L;
+                if (day % 2 == 0) uygula(player, MobEffects.SPEED, sure, 0);
+                else uygula(player, MobEffects.SLOWNESS, sure, 0);
             }
             case "okb" -> {
                 // OKB nadir, sürekli refresh yok
@@ -218,10 +217,10 @@ public class HastalikYoneticisi {
         }
     }
 
-    private static void uygula(ServerPlayerEntity player,
-                                net.minecraft.registry.entry.RegistryEntry<net.minecraft.entity.effect.StatusEffect> effect,
+    private static void uygula(ServerPlayer player,
+                                net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect,
                                 int sure, int amp) {
-        player.addStatusEffect(new StatusEffectInstance(effect, sure, amp, true, false, false));
+        player.addEffect(new MobEffectInstance(effect, sure, amp, true, false, false));
     }
 
     /**
@@ -230,16 +229,16 @@ public class HastalikYoneticisi {
      * lang key'inden çekilir: "candy.hastalik.panik_death" mesajı chat'te çıkar,
      * /kill kullanıldığı belli olmaz.
      */
-    private static void kalpKrizi(ServerPlayerEntity player) {
+    private static void kalpKrizi(ServerPlayer player) {
         if (!player.isAlive()) return;
         try {
-            ServerWorld world = (ServerWorld) player.getWorld();
-            var id = net.minecraft.util.Identifier.of("candy", "kalp_krizi");
-            var registry = world.getRegistryManager()
-                .getOrThrow(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE);
-            var entry = registry.getEntry(id).orElseThrow();
-            var source = new net.minecraft.entity.damage.DamageSource(entry);
-            player.damage(world, source, 1000f);
+            ServerLevel world = (ServerLevel) player.level();
+            var id = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("candy", "kalp_krizi");
+            var registry = world.registryAccess()
+                .lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
+            var entry = registry.get(id).orElseThrow();
+            var source = new net.minecraft.world.damagesource.DamageSource(entry);
+            player.hurtServer(world, source, 1000f);
             Candy.LOG.info("[Candy] Kalp krizi → {}", player.getName().getString());
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] Kalp krizi hata, fallback health=0: {}", t.getMessage());
@@ -250,15 +249,15 @@ public class HastalikYoneticisi {
     // v1.8.2 Fix B: temizleEfektler kaldırıldı — player'ın kendi potion'larını çalmaz.
     // Refresh durunca effect'ler 200 tick (10 sn) içinde doğal söner.
 
-    private static void bildir(ServerPlayerEntity player, String langKey, Formatting renk) {
-        player.sendMessage(
-            Text.translatable(langKey).formatted(renk, Formatting.ITALIC),
+    private static void bildir(ServerPlayer player, String langKey, ChatFormatting renk) {
+        player.displayClientMessage(
+            Component.translatable(langKey).withStyle(renk, ChatFormatting.ITALIC),
             false);
     }
 
-    private static void senkron(ServerPlayerEntity player, String hastalik) {
+    private static void senkron(ServerPlayer player, String hastalik) {
         try {
-            ServerPlayNetworking.send(player, new HastalikPayload(hastalik == null ? "" : hastalik));
+            SunucuAg.send(player, new HastalikPayload(hastalik == null ? "" : hastalik));
         } catch (Throwable ignored) {}
     }
 }

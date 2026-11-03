@@ -6,7 +6,7 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.JsonDepo;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
@@ -66,12 +66,12 @@ public class TreeGrowth {
     // ─────────────────────────────────────────────────────────
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(TreeGrowth::onTick);
+        SunucuTick.END_SERVER_TICK.register(TreeGrowth::onTick);
         Candy.LOG.info("[Candy] TreeGrowth aktif — kişilik ağacı büyüyor");
     }
 
     public static void sunucuBaslat(MinecraftServer server) {
-        Path worldPath = server.getSavePath(net.minecraft.util.WorldSavePath.ROOT);
+        Path worldPath = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
         treeKlasoru = worldPath.resolve("candy");
         try {
             Files.createDirectories(treeKlasoru);
@@ -151,7 +151,7 @@ public class TreeGrowth {
         tickSayaci++;
 
         if (tickSayaci % TICK_ARALIGI == 0) {
-            long simdi = server.getOverworld().getTime();
+            long simdi = server.overworld().getGameTime();
             for (var e : PersonalityManager.tumOyuncular().entrySet()) {
                 UUID uid = e.getKey();
                 TruePersonality tp = e.getValue();

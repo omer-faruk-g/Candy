@@ -1,14 +1,18 @@
 package com.photonpulse.candy.client;
 
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 
 /**
  * KaranlikState — sunucudan gelen ışık kademesini tutar; LightmapTextureManagerMixin okur.
  *
  * Değer yalnızca ağ thread'inde yazılıp render thread'inde okunuyor, o yüzden volatile.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class KaranlikState {
 
     private KaranlikState() {}
