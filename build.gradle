@@ -297,16 +297,25 @@ stonecutter {
         replace 'net.minecraft.world.entity.npc.Villager', 'net.minecraft.world.entity.npc.villager.Villager'
     }
 
-    // MIXIN HEDEF DIZGILERI (@Inject method = "..."). Bunlar >=1.21.9 ile BIRLIKTE
-    // gidemiyor, cunku 26.x ikisini de yeniden kirdi. Her biri src/ icinde tek kullanim.
+    // MIXIN HEDEF DIZGILERI: 1.21.9 <= x < 26 araligi icin ad kurali YOK -- ve bu bir
+    // DUZELTME. Burada iki yeniden adlandirma duruyordu:
     //
-    // 1.21.9 <= x < 26 araligi:
-    //   DebugScreenOverlay.getGameInformation -> getLeftText
-    //   FogRenderer.setupFog                  -> applyFog
-    replacements.string(current.parsed >= '1.21.9' && current.parsed < '26') {
-        replace 'getGameInformation', 'getLeftText'
-        replace 'setupFog', 'applyFog'
-    }
+    //     replace 'getGameInformation', 'getLeftText'
+    //     replace 'setupFog',           'applyFog'
+    //
+    // Ikisi de 1.21.11 jar'ina karsi javap ile olculdu ve YANLIS cikti:
+    //   * FogRenderer'da applyFog YOK. Ad hic degismemis; 1.21.11'de de setupFog.
+    //     Degisen sey imza: Vector4f setupFog(Camera,int,DeltaTracker,float,ClientLevel)
+    //     -- 1.21.7'deki `boolean thickFog` dusmus. Yani kural DOGRU adi yanlisa
+    //     ceviriyordu.
+    //   * DebugScreenOverlay'de getLeftText de YOK, getGameInformation da YOK
+    //     (1.21.9'da kalkmis). 1.21.11'de kalan tek sekil:
+    //     private void renderLines(GuiGraphics, List<String>, boolean).
+    //
+    // `injectors.defaultRequire = 0` oldugu icin ikisi de SESSIZCE olmustu: 1.21.11
+    // jar'i derleniyor, yukleniyor, log tertemiz -- ama ayna sisi ve F3 spoof hic
+    // calismiyordu. Dogru hedefler artik DebugHudMixin/FogRendererMixin icinde ayri
+    // `//? if` dallarinda, yani bir ad kuraline ihtiyac kalmadi.
 
     // 26.x:
     //   FogRenderer.setupFog adi GERI DONDU -- 26.3'te yine 'setupFog'. Yani 1.21.9'daki

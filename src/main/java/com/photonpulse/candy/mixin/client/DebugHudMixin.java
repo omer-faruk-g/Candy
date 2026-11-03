@@ -18,17 +18,26 @@ import net.minecraft.client.gui.components.DebugScreenOverlay;
  * Çıktıyı tara: "candy:mirror" veya "candy:anti_mirror" içeren satırlar
  * "minecraft:overworld" ile değiştirilir. Ayrıca Y koordinatı Mirror'da -250000 gösterilir.
  *
- * Hedef metot sürüme bağlı (javap ile ölçüldü):
- *   1.21.7            List&lt;String&gt; getGameInformation()
- *   1.21.9 – 1.21.11  List&lt;String&gt; getLeftText()   (replacements kuralıyla yeniden adlandırılır)
- *   26.x              void extractLines(GuiGraphicsExtractor, List&lt;String&gt;, boolean solTaraf, int)
+ * Hedef metot sürüme bağlı (her biri o sürümün jar'ında javap ile ölçüldü):
+ *   1.21.7   List&lt;String&gt; getGameInformation()
+ *   1.21.11  void renderLines(GuiGraphics, List&lt;String&gt;, boolean solTaraf)
+ *   26.x     void extractLines(GuiGraphicsExtractor, List&lt;String&gt;, boolean solTaraf, int)
  *
- * 26.x'te F3 satırlarını üreten tek bir metot yok: satırlar DebugScreenEntry'lerden
- * gelip extractRenderState içinde iki ArrayList'e doluyor, extractLines ise onları
- * SADECE ÇİZİYOR. Bu yüzden 26.x dalı extractLines'in HEAD'ine giriyor ve listeyi
- * çizimden önce YERİNDE düzeltiyor (TAIL işe yaramazdı, çizim bitmiş olurdu).
- * Spoof davranışı üç sürümde de aynı; 26.x'te sağ kolon da aynı süzgeçten
- * geçiyor, ama orada ne boyut adı ne XYZ satırı bulunduğu için bir etkisi olmuyor.
+ * DÜZELTME: 1.21.11 dalı daha önce `getLeftText` hedefliyordu — bir `replacements`
+ * kuralı `getGameInformation`'ı o ada çeviriyordu. 1.21.11 jar'ında <b>öyle bir metot
+ * yok</b>; `getGameInformation` da 1.21.9'da kalkmış. `defaultRequire = 0` olduğu için
+ * enjeksiyon <b>sessizce</b> ölüyordu: jar derleniyor, log tertemiz, F3 spoof çalışmıyor.
+ * Kalan tek şekil `renderLines` ve 1.21.11 dalı artık onu hedefliyor.
+ *
+ * 1.21.9'dan itibaren F3 satırlarını üreten tek bir metot yok: satırlar başka yerde
+ * doluyor, 1.21.11'de `renderLines` ve 26.x'te `extractLines` onları SADECE çiziyor.
+ * Bu yüzden iki dal da HEAD'e giriyor ve listeyi çizimden önce YERİNDE düzeltiyor
+ * (TAIL işe yaramazdı, çizim bitmiş olurdu). Liste değiştirilemez olsa bile sorun yok:
+ * düzeltme {@code try/catch(Throwable)} içinde ve değişiklik <b>fikir-güçsüz</b>
+ * (idempotent), aynı satıra iki kez uygulanması aynı sonucu veriyor.
+ *
+ * Spoof davranışı üç sürümde de aynı; 1.21.9+ sağ kolondan da geçiyor, ama orada ne
+ * boyut adı ne XYZ satırı bulunduğu için bir etkisi olmuyor.
  */
 @Mixin(DebugScreenOverlay.class)
 public class DebugHudMixin {
@@ -53,10 +62,19 @@ public class DebugHudMixin {
     }
     */
     //?}
-    // Spoof'un kendisi -- iki 26.x kabugu da buraya giriyor, liste YERINDE duzeltiliyor.
+    //? if >=1.21.9 && <26 {
+    /*@Inject(method = "renderLines", at = @At("HEAD"))
+    private void candy$f3Spoof(GuiGraphics grafik, List<String> satirlar,
+                               boolean solTaraf, CallbackInfo ci) {
+        candy$f3Duzelt(satirlar);
+    }
+    */
+    //?}
+    // Spoof'un kendisi -- 1.21.11 ve iki 26.x kabugu da buraya giriyor, liste
+    // YERINDE duzeltiliyor.
     // (Yorum directive blogunun DISINDA: Stonecutter dali aktif ederken blok icindeki
     //  satirlarin `//` onekini de siliyor, icerde kalsa gecersiz Java uretirdi.)
-    //? if >=26 {
+    //? if >=1.21.9 {
     /*private void candy$f3Duzelt(List<String> satirlar) {
         try {
             if (satirlar == null || satirlar.isEmpty()) return;
@@ -97,7 +115,7 @@ public class DebugHudMixin {
     }
     */
     //?}
-    //? if <26 {
+    //? if <1.21.9 {
     @Inject(method = "getGameInformation", at = @At("RETURN"), cancellable = true)
     private void candy$f3Spoof(CallbackInfoReturnable<List<String>> cir) {
         try {
