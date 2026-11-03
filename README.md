@@ -52,13 +52,16 @@ Jars are named `candy-<mod version>+<minecraft version>.jar`, e.g.
 covers 26.1.1 and 26.1.2 — all three present exactly the same API to Candy (measured
 class file by class file, not assumed).
 
-> **26.x builds, but has not been played yet.** Candy compiles for 26.1, 26.2 and
-> 26.3 and produces a jar for each. Every mixin target was checked against the real
-> 26.x class files with `javap`, and the one data key that 26.x newly requires was
-> added — but **no 26.x game session has been run**, so mixins actually applying and
-> the custom dimensions actually loading are still unverified. If you want the
-> versions that have been played, stay on 1.21.7 or 1.21.11. Measurements and what is
-> still assumed: [BUILD.md](BUILD.md).
+> **What was actually run.** Candy builds for 26.1, 26.2 and 26.3 and produces a jar
+> for each. A 26.3 client was started with all eleven mixins applied and zero injection
+> errors; a 26.3 server loaded Candy and ran its own init; and all five custom dimension
+> types were decoded by Minecraft's **own** `DimensionType` codec against the real 26.3
+> registry. Re-measuring the same things on 1.21.11 turned up two bugs that had been
+> there since 1.21.9 and were invisible to the compiler: eight ignored dimension keys,
+> and two mixins that were silently dead. Both are fixed here, so 1.21.11 gained from
+> this port as well. What is left is a person playing it: no world has been entered on
+> 26.x, so the effects have not been seen in a live world. Every measurement:
+> [BUILD.md](BUILD.md).
 
 Two features differ by version. Both are switched **off** rather than approximated,
 because the API they depended on is gone and guessing a replacement would be worse:
@@ -137,13 +140,15 @@ Jar adı `candy-<mod sürümü>+<minecraft sürümü>.jar` biçiminde, örn.
 26.1.1 ve 26.1.2'yi de karşılıyor — üçü de Candy'ye birebir aynı API'yi sunuyor
 (varsayılmadı, class dosyası class dosyasına ölçüldü).
 
-> **26.x derleniyor, ama henüz oynanmadı.** Candy 26.1, 26.2 ve 26.3 için derleniyor
-> ve her biri için jar üretiyor. Bütün mixin hedefleri gerçek 26.x class dosyalarına
-> karşı `javap` ile tek tek denetlendi ve 26.x'in yeni zorunlu kıldığı veri anahtarı
-> eklendi — ama **26.x'te tek bir oyun oturumu açılmadı**, yani mixin'lerin gerçekten
-> uygulanması ve özel boyutların gerçekten yüklenmesi henüz doğrulanmadı. Oynanmış
-> sürüm istiyorsan 1.21.7 veya 1.21.11'de kal. Ölçümler ve hangi varsayımın ayakta
-> kaldığı: [BUILD.md](BUILD.md).
+> **Ne çalıştırıldı.** Candy 26.1, 26.2 ve 26.3 için derleniyor ve her biri için jar
+> üretiyor. 26.3 istemcisi açıldı — on bir mixin'in tamamı uygulandı, sıfır injection
+> hatası; 26.3 sunucusu Candy'yi yükledi ve kendi init'ini koşturdu; beş özel boyut
+> tipinin hepsi Minecraft'ın **kendi** `DimensionType` kodeki tarafından, gerçek 26.3
+> registry'sine karşı çözümlendi. Aynı ölçümler 1.21.11'de yinelenince 1.21.9'dan beri
+> duran ve derleyicinin göremediği **iki** hata çıktı: gözardı edilen sekiz boyut
+> anahtarı, ve sessizce ölü iki mixin. İkisi de burada düzeltildi — yani 1.21.11 de bu
+> porttan kazançlı çıktı. Kalan tek şey birinin oynaması: 26.x'te bir dünyaya girilmedi,
+> yani efektler canlı bir dünyada görülmedi. Ölçümlerin tamamı: [BUILD.md](BUILD.md).
 
 Sürüme göre iki özellik değişiyor. İkisi de yaklaştırılmak yerine **kapatıldı**,
 çünkü dayandıkları API ortadan kalktı ve yerine bir şey uydurmak daha kötü olurdu:

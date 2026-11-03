@@ -20,3 +20,4 @@ run/
 versions/*/build/
 versions/*/src/
 .stonecutter/
+logs/

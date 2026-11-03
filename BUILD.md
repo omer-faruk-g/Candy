@@ -356,10 +356,23 @@ Beş Fabric düğümü, hepsi yeşil, hepsi jar üretiyor:
 
 Ayrıca iki `-neoforge` düğümü var, `candy.neoforge=false` ile **kapalı** (port bitmedi).
 
-> **Oyun içinde denenmedi.** Bu bölümdeki her şey statik ölçüm: derleme, `javap` ile
-> bayt kod karşılaştırması ve üretilen jar'ların içeriği. 26.x düğümleri için bir oyun
-> oturumu açılmadı — mixin'lerin gerçekten uygulanması ve özel boyutların yüklenmesi
-> çalıştırma anında doğrulanmayı bekliyor. "Derleniyor" ile "oynanıyor" aynı şey değil.
+> **Ne çalıştırıldı — ve ne çalıştırılmadı.** Bu bölümdeki şema ölçümleri statik, ama
+> doğrulama statik kalmadı:
+>
+> | ne | sonuç |
+> |---|---|
+> | `./gradlew clean build tumunuTopla` | EXIT=0, beş jar, her biri kendi şemasını taşıyor |
+> | `:26.3:runTest` (istemci) | 12 doku atlası kuruldu, 88 Candy satırı, sıfır `InvalidInjectionException` |
+> | `:26.3:runServer` | `SurumKapisi: 26.3 — test edilmiş sürüm`, 85 Candy satırı, mixin hatası yok |
+> | `:1.21.11:runServer` | aynısı 1.21.11 için, 85 Candy satırı |
+> | `:1.21.7:runClient` | gerileme kontrolü: 87 Candy satırı, 13 atlas, sıfır mixin hatası |
+> | `DimensionType.DIRECT_CODEC` koşumu | beş boyut dosyası 26.3'te **ve** 1.21.11'de gerçek registry'ye karşı çözümlendi; eski ağaç 1.21.7'de çözümlendi |
+> | 5 düğüm × 15 mixin hedefi = 75 | hepsi kendi jar'ında `javap` ile bulundu — ve bu koşum 1.21.11'de iki **sessiz** kopuk ortaya çıkardı |
+>
+> Çalıştırılmayan tek şey: **bir dünyaya girilmedi.** Sunucu Mojang EULA'sında duruyor;
+> `eula=true` yazmak kullanıcının kararı, derlemenin kararı değil — bu yüzden yazılmadı.
+> Yani mixin'lerin *uygulandığı* ve boyut dosyalarının *çözümlendiği* ölçüldü, ama
+> efektlerin canlı bir dünyada nasıl göründüğü görülmedi.
 
 #### 26.x sürüm manzarası (2026-11-03'te ölçüldü)
 
@@ -451,9 +464,22 @@ dört hedef bozuktu ve hiçbiri derlemeyi kırmıyordu:
 | `LightmapTextureManagerMixin` | `LightTexture` | `LightmapRenderStateExtractor` |
 
 İki hedef ise 26.x'te **değişmedi**, bu da ölçülmesi gereken bir şeydi:
-`FogRenderer.setupFog` 26.x'te de bu adı taşıyor (1.21.9'daki `applyFog` yeniden
-adlandırması geri alınmış, yani o kural `>=1.21.9 <26` ile sınırlı) ve
-`DeathScreen.init()` parametresiz.
+`FogRenderer.setupFog` 26.x'te de bu adı taşıyor ve `DeathScreen.init()` parametresiz.
+
+**Aynı ölçüm 1.21.11'de önceden duran iki sessiz kopuk ortaya çıkardı.** Bu 26.x
+portunun getirdiği bir gerileme değil: `>=1.21.9 && <26` aralığında iki yanlış
+`replacements` kuralı duruyordu.
+
+| kural | 1.21.11 jar'ında gerçek (javap) |
+|---|---|
+| `setupFog` → `applyFog` | `applyFog` **yok**. Ad hiç değişmemiş, 1.21.11'de de `setupFog`. Değişen şey imza: `boolean thickFog` 1.21.9'da düştü. |
+| `getGameInformation` → `getLeftText` | `getLeftText` **yok**, `getGameInformation` da yok (1.21.9'da kalktı). Kalan tek şekil: `renderLines(GuiGraphics, List<String>, boolean)`. |
+
+`defaultRequire: 0` olduğu için ikisi de sessizce ölmüştü: 1.21.11 jar'ı derleniyor,
+yükleniyor, log tertemiz — ama **ayna sisi ve F3 spoof hiç çalışmıyordu**. İki kural
+kaldırıldı; iki mixin'e ölçülen gerçek hedeflerle birer `//? if >=1.21.9 && <26` dalı
+eklendi. Bu, "derleniyor" ile "çalışıyor"un aynı şey olmadığının en keskin örneği —
+ve tek geçerli kanıtın o sürümün jar'ındaki bayt kod olduğunun.
 
 `DebugScreenOverlay.extractLines` ise **parametre sayısı değiştiriyor**: 26.2'de 3,
 26.3'te 4 (`int genislik` eklendi). Mixin geri çağrı imzasının hedefle birebir aynı
@@ -652,8 +678,12 @@ bu eşiklerin her birini o sürümün jar'ına karşı yeniden kontrol et.
 
 26.x eşikleri (`>=26`, `>=26.2`, `>=26.3`) böyle bir varsayım **taşımıyor**: üçü de
 26.1, 26.2 ve 26.3 jar'larına karşı ayrı ayrı ölçüldü — tek bir `>=26` eşiği
-denendiğinde iki düğüm kırmızı kaldığı için ayrıldılar. Kalan varsayım başka yerde:
-mixin'lerin **uygulanması** ve boyutların **yüklenmesi** 26.x'te çalıştırılmadı.
+denendiğinde iki düğüm kırmızı kaldığı için ayrıldılar.
+
+Mixin'lerin uygulanması ve boyut dosyalarının çözümlenmesi de artık varsayım değil:
+ikisi de çalıştırılarak ölçüldü (yukarıdaki "Ne çalıştırıldı" tablosu). `>=1.21.9`
+eşiğinin mixin **adlarına** dair taşıdığı iki varsayım ise yanlış çıktı ve kaldırıldı
+— bkz. "Derleyicinin GÖRMEDİĞİ hatalar: mixin hedefleri".
 
 ## Loader desteği
 
@@ -667,8 +697,9 @@ mixin'lerin **uygulanması** ve boyutların **yüklenmesi** 26.x'te çalıştır
 | 26.2    | ✅ jar üretiyor ¹ | ❌ düğüm yok | ❌ yok |
 | 26.3    | ✅ jar üretiyor ¹ | ❌ düğüm yok | ❌ yok |
 
-¹ 26.x jar'ları derleniyor ve mixin hedefleri `javap` ile tek tek doğrulanmış durumda,
-ama **oyun içinde denenmedi** — bkz. yukarıdaki "Sürüm durumu".
+¹ 26.x jar'ları derleniyor, 26.3 istemcisi ve sunucusu açıldı, on bir mixin'in tamamı
+uygulandı ve beş boyut dosyası gerçek kodekle çözümlendi. Girilmemiş olan tek şey canlı
+bir dünya — bkz. yukarıdaki "Sürüm durumu".
 
 NeoForge düğümleri (`versions/1.21.7-neoforge`, `versions/1.21.11-neoforge`)
 **varsayılan olarak kapalı** — `gradle.properties` içindeki `candy.neoforge=false`.

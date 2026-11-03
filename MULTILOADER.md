@@ -520,9 +520,13 @@ kırmızı kalıyordu. Ayrıca derleyicinin görmediği iki katman daha vardı: 
 hedefi sessizce bozulmuştu ve `dimension_type` JSON'larında 26.x'in zorunlu kıldığı bir
 anahtar eksikti. Ölçümlerin tamamı: [BUILD.md](BUILD.md).
 
-**Henüz oynanmadı.** 26.x düğümleri derleniyor ve statik olarak doğrulanmış durumda,
-ama 26.x'te tek bir oyun oturumu açılmadı — mixin'lerin uygulanması ve boyutların
-yüklenmesi çalıştırma anında doğrulanmayı bekliyor.
+**Çalıştırıldı.** 26.3 istemcisi ve sunucusu açıldı: on bir mixin'in tamamı uygulandı
+(sıfır injection hatası) ve beş `dimension_type` dosyası Minecraft'ın kendi kodekiyle
+gerçek registry'ye karşı çözümlendi. 1.21.7 istemcisi de gerileme kontrolü olarak
+açıldı. Bu koşumlar 1.21.11'de 1.21.9'dan beri duran iki sessiz mixin kopuğunu da
+ortaya çıkardı; ikisi de düzeltildi. Girilmemiş olan tek şey canlı bir dünya — sunucu
+Mojang EULA'sında duruyor ve `eula=true` yazmak kullanıcının kararı. Ölçümler:
+[BUILD.md](BUILD.md).
 
 ### Kalan iş — ölçülmüş envanter
 
