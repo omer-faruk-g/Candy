@@ -492,24 +492,60 @@ kapatır.
 
 #### Derleyicinin görmediği ikinci katman: veri (JSON)
 
-`dimension_type` kodeki iki sürümde de ölçüldü. **26.3'te `has_ender_dragon_fight`
-zorunlu** (`fieldOf`), 1.21.11 kodekinde ise hiç yok — ve Candy'nin beş
-`dimension_type` dosyasının hiçbirinde yoktu. Yani 26.x'te çözümleme hata verir, 12
-özel boyut **hiç yüklenmezdi**. Derleme bunu göremez; JSON derlenmiyor.
+Burada **iki** ayrı sorun vardı ve ikisini de derleme görmez; JSON derlenmiyor.
+Kaynak belge değil: her sürümün **kendi jar'ındaki** vanilla
+`data/minecraft/dimension_type/*.json` dosyaları okundu.
 
-Anahtar beş dosyaya da eklendi. 1.21.x'te **bilinmeyen anahtar** oluyor ve gözardı
-ediliyor — bunun tolere edildiği zaten ölçülmüş durumda, çünkü Candy 1.21.11'de
-kodeke ait olmayan on anahtar (`ultrawarm`, `natural`, `piglin_safe`, `bed_works`,
-`respawn_anchor_works`, `has_raids`, `effects`, `fixed_time`, iki `monster_spawn_*`)
-gönderiyor ve boyutlar yükleniyor.
+**1. 26.x bir anahtarı zorunlu kıldı.** 26.3'te `has_ender_dragon_fight` `fieldOf`
+(zorunlu), 1.21.11 kodekinde ise hiç yok — ve Candy'nin beş dosyasının hiçbirinde
+yoktu. Yani 26.x'te çözümleme hata verir, on bir özel boyut **hiç yüklenmezdi**.
 
-**Bu on anahtarın gözardı edilmesi 26.x'e özgü DEĞİL — 1.21.11'de de öyle.** Yeni
-şema (`skybox`, `attributes`, `timelines`, `has_fixed_time`, `cardinal_light`) 1.21.11
-kodekinde zaten var. Yani `fixed_time: 18000` taşıyan üç boyut (`anti_mirror`,
-`kdunya`, `mirror`) 1.21.11'de de donmuş zamana sahip değil. Bu **önceden var olan**
-bir sapma, 26.x portunun getirdiği bir gerileme değil, ve burada düzeltilmedi:
-`has_fixed_time: true` yazmak hangi zamanda donacağını söylemiyor (o bilgi artık
-`timelines`'ta) ve tahminle doldurulmadı. Ayrı bir iş.
+**2. Şema 1.21.9'da kırılmış ve Candy bunu fark etmemiş.** Sekiz anahtar (`ultrawarm`,
+`natural`, `piglin_safe`, `bed_works`, `respawn_anchor_works`, `has_raids`, `effects`,
+`fixed_time`) 1.21.11 kodekinde de **yok**. Yerine `attributes`
+(`EnvironmentAttributeMap`), `skybox`, `cardinal_light`, `has_fixed_time` +
+`timelines` geldi; `monster_spawn_light_level` ve `monster_spawn_block_light_limit`
+kaldı (ikisi de hâlâ **zorunlu**). DFU bilinmeyen anahtarı sessizce atıyor, yani
+dosyalar **hata vermeden** yükleniyor ve sekiz anahtarın tamamı gözardı ediliyordu.
+Ölçülen default'lar bunun ne demek olduğunu söylüyor: `visual/sky_color` **0x000000**,
+`visual/fog_color` **0x000000**, `gameplay/sky_light_level` **15.0**. Yani 1.21.11'de
+on bir özel boyut **siyah gökyüzü, siyah sis ve sürekli gündüz** ile oynanıyordu.
+Bu bir gerileme değil, 1.21.11'den beri öyleydi — ve burada düzeltildi.
+
+Çeviri tahminle yapılmadı: vanilla'nın **kendi** `the_nether` / `the_end` /
+`overworld` dosyaları iki sürümde yan yana okundu, yani aynı eski değerlerin resmî
+karşılığı doğrudan ölçüldü.
+
+| eski anahtar | yeni karşılığı (ölçüldü) |
+|---|---|
+| `effects: minecraft:the_end` | `skybox: "end"` + `visual/sky_color`, `visual/fog_color`, `visual/sky_light_factor` |
+| `effects: minecraft:overworld` | `timelines: "#minecraft:in_overworld"` — `day` zaman çizgisi bütün gökyüzü attribute'larını zaten sürüyor |
+| `fixed_time: 18000` | `has_fixed_time: true` + `day` çizgisinin 13670–22330 arası keyframe değerleri (donuk gece) |
+| `bed_works: false` | `gameplay/bed_rule` → `can_sleep`/`can_set_spawn` **never** |
+| `bed_works: true` | ölçülen default (`BedRule.CAN_SLEEP_WHEN_DARK`) — yazılmıyor |
+| `has_raids: false` | `gameplay/can_start_raid: false` |
+| `respawn_anchor_works` | `gameplay/respawn_anchor_works` |
+| `natural: true` | `gameplay/nether_portal_spawns_piglin: true` |
+| `piglin_safe: false`, `ultrawarm: false` | ölçülen default — yazılmıyor |
+| `monster_spawn_*` | aynı kaldı, hâlâ zorunlu |
+
+İki ayrıntı özellikle önemli:
+
+- **`bed_rule`'un alan adı 26.x'te değişti**: 1.21.11 `explodes`, 26.3
+  `destroy_on_use` + `destroy_on_leave` (`javap` ile iki jar'da ayrı ayrı ölçüldü,
+  ikisi de opsiyonel). Dosyalar **ikisini birden** yazıyor; her sürüm tanımadığını
+  atar.
+- **`attributes` anahtarı registry'den çözülüyor**, yani orada bilinmeyen bir id
+  sessizce atılmaz — çözümleme hatası verir. Kullanılan bütün attribute id'leri
+  26.3'te **ve** 1.21.11'de var (1.21.11'in 45 id'si 26.3'ün 51'inin alt kümesi,
+  `EnvironmentAttributes` bayt kodundan çıkarıldı). Yalnızca 26.3'te olan
+  `visual/ambient_light_color` **kullanılmadı**.
+
+Sonuç: tek dosya iki şemayı birden karşılayamaz, bu yüzden `dimension_type` artık
+**sürüme göre ayrı ağaçtan** geliyor — `src/boyut-eski/resources` (<1.21.9) ve
+`src/boyut-yeni/resources` (>=1.21.9). `replacements` `resources`'a uğramıyor ve
+`processResources`/`expand` tek tek değer için; burada bütün dosya değişiyor, o yüzden
+`src/fabric-kayit-*` ile aynı yol kullanıldı: `srcDir` seçimi.
 
 **Ayna'nın gökyüzü senkronu kaybolmadı, yeri değişti.** 26.x'te `Level.setDayTime`
 yok ve zaman seviye başına değil **saat başına** tutuluyor

@@ -77,7 +77,7 @@ public class Candy implements ModInitializer {
     public void onInitialize() {
         LOG.info("[Candy] uyanıyor...");
 
-        // v8.4: Sürüm/komşu tespiti her şeyden önce — alt sistemler guvenliMi()'ye bakıyor.
+        // v8.4: Sürüm/komşu tespiti her şeyden önce — log'un ilk satırı teşhisin başı.
         com.photonpulse.candy.uyum.SurumKapisi.register();
 
         // v0.7: Custom entity — Candy'nin doppelganger'ı (player-shaped, 40 HP)

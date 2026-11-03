@@ -16,10 +16,11 @@ import net.fabricmc.loader.api.FabricLoader;
  * yüklemek de seçenek değil — Candy hiçbir yerle konuşmuyor, bu kalıcı kural.
  *
  * <h3>O ZAMAN NE YAPAR</h3>
- * Beklenmeyen bir sürümde <b>çökmek yerine küçülür</b>. Sürümü okur, test edilmiş
- * listeyle karşılaştırır ve test edilmemişse {@link #guvenliMi()} false döner —
- * alt sistemler buna bakıp kendi invazif kısımlarını kapatır. Çökmeyen bir mod,
- * kaldırılan bir moddan iyidir.
+ * Sürümü okur, bu jar'ın doğrulanmış listesiyle karşılaştırır ve sonucu <b>log'a
+ * yazar</b>. {@link #guvenliMi()} bu kararin tek düğmesi, ama <b>şu an hiçbir alt
+ * sistem onu okumuyor</b> (ölçüldü: sıfır çağrı) — yani hiçbir şey kapanmıyor. Bir
+ * mixin hedefi tutmazsa Mixin onu sessizce atlar, oyun çökmez. Bu sınıfın işi teşhis:
+ * "Candy şunu bozdu" raporunda ilk bakılacak satırı log'a koymak.
  *
  * <p>Gerçek çok-sürüm desteği kaynak düzeyinde çözülür (sürüm başına ayrı jar:
  * Stonecutter / Preprocessor), çalışma anında değil.</p>
@@ -28,10 +29,37 @@ public final class SurumKapisi {
 
     private SurumKapisi() {}
 
-    /** Üzerinde gerçekten test edilmiş sürümler. Buraya eklemek bir karar, tahmin değil. */
-    private static final String[] TEST_EDILDI = { "1.21.7" };
+    /**
+     * Bu jar'ın derlendiği ve doğrulandiğı sürümler. Buraya eklemek bir karar, tahmin
+     * değil — ve liste <b>sürüme bağlı</b>: her düğüm kendi hattını taşıyor.
+     *
+     * <p>Neden böyle: jar'ın kendisi de kendi hattına pinli ({@code minecraft_dep=~<sürüm>})
+     * ve loader bunu Candy yüklenmeden önce doğruluyor. Yani Candy koşuyorsa sürüm bu
+     * hattan. Burada tek bir {@code "1.21.7"} sabiti durduğu sürece 1.21.11 ve 26.x
+     * jar'ları <b>kendi hakkında</b> "DESTEKLENMİYOR" yazıyordu.
+     *
+     * <p>26.1 satırı 26.1.1 ve 26.1.2'yi de kapsıyor: Candy'nin dokunduğu 11 sınıfın
+     * {@code javap -p} çıktısı üç sürümde birebir aynı (2609 satırın tamamı, ölçüldü).
+     */
+    private static final String[] TEST_EDILDI = {
+        //? if <1.21.9 {
+        "1.21.7"
+        //?}
+        //? if >=1.21.9 && <26 {
+        /*"1.21.11"
+        */
+        //?}
+        //? if >=26 {
+        /*"26.1", "26.1.1", "26.1.2", "26.2", "26.3"
+        */
+        //?}
+    };
 
-    /** Mixin hedeflerinin büyük olasılıkla tuttuğu, test edilmemiş yakın sürümler. */
+    /**
+     * Mixin hedeflerinin büyük olasılıkla tuttuğu, test edilmemiş yakın sürümler.
+     * Yalnızca 1.21.7 jar'ında işe yarıyor; diğer jar'lar {@code ~<sürüm>} ile pinli
+     * olduğu için loader onları bu sürümlere hiç yüklemiyor.
+     */
     private static final String[] YAKIN = { "1.21.6", "1.21.8" };
 
     private static volatile String surum = "bilinmiyor";
@@ -50,8 +78,9 @@ public final class SurumKapisi {
                 + "bir mixin tutmazsa oyun çökmez, o efekt sessizce devre dışı kalır.",
                 surum, TEST_EDILDI[0]);
             case BILINMEYEN -> Candy.LOG.warn(
-                "[Candy] SurumKapisi: {} DESTEKLENMİYOR (test edilen: {}). Candy kendini kısıtlı "
-                + "kipte açıyor: invazif alt sistemler kapalı. Bu sürüm için ayrı bir jar gerekir.",
+                "[Candy] SurumKapisi: {} bu jar'da test edilmedi (test edilen: {}). Candy yine de "
+                + "tam açılıyor — bir mixin tutmazsa oyun çökmez, o efekt sessizce devre dışı "
+                + "kalır. Bu sürüm için kendi jar'ını kullanmak daha iyi.",
                 surum, String.join(", ", TEST_EDILDI));
         }
 
