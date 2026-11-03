@@ -41,9 +41,15 @@ Kod sende, build GitHub'da. Sonuç: hazır JAR.
 
 ### Ön gereksinimler
 
-- **Java 21+** — https://adoptium.net/temurin/releases/ (Temurin 21)
+- **JDK 25** — https://adoptium.net/temurin/releases/ (Temurin 25). **Java 21 yetmiyor:**
+  26.x düğümleri için gereken fabric-loom 1.19.3 JVM 25 bayt kodu taşıyor, yani Gradle
+  daemon'ı JDK 25 ile koşmak zorunda — yalnızca 1.21.7 derleyecek olsan bile.
 - **İnternet bağlantısı** (ilk build ~500 MB indirir: Gradle, Mojang mapping'leri, Fabric API,
   Minecraft assets)
+
+> **Oyuncunun Java'sı değişmiyor.** Derleme JDK 25 istiyor, ama 1.21.x jar'ları hâlâ
+> `release 21` bayt kodu üretiyor ve `"java": ">=21"` ilan ediyor. Yalnızca 26.x
+> jar'ları Java 25 istiyor — zaten Minecraft 26.x'in kendisi de istiyor.
 
 ### Java'yı kontrol et
 
@@ -51,7 +57,11 @@ Kod sende, build GitHub'da. Sonuç: hazır JAR.
 java --version
 ```
 
-Çıktı `21.x.x` görmelisin. Değilse Temurin 21'i kur.
+Çıktı `25.x.x` görmelisin. Değilse Temurin 25'i kur ve `JAVA_HOME`'u ona çevir:
+
+```bash
+export JAVA_HOME="/yol/jdk-25"
+```
 
 ### Build komutları
 
@@ -77,22 +87,33 @@ cd candy
 
 JAR şurada olur:
 ```
-candy/versions/1.21.7/build/libs/candy-8.4.0+1.21.7.jar
-(sürüm numarası gradle.properties -> mod_version ile değişir)
+candy/versions/<sürüm>/build/libs/candy-8.4.1+<sürüm>.jar
 ```
+
+Kökteki `./gradlew build` beş düğümün hepsini derliyor, yani beş jar birden çıkıyor:
+
+```
+versions/1.21.7/build/libs/candy-8.4.1+1.21.7.jar
+versions/1.21.11/build/libs/candy-8.4.1+1.21.11.jar
+versions/26.1/build/libs/candy-8.4.1+26.1.jar
+versions/26.2/build/libs/candy-8.4.1+26.2.jar
+versions/26.3/build/libs/candy-8.4.1+26.3.jar
+```
+
+(mod sürüm numarası kökteki `gradle.properties` → `mod_version` ile değişir)
 
 ---
 
 ## 🎮 Kurulum
 
 1. **Fabric Loader** kur: https://fabricmc.net/use/installer/
-   - Minecraft sürümü: **1.21.7**
-   - Loader sürümü: en son
+   - Minecraft sürümü: **1.21.7**, **1.21.11**, **26.1**, **26.2** veya **26.3**
+   - Loader sürümü: en son (1.21.7 için en az 0.16.14, diğer hepsi için en az 0.20.1)
 2. **Fabric API** indir: https://modrinth.com/mod/fabric-api
-   - 1.21.7 uyumlu son sürüm
+   - kurduğun Minecraft sürümüyle eşleşen son sürüm
 3. `%APPDATA%\.minecraft\mods\` (Windows) veya `~/.minecraft/mods/` (Linux/Mac) klasörüne:
    - `fabric-api-XXX.jar`
-   - `candy-8.3.0.jar`
+   - `candy-8.4.1+<sürüm>.jar` — **sürümüne eşleşen jar**, yanlışı yüklenmez
 4. Minecraft'ı Fabric profili ile başlat
 
 ---
@@ -100,7 +121,7 @@ candy/versions/1.21.7/build/libs/candy-8.4.0+1.21.7.jar
 ## 🐛 Sorun Giderme
 
 ### `java: command not found`
-Java 21 kurulu değil veya PATH'te değil. Temurin'i kur, yeniden dene.
+JDK 25 kurulu değil veya PATH'te değil. Temurin 25'i kur, yeniden dene.
 
 ### `Could not resolve fabric-loader`
 İnternet bağlantısı sorunu veya Fabric Maven'a erişim yok. VPN varsa kapat, tekrar dene.
@@ -112,14 +133,21 @@ checkout var. `versions/<sürüm>/gradle.properties` içindeki `yarn_mappings` a
 ölü config — doğrulama/karşılaştırma için duruyor, build okumuyor.
 
 ### `Unsupported class file major version`
-Java 21+ olmalı. Java 17 veya altını kullanıyorsan güncelle.
+veya `Dependency requires at least JVM runtime version 25. This build uses a Java 21 JVM.`
+
+Gradle JDK 25 ile koşmuyor. `java --version` 25 göstermiyorsa `JAVA_HOME`'u Temurin
+25'e çevir. Bu hata 26.x düğümleri eklendikten sonra **yalnızca 1.21.7 derlerken de**
+çıkar, çünkü loom eklentisinin kendisi JVM 25 bayt kodu.
 
 ### Windows'ta `'gradlew' is not recognized`
 `.\gradlew.bat build` kullan (backslash + .bat).
 
 ### Build başarılı ama JAR oyunda yüklenmez
 - Fabric API yüklü mü kontrol et (mods/ içinde)
-- Minecraft sürümü 1.21.7 mi
+- jar'ın sürümü kurduğun Minecraft sürümüyle eşleşiyor mu (`candy-8.4.1+26.3.jar`
+  yalnızca 26.3 hattında yüklenir)
+- Fabric Loader sürümü yeterli mi — 26.x ve 1.21.11 **en az 0.20.1** istiyor; daha
+  eski bir loader'da jar yüklenir ama mixin'ler sessizce reddedilir
 - `.minecraft/logs/latest.log` içine bak (crash detayı burada)
 
 ---
@@ -309,139 +337,205 @@ BUILD SUCCESSFUL in 8s
 4 actionable tasks: 3 executed, 1 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.8.2/userguide/configuration_cache_enabling.html
 
-**Gradle 9.8.2 + Java 21 gerekiyor.** Stonecutter 0.9 Gradle 9 istiyor; loom bu yüzden
-1.17.2'de sabit — loom 1.18+ JVM 25 istiyor, bu makinede Java 21 var.
+**Gradle 9.8.2 + JDK 25 gerekiyor.** Stonecutter 0.9 Gradle 9 istiyor; 26.x için
+gereken fabric-loom 1.19.3 ise JVM 25 bayt kodu taşıyor (class major 69), yani Gradle
+daemon'ı JDK 25 ile koşmak **zorunda** — 1.21.x düğümleri için bile. Dağıtılan 1.21.x
+jar'ları hâlâ `release 21` üretiyor, oyuncunun Java'sı değişmiyor.
 
 ### Sürüm durumu
 
-- **1.21.7** — yeşil, jar üretiyor.
-- **1.21.11** — yeşil, jar üretiyor.
-- **26.x — düğüm YOK.** JDK 25 ve loom 1.19.3 **kuruldu** (ilk iki engel yıkıldı),
-  ama üçüncü bir engel çıktı: 26.x hiç mapping yayınlamıyor ve
-  `officialMojangMappings()` bu yüzden çalışmıyor. Ölçüm aşağıda.
+Beş Fabric düğümü, hepsi yeşil, hepsi jar üretiyor:
 
-#### 26.x — ölçülmüş durum (2026-11-02)
+| Düğüm | MC dep | Loader alt sınırı | Fabric API | jar bayt kodu | Mixin compat |
+|---|---|---|---|---|---|
+| 1.21.7  | `~1.21.7`  | `>=0.16.14` | 0.129.0+1.21.7  | 21 | `JAVA_21` |
+| 1.21.11 | `~1.21.11` | `>=0.20.1`  | 0.141.6+1.21.11 | 21 | `JAVA_21` |
+| 26.1    | `~26.1`    | `>=0.20.1`  | 0.145.1+26.1    | 25 | `JAVA_25` |
+| 26.2    | `~26.2`    | `>=0.20.1`  | 0.161.0+26.2    | 25 | `JAVA_25` |
+| 26.3    | `~26.3`    | `>=0.20.1`  | 0.165.0+26.3    | 25 | `JAVA_25` |
 
-Mojang beş 26.x sürümü yayınladı. Fabric Loader ve Fabric API **hepsi için hazır**:
+Ayrıca iki `-neoforge` düğümü var, `candy.neoforge=false` ile **kapalı** (port bitmedi).
 
-| Sürüm | Çıkış | Fabric Loader | Fabric API | Java | MC class major | Derlenebilir mi |
-|---|---|---|---|---|---|---|
-| 26.1   | 2026-03-24 | 0.20.1 | 0.145.1+26.1   | 25 | 69 | ❌ |
-| 26.1.1 | 2026-04-01 | 0.20.1 | 0.145.4+26.1.1 | 25 | 69 | ❌ |
-| 26.1.2 | 2026-04-09 | 0.20.1 | 0.155.3+26.1.2 | 25 | 69 | ❌ |
-| 26.2   | 2026-06-16 | 0.20.1 | 0.161.0+26.2   | 25 | 69 | ❌ |
-| 26.3   | 2026-09-15 | 0.20.1 | 0.165.0+26.3   | 25 | 69 | ❌ |
+> **Oyun içinde denenmedi.** Bu bölümdeki her şey statik ölçüm: derleme, `javap` ile
+> bayt kod karşılaştırması ve üretilen jar'ların içeriği. 26.x düğümleri için bir oyun
+> oturumu açılmadı — mixin'lerin gerçekten uygulanması ve özel boyutların yüklenmesi
+> çalıştırma anında doğrulanmayı bekliyor. "Derleniyor" ile "oynanıyor" aynı şey değil.
+
+#### 26.x sürüm manzarası (2026-11-03'te ölçüldü)
+
+Mojang manifest'inden: 26.x hattında **beş release** var, 26.4 yalnızca snapshot.
+
+| Sürüm | Çıkış | Java | MC class major | Düğüm |
+|---|---|---|---|---|
+| 26.1   | 2026-03-24 | 25 | 69 | `versions/26.1` |
+| 26.1.1 | 2026-04-01 | 25 | 69 | `~26.1` kapsıyor |
+| 26.1.2 | 2026-04-09 | 25 | 69 | `~26.1` kapsıyor |
+| 26.2   | 2026-06-16 | 25 | 69 | `versions/26.2` |
+| 26.3   | 2026-09-15 | 25 | 69 | `versions/26.3` |
 
 Karşılaştırma: 1.21.7 ve 1.21.11 → Java 21, class major 65.
 
-**26.x hattının tamamı Java 25 istiyor.** Bu engel **YIKILDI**: JDK 25 (Temurin
-25.0.5+8) ve fabric-loom 1.19.3 kuruldu, mevcut iki Fabric düğümü yeşil kaldı.
-Kalan engel mapping tarafında.
+**26.1 hattı için ayrı düğüm gerekmiyor — ölçüldü.** Candy'nin dokunduğu 11 sınıfın
+(8 mixin hedefi + `GuiGraphicsExtractor` + `EntityType` + `Blocks`) `javap -p` çıkışı
+26.1, 26.1.1 ve 26.1.2'de **birebir aynı**, 2609 satırın tamamı. Yani `~26.1` dep'i üç
+sürümü birlikte dürüstçe karşılıyor.
 
-**1. AKTİF ENGEL — 26.x mapping yayınlamıyor.** Geçici bir `versions/26.3` düğümü
-eklenip denendi (commit edilmedi):
+#### Mapping duvarı: loom'un iki eklenti kimliği
 
-```
-> Failed to setup Minecraft, java.lang.RuntimeException:
-  Failed to find official mojang mappings for 26.3
-```
-
-Loom 1.19.3 Java 25 kontrolünü **geçiyor** (önbellekte `fabric-loom/26.3/` dizini
-bile açılıyor), ama `mappings loom.officialMojangMappings()` satırında duruyor —
-çünkü 26.x `client_mappings` yayınlamıyor (aşağıdaki "Beklenmeyen bulgu").
-Deobfuscated jar için doğru `mappings` yapılandırması **henüz bilinmiyor**; tahminle
-doldurulmadı.
-
-**1b. ESKİ engel (yıkıldı, tarihsel).** Loom 1.17.2 aynı düğümü yapılandırma
-aşamasında reddediyordu: `Minecraft 26.3 requires Java 25 but Gradle is using 21`.
-
-**2. javac 21, MC 26.x bayt kodunu okuyamıyor** (yıkıldı — JDK 25 kuruldu). Gerçek 26.3 class dosyaları
-`client.jar`'dan çekilip bu makinenin javac'ına verildi:
-
-```
-bad class file: .../net/minecraft/world/entity/npc/Npc.class
-  class file has wrong version 69.0, should be 65.0
-```
-
-`--release 21` ile ve onsuz aynı. Bu duvar mapping veya API farkı değil, JDK'nın
-kendisi.
-
-**3. 26.x'i destekleyen loom hattı JVM 25 bayt kodu** (yıkıldı — loom 1.19.3 kuruldu). Loom jar'larının class major
-sürümü: 1.17.2 → 65, 1.17.21 → 65, **1.18.1 / 1.18.4 / 1.19.3 → 69**. Yani loom 1.18+
-JVM 21'de koşan bir Gradle daemon'ına **yüklenemez bile**.
-
-#### Beklenmeyen bulgu: 26.x hiç mapping yayınlamıyor
-
-Mojang version JSON'unda `downloads` anahtarları:
+**Mojang 26.x hattında obfuscation'ı bıraktı.** Version JSON'undaki `downloads`
+anahtarları:
 
 ```
 1.21.11: [client, client_mappings, server, server_mappings]
 26.3:    [client, server]
 ```
 
-Sebebi: **Mojang 26.x hattında obfuscation'ı bıraktı.** Jar içeriği sayıldı:
+Jar içeriği sayıldı:
 
 | | class sayısı | `net/minecraft/*` | obfuscated top-level |
 |---|---|---|---|
 | 1.21.11 | 10291 | 33 (%0.3) | 10201 |
 | 26.3 | 11383 | 10737 (%94.3) | **0** |
 
-İki sonucu var:
+Yani 26.x'te eşlenecek bir şey yok, ama `loom.officialMojangMappings()` yine de
+`client_mappings` arıyor ve bulamayınca duruyordu:
 
-- `loom.officialMojangMappings()` 26.x'te indirecek bir şey bulamaz — `client_mappings`
-  yok. loom 1.18+ tam olarak bu durum için var.
-- **Ad göçü 26.x için gerçekten bitmiş.** 26.3'ün jar'ı `net/minecraft/world/entity/npc/Npc`
-  gibi gerçek Mojang adlarını taşıyor; Candy'nin kaynağı göçten sonra zaten tam olarak
-  bu adları kullanıyor. 26.x için mapping katmanı **hiç gerekmiyor**.
+```
+> Failed to find official mojang mappings for 26.3
+```
 
-#### Araç zinciri: kuruldu
+Çözüm **loom'un iki ayrı eklenti kimliği olduğu**: `fabric-loom` → `LoomGradlePlugin`
+(remap yapar), `net.fabricmc.fabric-loom` → `LoomNoRemapGradlePlugin` (remap yapmaz).
+İkincisi tam olarak deobfuscated jar durumu için var. `settings.gradle` ikisini de
+`pluginManagement`'a alıyor, `build.gradle` düğüme göre birini uyguluyor. Fabric
+intermediary de 1.21.11'de duruyor, yani ara katman da yok — 26.x düğümleri
+`yarn_mappings` taşımıyor.
 
-1. **JDK 25** — Temurin `25.0.5+8`, `~/.jdks/jdk-25.0.5+8`. Gradle daemon'ı bununla
-   koşuyor: `export JAVA_HOME="C:/Users/HP/.jdks/jdk-25.0.5+8"`.
-2. **fabric-loom 1.19.3** — `settings.gradle` → `pluginManagement`. CI de
-   `java-version: '25'`.
+#### 26.x TEK BİR API DEĞİL — üç eşik gerekiyor
 
-**Artık bütün proje JDK 25 ile derleniyor, 1.21.x düğümleri dahil.** Dağıtılan
-1.21.x jar'ları hâlâ `release 21` bayt kodu (doğrulandı: class major 65) ve
-`fabric.mod.json` içinde `"java": ">=21"` — yani **oyuncunun Java'sı değişmiyor.**
-26.x düğümü `release 25` ve `">=25"` alacak (`build.gradle` → `javaSurum`).
+Beklenti tek bir `>=26` eşiğiydi. **Ölçüm bunu çürüttü**: tek eşikle 26.1 ve 26.2
+düğümleri kırmızı kalıyor.
 
-#### Kalan iş
+| Düğüm | Tek `>=26` eşiğiyle | Sebep (javap ile ölçüldü) |
+|---|---|---|
+| 26.1 | **19 hata** | `EntityType` sabitleri hâlâ sınıfın kendisinde (`EntityTypes` tutucusu yok), bedler renk renk ayrı blok (`Blocks.BLUE_BED` duruyor), `net.minecraft.client.gui.Hud` sınıfı henüz yok |
+| 26.2 | **20 hata** | `setInvulnerable` tek, `ConstantValue` hâlâ `providers.number`'da ve `setRolls(NumberProvider)`, `swing` iki parametreli, `net.minecraft.util.Prediction` sınıfı yok, `SignText` hâlâ değiştirilebilir |
 
-Loom 1.19.3'te deobfuscated 26.x jar'ı için doğru `mappings` kaynağı. Bulunduğunda
-sıradaki adım hazır: `replacements` kuralları 26.3'e karşı tek tek `javap` ile
-doğrulandı, 14 kuraldan 12'si geçerli, kırık ikisi aşağıda.
+Son durum: `>=26` (12 kural), `>=26.2` (11 kural), `>=26.3` (6 kural + `TabelaUyum`).
 
-`settings.gradle` bir kez değerlendirildiği için **düğüm başına ayrı loom sürümü
-mümkün değil** — 1.19.3'e geçmek 1.21.7 ve 1.21.11 düğümlerini de taşıdı, ikisi
-yeniden doğrulandı ve yeşil.
+Üstüne, HUD çizim noktasının **iki eşiği birbirinden bağımsız**: metot adı 26'da,
+sınıf 26.2'de değişti.
 
-#### 26.x'te kırılan iki mixin kuralı (javap ile ölçüldü)
-
-`replacements` listesindeki 14 kuraldan **12'si 26.3'te aynen geçerli** — altı paket
-taşımasının hepsi dahil, ve `GameProfile` authlib **7.0.61 → 10.0.77** atlamasına
-rağmen hâlâ record, yani `name()`/`properties()` duruyor. Kırık ikisi bu yüzden
-`>=1.21.9 <26` ve `>=26` olarak **ayrıldı**:
-
-**`FogRenderer.setupFog` → `applyFog`: 26.x'te ad GERİ DÖNDÜ.** 26.3'te yine
-`setupFog`, yani 1.21.9'daki yeniden adlandırma geri alınmış — 26.x için kural yok.
-Ama imza değişti:
-
-| | imza |
+| | sınıf + metot |
 |---|---|
-| 1.21.7 | `Vector4f setupFog(Camera, int, boolean, DeltaTracker, float, ClientLevel)` |
-| 26.3 | `FogData setupFog(Camera, int, DeltaTracker, float, ClientLevel)` |
+| 1.21.x | `Gui.render(GuiGraphics, DeltaTracker)` |
+| 26.1 | `Gui.extractRenderState(GuiGraphicsExtractor, DeltaTracker)` |
+| 26.2+ | `Hud.extractRenderState(GuiGraphicsExtractor, DeltaTracker)` |
 
-`boolean thickFog` düştü, dönüş `FogData` oldu. `FogData` **1.21.7'de de var** (loom'un
-eşlenmiş jar'ından doğrulandı) ve `FogData.color` public `Vector4f` — yani özellik
-port edilebilir, **kaybolmuyor**. Metot gövdesi `//? if >=26` ile ayrılacak.
+Parametreler üç kademede de aynı, bu yüzden 190 satırlık gövde **tek kopya** kalıyor;
+`InGameHudMixin` içinde yalnızca iki anotasyon satırı ayrılıyor. `Gui` → `Hud` bir
+metin kuralı **olamaz**, çünkü `Gui` aynı zamanda `GuiGraphics`'in alt dizgisi.
 
-**`DebugScreenOverlay.getGameInformation` → `getLeftText`: 26.x'te İKİSİ DE YOK.**
-Yerine `private void extractLines(GuiGraphicsExtractor, List<String>, boolean, int)`
-var — listeyi parametre olarak dolduruyor, dönüş değeri yok. Yani mixin `@At("TAIL")`
-ile listeyi **yerinde** değiştirmeli, `cir.setReturnValue()` ile değil.
+#### Derleyicinin GÖRMEDİĞİ hatalar: mixin hedefleri
 
-26.1 ve 26.2'nin class yerleşimi 26.3 ile aynı, yani tek `>=26` eşiği üçünü kapsıyor.
+`candy.mixins.json` içinde `"injectors": {"defaultRequire": 0}` var ve `method =` bir
+**dizgi**. Yani yanlış bir hedef derleme hatası vermez, **sessizce hiç uygulanmaz**.
+Bu yüzden 11 mixin'in hepsi beş düğümde tek tek `javap` ile ölçüldü. 26.x'e geçişte
+dört hedef bozuktu ve hiçbiri derlemeyi kırmıyordu:
+
+| Mixin | 1.21.x | 26.x |
+|---|---|---|
+| `InGameHudMixin` | `Gui.render` | `Gui`/`Hud.extractRenderState` |
+| `CameraMixin` | `Camera.setup` (5 par.) | `Camera.update(DeltaTracker)` |
+| `ChatHudMixin` | `addMessage(Component)` | `addMessage(Component, MessageSignature, GuiMessageSource, GuiMessageTag)` |
+| `LightmapTextureManagerMixin` | `LightTexture` | `LightmapRenderStateExtractor` |
+
+İki hedef ise 26.x'te **değişmedi**, bu da ölçülmesi gereken bir şeydi:
+`FogRenderer.setupFog` 26.x'te de bu adı taşıyor (1.21.9'daki `applyFog` yeniden
+adlandırması geri alınmış, yani o kural `>=1.21.9 <26` ile sınırlı) ve
+`DeathScreen.init()` parametresiz.
+
+`DebugScreenOverlay.extractLines` ise **parametre sayısı değiştiriyor**: 26.2'de 3,
+26.3'te 4 (`int genislik` eklendi). Mixin geri çağrı imzasının hedefle birebir aynı
+olmasını istiyor, uymazsa **uygulama anında** `InvalidInjectionException` — derleyici
+bunu da görmüyor. Bu yüzden üç kademeli kabuk var, spoof gövdesi tek yerde
+(`candy$f3Duzelt`). Ayrıca `extractLines` yalnızca `extractRenderState`'in doldurduğu
+listeyi **çiziyor**, o yüzden `@At("HEAD")` + yerinde değiştirme kullanılıyor;
+`@At("TAIL")` çizimden sonraya düşerdi (disassembly ile ölçüldü).
+
+#### Stonecutter'ın dokümante edilmemiş üç yapısal kuralı
+
+Üçü de deneyle ölçüldü, hiçbiri belgelerde yok.
+
+1. **`replacements` İKİ YÖNLÜ çalışıyor.** `replacements.string(kosul)` içindeki bir
+   kural, koşulun doğru olduğu düğümde ileri, **yanlış olduğu düğümde TERS** koşuyor.
+   `drawString` → `text` kuralı eklendiğinde 1.21.11'in üretilen ağacında
+   `texture` → `drawStringure` ve `getContext` → `getCondrawString` oluştu, 21 hata.
+   Sonuç: her kuralın **sonuç** metni kaynak ağaçta ya hiç bulunmamalı ya da yalnızca
+   pasif dalın blok yorumu içinde bulunmalı. Kurallar alıcıya çapalanıyor
+   (`ctx.drawString(` → `ctx.text(`), çünkü düz metin değiştirme alıcı tipini bilmiyor.
+2. **`replacements` `main/resources`'a UĞRAMIYOR.** `candy.mixins.json` üretilen ağaca
+   kopyalanıyor ama kurallar üzerinde koşmuyor — `compatibilityLevel` 26.3 düğümünde
+   `JAVA_21` kalmıştı. Sürüme bağlı kaynak değerleri Gradle `processResources` +
+   `expand` ile veriliyor (`fabric.mod.json` zaten o yoldan besleniyordu).
+3. **Directive bloğunun İÇİNDE ama `/* */` DIŞINDA kalan yorumların `//` öneki
+   siliniyor.** Geriye çıplak metin kalıyor ve geçersiz Java üretiyor — 26.2 ile
+   26.3'te `unclosed character literal` (bir kesme işareti char literali sanıldı).
+   Böyle yorumlar `//? if` satırının **üstüne** yazılmalı; `/* */` içindekiler sağlam
+   kalıyor.
+
+Buna bir de şu ekleniyor: **aktif düğüm `src/`'yi yerinde derliyor ve replacements
+orada koşmuyor**, yani `src/` her zaman aktif sürümün adlarını taşıyor (aktif düğüm
+1.21.7 → `<26` dalları yorumsuz, `>=26` dalları `/* */` içinde). Javadoc **asla**
+`//? if` bloğunun içine girmez: içinde `*/` var ve pasif dalın blok yorumunu erken
+kapatır.
+
+#### Derleyicinin görmediği ikinci katman: veri (JSON)
+
+`dimension_type` kodeki iki sürümde de ölçüldü. **26.3'te `has_ender_dragon_fight`
+zorunlu** (`fieldOf`), 1.21.11 kodekinde ise hiç yok — ve Candy'nin beş
+`dimension_type` dosyasının hiçbirinde yoktu. Yani 26.x'te çözümleme hata verir, 12
+özel boyut **hiç yüklenmezdi**. Derleme bunu göremez; JSON derlenmiyor.
+
+Anahtar beş dosyaya da eklendi. 1.21.x'te **bilinmeyen anahtar** oluyor ve gözardı
+ediliyor — bunun tolere edildiği zaten ölçülmüş durumda, çünkü Candy 1.21.11'de
+kodeke ait olmayan on anahtar (`ultrawarm`, `natural`, `piglin_safe`, `bed_works`,
+`respawn_anchor_works`, `has_raids`, `effects`, `fixed_time`, iki `monster_spawn_*`)
+gönderiyor ve boyutlar yükleniyor.
+
+**Bu on anahtarın gözardı edilmesi 26.x'e özgü DEĞİL — 1.21.11'de de öyle.** Yeni
+şema (`skybox`, `attributes`, `timelines`, `has_fixed_time`, `cardinal_light`) 1.21.11
+kodekinde zaten var. Yani `fixed_time: 18000` taşıyan üç boyut (`anti_mirror`,
+`kdunya`, `mirror`) 1.21.11'de de donmuş zamana sahip değil. Bu **önceden var olan**
+bir sapma, 26.x portunun getirdiği bir gerileme değil, ve burada düzeltilmedi:
+`has_fixed_time: true` yazmak hangi zamanda donacağını söylemiyor (o bilgi artık
+`timelines`'ta) ve tahminle doldurulmadı. Ayrı bir iş.
+
+**Ayna'nın gökyüzü senkronu kaybolmadı, yeri değişti.** 26.x'te `Level.setDayTime`
+yok ve zaman seviye başına değil **saat başına** tutuluyor
+(`ServerClockManager.setTotalTicks(Holder<WorldClock>, long)`, ölçüldü), yani Ayna'ya
+tek tek zaman yazılamıyor. Karşılığı `dimension_type`'ın `default_clock` alanı:
+`ayna` ve `kor` artık `minecraft:overworld` saatini paylaşıyor. Anahtar olmasa
+`getDefaultClockTime()` **0** dönerdi (ölçüldü: `getClockTimeTicks` =
+`opt.map(..).orElse(0L)`) ve gökyüzü şafakta donar kalırdı. Sürekli izleme, eski iki
+anlık `setDayTime` senkronundan daha iyi.
+
+#### 26.x'te kapanan tek özellik
+
+`DonanimGonder` **GPU ve CPU** dizgilerini toplamıyor:
+
+- `GpuDevice` `com.mojang.renderpearl.api.device`'a taşındı ve renderer adı veren bir
+  metodu yok — `getRenderer()` kaldırıldı (ölçüldü: 0 eşleşme).
+- `com.mojang.blaze3d.platform.GLX` **jar'dan tamamen kalktı** (Mojang SDL'e geçti),
+  `_getCpuInfo()`'nun yerine geçen bir API yok.
+
+Kaybolan davranış: 26.x'te "Ben PC'de %s var." diyaloğu yalnızca işletim sistemini ve
+JVM'e ayrılan belleği sayıyor, ekran kartı ile işlemci adını **saymıyor**. Uydurma bir
+kaynak kullanılmadı. (Veri yine hiçbir yere gitmiyor — client kendi sunucusuna
+yolluyor, dışarıya tek bir istek yok.)
+
+`MeYuz` (bloklardaki yüz) 26.x'te de kapalı — 1.21.9'da zaten kapanmıştı, sebebi
+aşağıdaki "1.21.9+ için bilinen davranış farkı".
 
 ### Mapping: Mojang resmî adları (Yarn değil)
 
@@ -516,19 +610,29 @@ atlasını bozacağı için özellik devre dışı bırakıldı, tahminle port e
 
 ### Doğrulanmamış varsayım
 
-`GameProfile` (authlib 7: record → `name()`, `properties()`) ve diğer tüm kurallar
-`>=1.21.9` eşiğine bağlı, ama **yalnızca 1.21.11'de doğrulandı**. 1.21.8/1.21.9/1.21.10
-düğümü eklenirse bu eşiklerin her birini o sürümün jar'ına karşı yeniden kontrol et.
+`GameProfile` (authlib 7: record → `name()`, `properties()`) ve diğer tüm `>=1.21.9`
+kuralları **yalnızca 1.21.11'de doğrulanıldı**. 1.21.8/1.21.9/1.21.10 düğümü eklenirse
+bu eşiklerin her birini o sürümün jar'ına karşı yeniden kontrol et.
+
+26.x eşikleri (`>=26`, `>=26.2`, `>=26.3`) böyle bir varsayım **taşımıyor**: üçü de
+26.1, 26.2 ve 26.3 jar'larına karşı ayrı ayrı ölçüldü — tek bir `>=26` eşiği
+denendiğinde iki düğüm kırmızı kaldığı için ayrıldılar. Kalan varsayım başka yerde:
+mixin'lerin **uygulanması** ve boyutların **yüklenmesi** 26.x'te çalıştırılmadı.
 
 ## Loader desteği
 
-Şu an jar üreten **yalnızca Fabric** — 1.21.7 ve 1.21.11.
+Şu an jar üreten **yalnızca Fabric** — beş sürümde.
 
-| Loader | 1.21.7 | 1.21.11 |
-|---|---|---|
-| Fabric | ✅ jar üretiyor | ✅ jar üretiyor |
-| NeoForge | 🚧 düğüm var, jar yok | 🚧 düğüm var, jar yok |
-| Forge | ❌ yok | ❌ yok |
+| Sürüm | Fabric | NeoForge | Forge |
+|---|---|---|---|
+| 1.21.7  | ✅ jar üretiyor | 🚧 düğüm var, jar yok | ❌ yok |
+| 1.21.11 | ✅ jar üretiyor | 🚧 düğüm var, jar yok | ❌ yok |
+| 26.1    | ✅ jar üretiyor ¹ | ❌ düğüm yok | ❌ yok |
+| 26.2    | ✅ jar üretiyor ¹ | ❌ düğüm yok | ❌ yok |
+| 26.3    | ✅ jar üretiyor ¹ | ❌ düğüm yok | ❌ yok |
+
+¹ 26.x jar'ları derleniyor ve mixin hedefleri `javap` ile tek tek doğrulanmış durumda,
+ama **oyun içinde denenmedi** — bkz. yukarıdaki "Sürüm durumu".
 
 NeoForge düğümleri (`versions/1.21.7-neoforge`, `versions/1.21.11-neoforge`)
 **varsayılan olarak kapalı** — `gradle.properties` içindeki `candy.neoforge=false`.

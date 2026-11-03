@@ -437,8 +437,11 @@ açık.** İki iş ayrı ayrı teslim edilebilir.
 
 ### Düzeltme: mapping engeli kalktı, JDK 25 engeli çıktı (ölçüm, 2026-11-02)
 
-`feat/mc-26x` dalında Adım 1 (hedefi ölç) koşturuldu. Sonuç: **26.x bu makinede
-derlenemiyor**, ve sebep mod tarafında değil.
+> **Bu bölüm tarihsel.** Buradaki iki engel de 2026-11-03'te yıkıldı ve 26.1 / 26.2 /
+> 26.3 düğümleri eklendi — en alttaki "26.x açıldı" düzeltmesine bak.
+
+`feat/mc-26x` dalında Adım 1 (hedefi ölç) koşturuldu. O günkü sonuç: **26.x bu
+makinede derlenemiyordu**, ve sebep mod tarafında değildi.
 
 Beş 26.x sürümü var (26.1, 26.1.1, 26.1.2, 26.2, 26.3 — en güncel 26.3, 2026-09-15).
 **Fabric tarafında hiçbir eksik yok:** Loader 0.20.1 ve Fabric API beşi için de hazır
@@ -455,9 +458,10 @@ Beş 26.x sürümü var (26.1, 26.1.1, 26.1.2, 26.2, 26.3 — en güncel 26.3, 2
   1.18.1/1.18.4/1.19.3 → **major 69**. Yani loom 1.18+ JVM 21'deki Gradle daemon'ına
   yüklenemez bile.
 
-Bu makinede yalnızca Corretto JDK 21.0.9 (ve bir JRE 1.8) var. Görev Java/loom
+O an bu makinede yalnızca Corretto JDK 21.0.9 (ve bir JRE 1.8) vardı. Görev Java/loom
 yükseltmesini kapsam dışı bıraktığı için Adım 2'ye geçilmedi — yarım bir sürüm desteği
-eklemek hiç eklememekten kötü.
+eklemek hiç eklememekten kötü. (Kısıtlama sonradan kullanıcı tarafından kaldırıldı:
+"JDK 25 kur ve loom 1.18+ ile tekrar dene".)
 
 ### Beklenmeyen bulgu: Mojang 26.x'te obfuscation'ı bıraktı
 
@@ -497,6 +501,28 @@ zorunda. Auto-provisioning kurulu değil (foojay resolver yok).
 
 Sıra geldiğinde beklenen iş, ad göçü değil **araç zinciri yükseltmesi + dört düğümün
 yeniden doğrulanması**.
+
+### Düzeltme: 26.x açıldı — üç düğüm eklendi (2026-11-03)
+
+Yukarıdaki iki şartın ikisi de karşılandı (JDK 25 Temurin `25.0.5+8`, fabric-loom
+1.19.3) ve **üçüncü bir engel** çıktı: loom'un `officialMojangMappings()` adımı 26.x'te
+indirecek `client_mappings` bulamıyor. Çözümü loom'un **iki ayrı eklenti kimliği**
+olduğu: `fabric-loom` remap yapar, `net.fabricmc.fabric-loom` yapmaz
+(`LoomNoRemapGradlePlugin`) — ikincisi tam olarak deobfuscated jar durumu için var.
+
+Sonuç: `versions/26.1`, `versions/26.2`, `versions/26.3` eklendi, beş Fabric düğümü de
+jar üretiyor. Mevcut 1.21.7 ve 1.21.11 düğümleri loom 1.19.3'e taşındı ve yeniden
+doğrulandı; dağıtılan jar'ları hâlâ `release 21`.
+
+Ama **"sürüm işi" tek bir eşik değildi**: 26.x üç ayrı API olarak ölçüldü (`>=26`,
+`>=26.2`, `>=26.3`), tek bir `>=26` eşiğiyle 26.1 düğümü 19, 26.2 düğümü 20 hatayla
+kırmızı kalıyordu. Ayrıca derleyicinin görmediği iki katman daha vardı: dört mixin
+hedefi sessizce bozulmuştu ve `dimension_type` JSON'larında 26.x'in zorunlu kıldığı bir
+anahtar eksikti. Ölçümlerin tamamı: [BUILD.md](BUILD.md).
+
+**Henüz oynanmadı.** 26.x düğümleri derleniyor ve statik olarak doğrulanmış durumda,
+ama 26.x'te tek bir oyun oturumu açılmadı — mixin'lerin uygulanması ve boyutların
+yüklenmesi çalıştırma anında doğrulanmayı bekliyor.
 
 ### Kalan iş — ölçülmüş envanter
 

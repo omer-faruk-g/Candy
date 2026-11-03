@@ -41,25 +41,38 @@ This list is a hard boundary in the code, not a promise in a readme:
 
 | | |
 |---|---|
-| Minecraft | **1.21.7** or **1.21.11** — one jar per version, pick the matching one |
-| Loader | Fabric (0.16.14+ on 1.21.7, 0.20.1+ on 1.21.11) |
+| Minecraft | **1.21.7**, **1.21.11**, **26.1**, **26.2** or **26.3** — one jar per version, pick the matching one |
+| Loader | Fabric — 0.16.14+ on 1.21.7, **0.20.1+** on everything else |
 | Fabric API | required |
-| Java | 21+ |
+| Java | 21+ on 1.21.x, **25+** on 26.x (Minecraft 26.x requires it too) |
 | Side | works in single player and on servers (install on both) |
 
 Jars are named `candy-<mod version>+<minecraft version>.jar`, e.g.
-`candy-8.4.0+1.21.11.jar`. Installing the wrong one will not load.
+`candy-8.4.1+26.3.jar`. Installing the wrong one will not load. The **26.1** jar also
+covers 26.1.1 and 26.1.2 — all three present exactly the same API to Candy (measured
+class file by class file, not assumed).
 
-**Minecraft 26.x (26.1 – 26.3) is not supported yet.** Not for mod reasons: Fabric
-Loader and Fabric API are ready for every 26.x release. The JDK 25 toolchain it needs
-is now in place, but Mojang stopped publishing mappings for the 26.x line and the
-build's mapping step has no working source for it yet. The measurement is in
-[BUILD.md](BUILD.md).
+> **26.x builds, but has not been played yet.** Candy compiles for 26.1, 26.2 and
+> 26.3 and produces a jar for each. Every mixin target was checked against the real
+> 26.x class files with `javap`, and the one data key that 26.x newly requires was
+> added — but **no 26.x game session has been run**, so mixins actually applying and
+> the custom dimensions actually loading are still unverified. If you want the
+> versions that have been played, stay on 1.21.7 or 1.21.11. Measurements and what is
+> still assumed: [BUILD.md](BUILD.md).
 
-One known difference between the two: the Mirror dimension's *face on the blocks*
-effect runs on 1.21.7 only. Minecraft rewrote the texture atlas upload path in
-1.21.9 and the effect depended on the old one, so it is switched off on 1.21.11
-rather than approximated. Everything else is identical.
+Two features differ by version. Both are switched **off** rather than approximated,
+because the API they depended on is gone and guessing a replacement would be worse:
+
+- the Mirror dimension's *face on the blocks* effect runs on **1.21.7 only**.
+  Minecraft rewrote the texture atlas upload path in 1.21.9 and the effect depended
+  on the old one.
+- on **26.x**, the "I know what is in your PC" line names only your operating system
+  and memory — not your graphics card or CPU. Mojang removed `GLX` outright (it moved
+  to SDL) and `GpuDevice` no longer reports a renderer name, so there is no source
+  left to read.
+
+Everything else is identical. The Mirror's sky still tracks the Overworld on 26.x —
+that sync just moved out of the code and into the dimension's own data.
 
 ## Config
 
@@ -84,9 +97,11 @@ one shared source tree, one node per Minecraft version under `versions/`.
 ./gradlew runTest                          # test profile: /candy, short cooldowns, cheats on
 ```
 
-Building requires Gradle 9.8.2 and **JDK 25** (fabric-loom 1.19.3 needs it). The
-jars it produces still target Java 21, so players need only Java 21. Build details, the version-split rules and the
-per-version API notes are in [BUILD.md](BUILD.md).
+Building requires Gradle 9.8.2 and **JDK 25** (fabric-loom 1.19.3 needs it — even to
+build 1.21.7 alone). The 1.21.x jars it produces still target Java 21, so players on
+those versions need only Java 21; the 26.x jars target Java 25, which Minecraft 26.x
+requires anyway. Build details, the version-split rules and the per-version API notes
+are in [BUILD.md](BUILD.md).
 
 ## Licence
 
@@ -111,25 +126,38 @@ an AGPL copy you already hold keeps its grant — see [LICENSE](LICENSE).
 
 | | |
 |---|---|
-| Minecraft | **1.21.7** veya **1.21.11** — her sürüm için ayrı jar, eşleşeni indir |
-| Loader | Fabric (1.21.7'de 0.16.14+, 1.21.11'de 0.20.1+) |
+| Minecraft | **1.21.7**, **1.21.11**, **26.1**, **26.2** veya **26.3** — her sürüm için ayrı jar, eşleşeni indir |
+| Loader | Fabric — 1.21.7'de 0.16.14+, geri kalan hepsinde **0.20.1+** |
 | Fabric API | zorunlu |
-| Java | 21+ |
+| Java | 1.21.x'te 21+, 26.x'te **25+** (Minecraft 26.x'in kendisi de istiyor) |
 | Taraf | tek oyuncu ve sunucuda çalışır (ikisine de kur) |
 
 Jar adı `candy-<mod sürümü>+<minecraft sürümü>.jar` biçiminde, örn.
-`candy-8.4.0+1.21.11.jar`. Yanlışını kurarsan yüklenmez.
+`candy-8.4.1+26.3.jar`. Yanlışını kurarsan yüklenmez. **26.1** jar'ı aynı zamanda
+26.1.1 ve 26.1.2'yi de karşılıyor — üçü de Candy'ye birebir aynı API'yi sunuyor
+(varsayılmadı, class dosyası class dosyasına ölçüldü).
 
-**Minecraft 26.x (26.1 – 26.3) henüz desteklenmiyor.** Sebebi mod tarafında değil:
-Fabric Loader ve Fabric API bütün 26.x sürümleri için hazır. Gereken JDK 25 araç
-zinciri **artık kurulu**, ama Mojang 26.x hattında mapping yayınlamayı bıraktı ve
-build'in mapping adımının henüz çalışan bir kaynağı yok. Ölçüm
-[BUILD.md](BUILD.md) içinde.
+> **26.x derleniyor, ama henüz oynanmadı.** Candy 26.1, 26.2 ve 26.3 için derleniyor
+> ve her biri için jar üretiyor. Bütün mixin hedefleri gerçek 26.x class dosyalarına
+> karşı `javap` ile tek tek denetlendi ve 26.x'in yeni zorunlu kıldığı veri anahtarı
+> eklendi — ama **26.x'te tek bir oyun oturumu açılmadı**, yani mixin'lerin gerçekten
+> uygulanması ve özel boyutların gerçekten yüklenmesi henüz doğrulanmadı. Oynanmış
+> sürüm istiyorsan 1.21.7 veya 1.21.11'de kal. Ölçümler ve hangi varsayımın ayakta
+> kaldığı: [BUILD.md](BUILD.md).
 
-İki sürüm arasındaki tek fark: Ayna boyutundaki *blokların yüze dönmesi* efekti
-yalnızca 1.21.7'de çalışıyor. Minecraft 1.21.9'da doku atlası yükleme yolunu
-yeniden yazdı, efekt eskisine dayanıyordu; tahminle yaklaştırmak yerine 1.21.11'de
-kapatıldı. Geri kalan her şey aynı.
+Sürüme göre iki özellik değişiyor. İkisi de yaklaştırılmak yerine **kapatıldı**,
+çünkü dayandıkları API ortadan kalktı ve yerine bir şey uydurmak daha kötü olurdu:
+
+- Ayna boyutundaki *blokların yüze dönmesi* efekti yalnızca **1.21.7**'de çalışıyor.
+  Minecraft 1.21.9'da doku atlası yükleme yolunu yeniden yazdı, efekt eskisine
+  dayanıyordu.
+- **26.x**'te "Ben PC'de şu var." cümlesi yalnızca işletim sistemini ve belleği
+  sayıyor — ekran kartını ve işlemciyi **saymıyor**. Mojang `GLX`'i tamamen kaldırdı
+  (SDL'e geçti) ve `GpuDevice` artık renderer adı vermiyor, yani okunacak bir kaynak
+  kalmadı.
+
+Geri kalan her şey aynı. Ayna'nın gökyüzü 26.x'te de Overworld'ü izlemeye devam
+ediyor — o senkron yalnizca koddan çıkıp boyutun kendi verisine taşındı.
 
 ## Kurmadan önce: içerik uyarısı
 
