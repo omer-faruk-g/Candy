@@ -33,10 +33,31 @@ import net.minecraft.client.gui.components.DebugScreenOverlay;
 @Mixin(DebugScreenOverlay.class)
 public class DebugHudMixin {
 
-    //? if >=26 {
+    // Hedefin parametreleri surumle degisiyor, geri cagri imzasi da aynen degismek
+    // zorunda (Mixin aksi halde uygulama aninda reddediyor):
+    //   26.2  extractLines(GuiGraphicsExtractor, List<String>, boolean)
+    //   26.3  extractLines(GuiGraphicsExtractor, List<String>, boolean, int)
+    //? if >=26.3 {
     /*@Inject(method = "extractLines", at = @At("HEAD"))
     private void candy$f3Spoof(GuiGraphics cikarici, List<String> satirlar,
                                boolean solTaraf, int genislik, CallbackInfo ci) {
+        candy$f3Duzelt(satirlar);
+    }
+    */
+    //?}
+    //? if >=26 && <26.3 {
+    /*@Inject(method = "extractLines", at = @At("HEAD"))
+    private void candy$f3Spoof(GuiGraphics cikarici, List<String> satirlar,
+                               boolean solTaraf, CallbackInfo ci) {
+        candy$f3Duzelt(satirlar);
+    }
+    */
+    //?}
+    // Spoof'un kendisi -- iki 26.x kabugu da buraya giriyor, liste YERINDE duzeltiliyor.
+    // (Yorum directive blogunun DISINDA: Stonecutter dali aktif ederken blok icindeki
+    //  satirlarin `//` onekini de siliyor, icerde kalsa gecersiz Java uretirdi.)
+    //? if >=26 {
+    /*private void candy$f3Duzelt(List<String> satirlar) {
         try {
             if (satirlar == null || satirlar.isEmpty()) return;
 

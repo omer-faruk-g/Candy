@@ -24,22 +24,24 @@ import net.minecraft.network.chat.Component;
  * 15 frame boyunca soluk gri "candy" veya "?" yazısı gösterir.
  * Player'ın gözünün ucundan bir şey geçer hissi.
  *
- * Hedef sınıf ve metot sürüme bağlı (javap ile ölçüldü):
+ * Hedef sınıf ve metot sürüme bağlı, ÜÇ KADEMELİ (javap ile ölçüldü):
  *   1.21.x  Gui.render(GuiGraphics, DeltaTracker)
- *   26.x    Hud.extractRenderState(GuiGraphicsExtractor, DeltaTracker)
- * 26.x'te Gui bir kabuğa dönüştü (ekran/overlay yönetimi) ve HUD çizimi ayrı bir
- * Hud sınıfına taşındı; Gui'de render diye bir metot kalmadı. Parametre sayısı ve
- * sırası aynı olduğu için 190 satırlık gövde TEK kopya kalıyor — yalnızca iki
- * anotasyon satırı ayrılıyor.
+ *   26.1    Gui.extractRenderState(GuiGraphicsExtractor, DeltaTracker)
+ *   26.2+   Hud.extractRenderState(GuiGraphicsExtractor, DeltaTracker)
+ * 26'da çizim "extract render state" modeline geçti (metot adı değişti), 26.2'de ise
+ * Gui bir kabuğa dönüştü (ekran/overlay yönetimi) ve HUD çizimi ayrı bir Hud sınıfına
+ * taşındı. Yani METOT adı 26'da, SINIF 26.2'de değişti — iki eşik ayrı.
+ * Parametre sayısı ve sırası üç kademede de aynı olduğu için 190 satırlık gövde TEK
+ * kopya kalıyor — yalnızca iki anotasyon satırı ayrılıyor.
  *
  * `Gui` -> `Hud` bir replacements kuralı OLAMAZ: 'Gui' alt dizgisi 'GuiGraphics'in
  * içinde de geçiyor, kural onu da bozardı.
  */
-//? if >=26 {
+//? if >=26.2 {
 /*@Mixin(net.minecraft.client.gui.Hud.class)
 */
 //?}
-//? if <26 {
+//? if <26.2 {
 @Mixin(Gui.class)
 //?}
 public class InGameHudMixin {

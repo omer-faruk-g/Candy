@@ -305,14 +305,11 @@ stonecutter {
         // extractLines yalnizca cizim yapiyor. Bu yuzden DebugHudMixin'de govde bastan
         // //? if ile ayrildi ve 26.x dali gercek adi/imzasini tasiyor.
 
-        // --- 26.x ad degisiklikleri. HEPSI slice-26.3.jar uzerinde javap ile olculdu. ---
+        // --- 26.x ad degisiklikleri. HEPSI javap ile olculdu (26.2 ve 26.3 slice'lari). ---
 
-        // Entity: tag kumesi ve kalici dokunulmazlik yeniden adlandirildi.
-        //   Set<String> getTags()      -> entityTags()
-        //   setInvulnerable(boolean)   -> setPermanentlyInvulnerable(boolean)
-        // (26.x dokunulmazligi kalici/gecici diye ikiye ayirdi; Candy'nin istedigi kalici.)
+        // Entity.getTags() -> entityTags(). 26.2'de DE boyle (olculdu), o yuzden >=26.
         replace 'getTags()', 'entityTags()'
-        replace 'setInvulnerable(', 'setPermanentlyInvulnerable('
+
 
         // ChunkPos artik bir record: x/z alanlari private, statik asLong -> pack.
         // BlockPos.asLong() (parametresiz) DEGISMEDI, o yuzden kural ChunkPos'a capalandi.
@@ -323,31 +320,6 @@ stonecutter {
         // Level zaman API'si WorldClock'a tasindi: getDayTime() -> getDefaultClockTime()
         // (seviyenin kendi saati; overworld icin ayni degeri verir).
         replace 'getDayTime()', 'getDefaultClockTime()'
-
-        // EntityType sabitleri yeni bir tutucuya tasindi: EntityTypes.
-        // Tam nitelikli yaziliyor ki import eklemek gerekmesin.
-        replace 'EntityType.CAVE_SPIDER', 'net.minecraft.world.entity.EntityTypes.CAVE_SPIDER'
-        replace 'EntityType.CHICKEN', 'net.minecraft.world.entity.EntityTypes.CHICKEN'
-        replace 'EntityType.COW', 'net.minecraft.world.entity.EntityTypes.COW'
-        replace 'EntityType.CREEPER', 'net.minecraft.world.entity.EntityTypes.CREEPER'
-        replace 'EntityType.PIG', 'net.minecraft.world.entity.EntityTypes.PIG'
-        replace 'EntityType.SHEEP', 'net.minecraft.world.entity.EntityTypes.SHEEP'
-        replace 'EntityType.SKELETON', 'net.minecraft.world.entity.EntityTypes.SKELETON'
-        replace 'EntityType.SPIDER', 'net.minecraft.world.entity.EntityTypes.SPIDER'
-        replace 'EntityType.VILLAGER', 'net.minecraft.world.entity.EntityTypes.VILLAGER'
-        replace 'EntityType.ZOMBIE', 'net.minecraft.world.entity.EntityTypes.ZOMBIE'
-
-        // Renkli bloklar ColorCollection'a toplandi: Blocks.BLUE_BED -> Blocks.BED.pick(BLUE)
-        replace 'Blocks.BLUE_BED', 'Blocks.BED.pick(net.minecraft.world.item.DyeColor.BLUE)'
-
-        // Loot sayi saglayicilari ints/floats olarak ayrildi ve ConstantValue record oldu.
-        replace 'net.minecraft.world.level.storage.loot.providers.number.ConstantValue',
-                'net.minecraft.world.level.storage.loot.providers.number.ints.ConstantValue'
-        // ...ve LootPool.Builder.setRolls artik Holder<ContextIntProvider> aliyor,
-        // o yuzden Holder.direct ile sarmalaniyor (olculdu:
-        // setRolls(Holder<...ints.ContextIntProvider>), ConstantValue record ctor).
-        replace 'ConstantValue.exactly(1)',
-                'net.minecraft.core.Holder.direct(new ConstantValue(1))'
 
         // Player.displayClientMessage(Component, boolean actionBar) IKIYE AYRILDI:
         //   sendSystemMessage(Component)  (sohbet)
@@ -377,19 +349,6 @@ stonecutter {
         replace 'ServerEntityWorldChangeEvents', 'ServerEntityLevelChangeEvents'
         replace 'AFTER_PLAYER_CHANGE_WORLD', 'AFTER_PLAYER_CHANGE_LEVEL'
 
-        // LivingEntity.swing(InteractionHand) -> swing(InteractionHand, SwingAnimation, boolean).
-        // SwingAnimation.DEFAULT + false, 1.21.x'teki swing(hand) == swing(hand, false)
-        // davranisini birebir verir. Iki cagri yeri de tam bu metni tasiyor.
-        replace 'swing(net.minecraft.world.InteractionHand.MAIN_HAND)',
-                'swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false)'
-
-        // Envantere geri koyma / dusurme artik bir Prediction aliyor. Her iki cagri da
-        // sunucu tarafinda, yani SERVER_ONLY.
-        replace 'player.drop(kitap, false)',
-                'player.drop(kitap, false, net.minecraft.util.Prediction.SERVER_ONLY)'
-        replace 'Denek239Book.olusturTam(true));',
-                'Denek239Book.olusturTam(true), net.minecraft.util.Prediction.SERVER_ONLY);'
-
         // NOT: ServerBossEvent ctor'una UUID eklendi, ama o kural BURAYA yazilamaz --
         // 'new ServerBossEvent(' aradigi metin uretilen metnin de PARCASI olurdu ve
         // degistirmenin tek gecisli oldugu VARSAYIMINA dayanirdi. Tek cagri yeri oldugu
@@ -410,5 +369,62 @@ stonecutter {
         replace 'GuiGraphics', 'GuiGraphicsExtractor'
         replace 'net.minecraft.client.renderer.state.CameraRenderState',
                 'net.minecraft.client.renderer.state.level.CameraRenderState'
+    }
+
+    // 26.1 bytecode'u da olculdu: asagidaki iki grup 26.1'de HALA 1.21.x seklinde
+    // (EntityType sabitleri sinifin kendisinde, bedler renk renk ayri blok), degisim
+    // 26.2'de oldu. >=26'da birakilmis olsa 26.1 dugumu 19 hatayla kirmizi kalirdi.
+    replacements.string(current.parsed >= '26.2') {
+        // EntityType sabitleri yeni bir tutucuya tasindi: EntityTypes. 26.1'de hala
+        // net.minecraft.world.entity.EntityType icinde (olculdu: 174 sabit).
+        // Tam nitelikli yaziliyor ki import eklemek gerekmesin.
+        replace 'EntityType.CAVE_SPIDER', 'net.minecraft.world.entity.EntityTypes.CAVE_SPIDER'
+        replace 'EntityType.CHICKEN', 'net.minecraft.world.entity.EntityTypes.CHICKEN'
+        replace 'EntityType.COW', 'net.minecraft.world.entity.EntityTypes.COW'
+        replace 'EntityType.CREEPER', 'net.minecraft.world.entity.EntityTypes.CREEPER'
+        replace 'EntityType.PIG', 'net.minecraft.world.entity.EntityTypes.PIG'
+        replace 'EntityType.SHEEP', 'net.minecraft.world.entity.EntityTypes.SHEEP'
+        replace 'EntityType.SKELETON', 'net.minecraft.world.entity.EntityTypes.SKELETON'
+        replace 'EntityType.SPIDER', 'net.minecraft.world.entity.EntityTypes.SPIDER'
+        replace 'EntityType.VILLAGER', 'net.minecraft.world.entity.EntityTypes.VILLAGER'
+        replace 'EntityType.ZOMBIE', 'net.minecraft.world.entity.EntityTypes.ZOMBIE'
+
+        // Renkli bloklar ColorCollection'a toplandi: Blocks.BLUE_BED -> Blocks.BED.pick(BLUE).
+        // 26.1'de hala WHITE_BED/ORANGE_BED/... diye ayri sabitler var (olculdu).
+        replace 'Blocks.BLUE_BED', 'Blocks.BED.pick(net.minecraft.world.item.DyeColor.BLUE)'
+    }
+
+    // 26.x TEK BIR API DEGIL. 26.2 bytecode'u javap ile olculdu: asagidaki dort grup
+    // 26.2'de HALA 1.21.x seklinde, degisim 26.3'te oldu. Esik bu yuzden >=26 degil
+    // >=26.3 -- hepsi >=26'da birakilmis olsa 26.2 dugumu 20 hatayla kirmizi kalirdi
+    // (olculdu). SignText'in degismez hali de ayni esikte, o TabelaUyum icinde.
+    replacements.string(current.parsed >= '26.3') {
+        // Dokunulmazlik kalici/gecici diye ikiye ayrildi; Candy'nin istedigi kalici.
+        // 26.2'de hala tek bir setInvulnerable(boolean) var.
+        replace 'setInvulnerable(', 'setPermanentlyInvulnerable('
+
+        // Loot sayi saglayicilari ints/floats olarak ayrildi, ConstantValue record oldu
+        // ve LootPool.Builder.setRolls artik Holder<ContextIntProvider> aliyor. 26.2'de
+        // hala ...providers.number.ConstantValue + exactly(float) ve
+        // setRolls(NumberProvider) duruyor (olculdu).
+        replace 'net.minecraft.world.level.storage.loot.providers.number.ConstantValue',
+                'net.minecraft.world.level.storage.loot.providers.number.ints.ConstantValue'
+        replace 'ConstantValue.exactly(1)',
+                'net.minecraft.core.Holder.direct(new ConstantValue(1))'
+
+        // LivingEntity.swing(InteractionHand) -> swing(InteractionHand, SwingAnimation,
+        // boolean). SwingAnimation.DEFAULT + false, 1.21.x'teki swing(hand) ==
+        // swing(hand, false) davranisini birebir verir. 26.2'de iki parametreli
+        // swing(hand, boolean) duruyor, uc parametreli yok (olculdu).
+        replace 'swing(net.minecraft.world.InteractionHand.MAIN_HAND)',
+                'swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false)'
+
+        // Envantere geri koyma / dusurme artik bir Prediction aliyor; her iki cagri da
+        // sunucu tarafinda, yani SERVER_ONLY. net.minecraft.util.Prediction sinifi
+        // 26.2'de HENUZ YOK (olculdu), drop(ItemStack, boolean) duruyor.
+        replace 'player.drop(kitap, false)',
+                'player.drop(kitap, false, net.minecraft.util.Prediction.SERVER_ONLY)'
+        replace 'Denek239Book.olusturTam(true));',
+                'Denek239Book.olusturTam(true), net.minecraft.util.Prediction.SERVER_ONLY);'
     }
 }
