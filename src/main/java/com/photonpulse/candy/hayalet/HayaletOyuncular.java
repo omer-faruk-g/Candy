@@ -5,6 +5,7 @@ import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.sign.TabelaUyum;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import com.photonpulse.candy.platform.SunucuBaglanti;
 import net.minecraft.ChatFormatting;
@@ -504,10 +505,10 @@ public class HayaletOyuncular {
             world.setBlockAndUpdate(signPos, Blocks.OAK_SIGN.defaultBlockState());
             BlockEntity be = world.getBlockEntity(signPos);
             if (be instanceof SignBlockEntity sign) {
-                SignText metin = new SignText();
-                metin = metin.setMessage(0, Component.literal(isim));
-                metin = metin.setMessage(1, Component.literal("was here"));
-                sign.setText(metin, true);
+                SignText metin = TabelaUyum.bos();
+                metin = TabelaUyum.satir(metin, 0, Component.literal(isim));
+                metin = TabelaUyum.satir(metin, 1, Component.literal("was here"));
+                TabelaUyum.yaz(sign, metin, true);
                 sign.setChanged();
             }
         }
@@ -877,10 +878,10 @@ public class HayaletOyuncular {
             world.setBlockAndUpdate(signPos, Blocks.OAK_SIGN.defaultBlockState());
             var be = world.getBlockEntity(signPos);
             if (be instanceof SignBlockEntity sign) {
-                SignText metin = new SignText();
-                metin = metin.setMessage(0, Component.literal("Steve & Alex"));
-                metin = metin.setMessage(1, Component.translatable("candy.hayalet.ev.sign"));
-                sign.setText(metin, true);
+                SignText metin = TabelaUyum.bos();
+                metin = TabelaUyum.satir(metin, 0, Component.literal("Steve & Alex"));
+                metin = TabelaUyum.satir(metin, 1, Component.translatable("candy.hayalet.ev.sign"));
+                TabelaUyum.yaz(sign, metin, true);
                 sign.setChanged();
             }
         }
@@ -955,34 +956,28 @@ public class HayaletOyuncular {
                         if (!(be instanceof SignBlockEntity sign)) continue;
                         if (cevaplanan.contains(p.asLong())) continue;
 
-                        String metin = (metinYuz(sign.getFrontText())
-                            + " " + metinYuz(sign.getBackText())).toLowerCase();
+                        String metin = (metinYuz(TabelaUyum.onYuz(sign))
+                            + " " + metinYuz(TabelaUyum.arkaYuz(sign))).toLowerCase();
 
                         if (metin.contains("steve") || metin.contains("alex")) {
                             // v1.7.3: Candy chat'ten konuşmaz. Cevabı TABELA'nın arka yüzüne yaz.
                             // Boş bir yüz varsa oraya yaz, yoksa tabelayı değiştirme.
-                            SignText onYuz = sign.getFrontText();
-                            SignText arkaYuz = sign.getBackText();
-                            boolean arkaBos = arkaYuz.getMessages(false)[0].getString().isEmpty()
-                                && arkaYuz.getMessages(false)[1].getString().isEmpty()
-                                && arkaYuz.getMessages(false)[2].getString().isEmpty()
-                                && arkaYuz.getMessages(false)[3].getString().isEmpty();
-                            boolean onBos = onYuz.getMessages(false)[0].getString().isEmpty()
-                                && onYuz.getMessages(false)[1].getString().isEmpty()
-                                && onYuz.getMessages(false)[2].getString().isEmpty()
-                                && onYuz.getMessages(false)[3].getString().isEmpty();
+                            SignText onYuz = TabelaUyum.onYuz(sign);
+                            SignText arkaYuz = TabelaUyum.arkaYuz(sign);
+                            boolean arkaBos = yuzBosMu(arkaYuz);
+                            boolean onBos = yuzBosMu(onYuz);
 
-                            SignText yeni = new SignText();
-                            yeni = yeni.setMessage(0, Component.translatable("candy.hayalet.gaslight.0"));
-                            yeni = yeni.setMessage(1, Component.translatable("candy.hayalet.gaslight.1"));
-                            yeni = yeni.setMessage(2, Component.translatable("candy.hayalet.gaslight.2"));
-                            yeni = yeni.setMessage(3, Component.translatable("candy.hayalet.gaslight.3"));
+                            SignText yeni = TabelaUyum.bos();
+                            yeni = TabelaUyum.satir(yeni, 0, Component.translatable("candy.hayalet.gaslight.0"));
+                            yeni = TabelaUyum.satir(yeni, 1, Component.translatable("candy.hayalet.gaslight.1"));
+                            yeni = TabelaUyum.satir(yeni, 2, Component.translatable("candy.hayalet.gaslight.2"));
+                            yeni = TabelaUyum.satir(yeni, 3, Component.translatable("candy.hayalet.gaslight.3"));
 
                             if (arkaBos) {
-                                sign.setText(yeni, false); // arka yüz
+                                TabelaUyum.yaz(sign, yeni, false); // arka yüz
                                 sign.setChanged();
                             } else if (onBos) {
-                                sign.setText(yeni, true); // ön yüz
+                                TabelaUyum.yaz(sign, yeni, true); // ön yüz
                                 sign.setChanged();
                             }
                             // İki yüz de doluysa — dokunma, sadece kaydet
@@ -995,6 +990,14 @@ public class HayaletOyuncular {
                 }
             }
         }
+    }
+
+    /** Dort satirin hepsi bos mu. (26.x'te getMessages List dondugu icin indeks yerine yardimci.) */
+    private static boolean yuzBosMu(SignText t) {
+        for (int i = 0; i < 4; i++) {
+            if (!TabelaUyum.mesaj(t, i).getString().isEmpty()) return false;
+        }
+        return true;
     }
 
     private static String metinYuz(SignText t) {

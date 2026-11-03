@@ -20,7 +20,7 @@
     "candy.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.16.13",
+    "fabricloader": "${loader_dep}",
     "minecraft": "${minecraft_dep}",
     "java": "${java_dep}",
     "fabric-api": "*"

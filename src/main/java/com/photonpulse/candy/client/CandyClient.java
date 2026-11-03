@@ -113,7 +113,17 @@ public class CandyClient implements ClientModInitializer {
         // Bir sonraki tick'te chat'e yaz — screen init sırasında yollamak sorun çıkarabilir
         client.execute(() -> {
             if (client.player != null) {
+                // 26.x'te displayClientMessage(Component, boolean) ikiye ayrildi ve
+                // LocalPlayer'da yalnizca tek parametreli sistem mesaji metodu var
+                // (iki parametreli asiri yukleme ServerPlayer'a ozel). Bu yuzden bu cagri
+                // replacements kuraliyla degil burada ayrildi.
+                //? if >=26 {
+                /*client.player.sendSystemMessage(mesaj);
+                */
+                //?}
+                //? if <26 {
                 client.player.displayClientMessage(mesaj, false);
+                //?}
             }
         });
     }

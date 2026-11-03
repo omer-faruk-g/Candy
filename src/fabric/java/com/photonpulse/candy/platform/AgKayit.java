@@ -1,6 +1,5 @@
 package com.photonpulse.candy.platform;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -27,10 +26,13 @@ public final class AgKayit {
         public <T extends CustomPacketPayload> void register(
                 CustomPacketPayload.Type<T> tip,
                 StreamCodec<? super RegistryFriendlyByteBuf, T> kodek) {
+            // PayloadTypeRegistry'nin statik metot adlari 26.x'te degisti ve bu dizin
+            // Stonecutter tarafindan ISLENMIYOR (bkz. build.gradle, srcDir notu), yani
+            // burada `//? if` calismaz. Fark PayloadKayit'ta, surume gore gelen dizinde.
             if (this == S2C) {
-                PayloadTypeRegistry.playS2C().register(tip, kodek);
+                PayloadKayit.istemciye().register(tip, kodek);
             } else {
-                PayloadTypeRegistry.playC2S().register(tip, kodek);
+                PayloadKayit.sunucuya().register(tip, kodek);
             }
         }
     }

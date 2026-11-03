@@ -609,11 +609,11 @@ public class SignSystem {
         BlockEntity be = world.getBlockEntity(pos);
         if (!(be instanceof SignBlockEntity sign)) return;
 
-        SignText metin = new SignText();
+        SignText metin = TabelaUyum.bos();
         for (int i = 0; i < Math.min(4, satirlar.length); i++) {
-            metin = metin.setMessage(i, satirlar[i]);
+            metin = TabelaUyum.satir(metin, i, satirlar[i]);
         }
-        sign.setText(metin, true);
+        TabelaUyum.yaz(sign, metin, true);
         // Waxed olmadığından emin ol — oyuncu sağ tıklayıp edit UI'sını açabilsin.
         sign.setWaxed(false);
 
@@ -654,13 +654,13 @@ public class SignSystem {
      * Format: "front-text|back-text". Boş back → "front-text|".
      */
     private static String tabelaMetni(SignBlockEntity sign) {
-        return yuzMetin(sign.getFrontText()) + "|" + yuzMetin(sign.getBackText());
+        return yuzMetin(TabelaUyum.onYuz(sign)) + "|" + yuzMetin(TabelaUyum.arkaYuz(sign));
     }
 
     private static String yuzMetin(SignText t) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 4; i++) {
-            Component line = t.getMessage(i, false);
+            Component line = TabelaUyum.mesaj(t, i);
             if (line != null) {
                 if (sb.length() > 0) sb.append(' ');
                 sb.append(line.getString());

@@ -14,6 +14,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * calculateDarknessScale(LivingEntity, float, float) private methodu return değerini modifiye eder.
  * Bu vanilla lightmap pipeline'ına yerleşir → tüm blok aydınlatması etkilenir.
  *
+ * Hedef sınıf sürüme bağlı (javap ile ölçüldü) — metot adı ve imzası aynı kaldı:
+ *   1.21.x  net.minecraft.client.renderer.LightTexture
+ *   26.x    net.minecraft.client.renderer.LightmapRenderStateExtractor
+ * 26.x'te LightTexture, Lightmap'e dönüştü ama Lightmap artik yalnızca GPU dokusunu
+ * tutuyor; karartma hesabı yeni extractor sınıfına taşındı. Ad değişimi build.gradle'daki
+ * `LightTexture -> LightmapRenderStateExtractor` kuralıyla yapılıyor.
+ *
  * İki ayrı kaynak:
  *   1. Mirror / Anti-Mirror boyutu → minimum karanlık zorlanır (v3.0).
  *   2. Çözülen şifre sayısı → her kademe ~1/15 karanlık ekler (v8.1). Boyuttan bağımsız,

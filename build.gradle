@@ -22,6 +22,17 @@ def loader = (findProperty('loader') ?: 'fabric').toString()
 // dagitilan 1.21.x jar'larinin calisma zamani gereksinimi DEGISMIYOR.
 def javaSurum = stonecutter.current.parsed >= '26' ? 25 : 21
 
+// MIXIN UYUM SEVIYESI DE AYNI SEBEPTEN SURUME BAGLI. Mixin, kendi uyum seviyesinin
+// USTUNDE bir class surumu tasiyan mixin sinifini reddediyor; 26.x dugumu Java 25
+// bytecode (major 69) uretiyor. Loader'larin getirdigi Mixin surumleri olculdu:
+//   loader 0.16.14 -> sponge-mixin 0.15.5 -> en yuksek JAVA_22  (1.21.7)
+//   loader 0.20.1  -> sponge-mixin 0.17.5 -> en yuksek JAVA_25  (1.21.11, 26.3)
+// Yani JAVA_25'i her dugume yazmak 1.21.7'yi kirardi. Deger candy.mixins.json'a
+// sablonla giriyor (bkz. processResources): JSON'da `//? if` kullanilamaz (//? bir
+// yorumdur) ve Stonecutter replacements kaynak agacinda kosup resources'a UGRAMIYOR
+// -- ikisi de denendi, ikisi de yanlis yol.
+def mixinUyum = "JAVA_${javaSurum}".toString()
+
 // MAPPING YOLU SURUME BAGLI. 26.x'te Mojang obfuscation'i BIRAKTI: version JSON'da
 // client_mappings yok ve Fabric intermediary de 1.21.11'de duruyor. Yani 26.x'te
 // eslenecek bir sey yok — jar zaten net/minecraft/* adlarini tasiyor.
@@ -30,6 +41,20 @@ def javaSurum = stonecutter.current.parsed >= '26' ? 25 : 21
 //   net.fabricmc.fabric-loom -> LoomNoRemapGradlePlugin  (no-remap)
 // No-remap yolunda `mappings` satiri OLMAMALI (okunmuyor) ve remapJar task'i YOK.
 def obfuscated = stonecutter.current.parsed < '26'
+
+// REPLACEMENTS IKI YONLU CALISIYOR -- deneyle olculdu, dokumante edilmemis.
+// `replacements.string(kosul)` bloğundaki her kural, kosulun DOGRU oldugu dugumde
+// ileri, kosulun YANLIS oldugu pasif dugumde GERIYE uygulaniyor. Kanit: `drawString`
+// -> `text` kurali eklendiginde 1.21.11'in uretilen agacinda `texture` ->
+// `drawStringure` ve `getContext` -> `getCondrawString` olustu; bunu uretebilecek tek
+// sey o kuralin tersiydi.
+//
+// SONUC -- her kuralin SONUC metni, kaynak agacta ya hic bulunmamali ya da yalnizca
+// pasif dalin blok yorumu icinde bulunmali. Aksi halde kural, hedeflemedigi bir
+// dugumde dogru kodu bozar. Pratikte: kisa/genel metinler (drawString, text, Gui)
+// kural olarak YAZILAMAZ, alici ustunden capalanmalari gerekir (ctx.drawString( gibi).
+// Aktif dugum (1.21.7) src/ agacini YERINDE derledigi icin orada hic replacement
+// kosmaz; bu yuzden ters yon ancak pasif dugumlerde goze carpiyor.
 
 version = "${property('mod_version')}+${mc}"
 group = property('maven_group')
@@ -42,6 +67,16 @@ base { archivesName = property('archives_base_name') }
 // Bu agaclarda //? direktifi ve replacement YOK; iki MC surumunde de ayni derlenen
 // sembolleri kullanmak zorundalar.
 sourceSets.main.java.srcDir rootProject.file("src/${loader}/java")
+// DIKKAT: yukaridaki dizin KOK yoldan ekleniyor, yani Stonecutter'in uretilmis agacinda
+// DEGIL -> icindeki `//? if` directifleri CALISMAZ ve replacements oraya UGRAMAZ
+// (hata mesajlarindaki yol da bunu gosteriyor: src\fabric\java\... vs
+// versions/<s>/build/generated/stonecutter/main/java/...). 26.x'te Fabric API'nin
+// payload kayit adlari degisti (playS2C/playC2S -> clientboundPlay/serverboundPlay),
+// bu yuzden YALNIZCA o farki tasiyan kucuk sinif surume gore ayri bir dizinden geliyor.
+if (loader == 'fabric') {
+    sourceSets.main.java.srcDir rootProject.file(
+        obfuscated ? 'src/fabric-kayit-eski/java' : 'src/fabric-kayit-26/java')
+}
 
 repositories {
     mavenCentral()
@@ -132,13 +167,26 @@ def mcDep = property('minecraft_dep')
 // Sabit ">=21" birakilsa 26.x jar'i Java 21'de yuklenmeyi kabul eder ve oyun
 // ic cagrida patlardi.
 def javaDep = ">=${javaSurum}".toString()
+// LOADER ALT SINIRI DA SURUME BAGLI. 26.x JAVA_25 uyum seviyesiyle derleniyor ve o
+// seviyeyi tanıyan ilk Mixin loader 0.20.1 ile geliyor; daha eski bir loader'da jar
+// yuklenir ama mixin'lerin HEPSI sessizce reddedilirdi. Alt sinir dugumun kendi
+// loader_version'u: tek yerde duruyor, elle ikinci bir yere yazilmiyor.
+def loaderDep = ">=${property('loader_version')}".toString()
 processResources {
     inputs.property "version", modSurum
     inputs.property "minecraft_dep", mcDep
     inputs.property "java_dep", javaDep
-    // Iki loader'in metadata dosyasi da ayni degerleri bekliyor.
+    inputs.property "mixin_uyum", mixinUyum
+    inputs.property "loader_dep", loaderDep
+    // Iki loader'in metadata dosyasi da ayni degerleri bekliyor. loader_dep yalnizca
+    // fabric.mod.json'da geciyor; neoforge.mods.toml'da karsiligi yok, expand fazla
+    // anahtarlari gormezden geliyor.
     filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
-        expand "version": modSurum, "minecraft_dep": mcDep, "java_dep": javaDep
+        expand "version": modSurum, "minecraft_dep": mcDep, "java_dep": javaDep,
+               "loader_dep": loaderDep
+    }
+    filesMatching("candy.mixins.json") {
+        expand "mixin_uyum": mixinUyum
     }
 }
 
@@ -252,6 +300,115 @@ stonecutter {
     //   listeyi parametre olarak doldurdugu icin donus degeri yerine liste yerinde
     //   degistiriliyor (imza farki //? if ile).
     replacements.string(current.parsed >= '26') {
-        replace 'getGameInformation', 'extractLines'
+        // NOT: getGameInformation icin 26.x ad kurali YOK. 26.x'te metot yalnizca yeniden
+        // adlandirilmadi; satirlari ureten metot kalmadi (DebugScreenEntry'ler uretiyor) ve
+        // extractLines yalnizca cizim yapiyor. Bu yuzden DebugHudMixin'de govde bastan
+        // //? if ile ayrildi ve 26.x dali gercek adi/imzasini tasiyor.
+
+        // --- 26.x ad degisiklikleri. HEPSI slice-26.3.jar uzerinde javap ile olculdu. ---
+
+        // Entity: tag kumesi ve kalici dokunulmazlik yeniden adlandirildi.
+        //   Set<String> getTags()      -> entityTags()
+        //   setInvulnerable(boolean)   -> setPermanentlyInvulnerable(boolean)
+        // (26.x dokunulmazligi kalici/gecici diye ikiye ayirdi; Candy'nin istedigi kalici.)
+        replace 'getTags()', 'entityTags()'
+        replace 'setInvulnerable(', 'setPermanentlyInvulnerable('
+
+        // ChunkPos artik bir record: x/z alanlari private, statik asLong -> pack.
+        // BlockPos.asLong() (parametresiz) DEGISMEDI, o yuzden kural ChunkPos'a capalandi.
+        replace 'ChunkPos.asLong(', 'ChunkPos.pack('
+        replace 'chunkPosition().x', 'chunkPosition().x()'
+        replace 'chunkPosition().z', 'chunkPosition().z()'
+
+        // Level zaman API'si WorldClock'a tasindi: getDayTime() -> getDefaultClockTime()
+        // (seviyenin kendi saati; overworld icin ayni degeri verir).
+        replace 'getDayTime()', 'getDefaultClockTime()'
+
+        // EntityType sabitleri yeni bir tutucuya tasindi: EntityTypes.
+        // Tam nitelikli yaziliyor ki import eklemek gerekmesin.
+        replace 'EntityType.CAVE_SPIDER', 'net.minecraft.world.entity.EntityTypes.CAVE_SPIDER'
+        replace 'EntityType.CHICKEN', 'net.minecraft.world.entity.EntityTypes.CHICKEN'
+        replace 'EntityType.COW', 'net.minecraft.world.entity.EntityTypes.COW'
+        replace 'EntityType.CREEPER', 'net.minecraft.world.entity.EntityTypes.CREEPER'
+        replace 'EntityType.PIG', 'net.minecraft.world.entity.EntityTypes.PIG'
+        replace 'EntityType.SHEEP', 'net.minecraft.world.entity.EntityTypes.SHEEP'
+        replace 'EntityType.SKELETON', 'net.minecraft.world.entity.EntityTypes.SKELETON'
+        replace 'EntityType.SPIDER', 'net.minecraft.world.entity.EntityTypes.SPIDER'
+        replace 'EntityType.VILLAGER', 'net.minecraft.world.entity.EntityTypes.VILLAGER'
+        replace 'EntityType.ZOMBIE', 'net.minecraft.world.entity.EntityTypes.ZOMBIE'
+
+        // Renkli bloklar ColorCollection'a toplandi: Blocks.BLUE_BED -> Blocks.BED.pick(BLUE)
+        replace 'Blocks.BLUE_BED', 'Blocks.BED.pick(net.minecraft.world.item.DyeColor.BLUE)'
+
+        // Loot sayi saglayicilari ints/floats olarak ayrildi ve ConstantValue record oldu.
+        replace 'net.minecraft.world.level.storage.loot.providers.number.ConstantValue',
+                'net.minecraft.world.level.storage.loot.providers.number.ints.ConstantValue'
+        // ...ve LootPool.Builder.setRolls artik Holder<ContextIntProvider> aliyor,
+        // o yuzden Holder.direct ile sarmalaniyor (olculdu:
+        // setRolls(Holder<...ints.ContextIntProvider>), ConstantValue record ctor).
+        replace 'ConstantValue.exactly(1)',
+                'net.minecraft.core.Holder.direct(new ConstantValue(1))'
+
+        // Player.displayClientMessage(Component, boolean actionBar) IKIYE AYRILDI:
+        //   sendSystemMessage(Component)  (sohbet)
+        //   sendOverlayMessage(Component) (hotbar ustu)
+        // Candy'nin 44 cagri yerinin HEPSI actionBar=false, yani sohbet. ServerPlayer'da
+        // iki parametreli sendSystemMessage(Component, boolean) DURUYOR ve bytecode'u
+        // 1.21.x'teki displayClientMessage yolunun aynisi:
+        // acceptsSystemMessages(flag) -> ClientboundSystemChatPacket(component, flag).
+        // Yani ServerPlayer alicilarinda bu duz bir ad degisikligi; davranis ayni.
+        // TEK istisna LocalPlayer (CandyClient): orada iki parametreli asiri yukleme yok,
+        // o cagri //? if ile ayrildi.
+        replace 'displayClientMessage(', 'sendSystemMessage('
+
+        // GuiGraphics -> GuiGraphicsExtractor ile birlikte metin cizme adi da degisti:
+        //   drawString(Font, X, int, int, int, boolean) -> text(Font, X, int, int, int, boolean)
+        // Imza ayni; yalnizca InGameHudMixin kullaniyor (8 yer, hepsi `ctx` alicisi).
+        //
+        // ALICIYA CAPALI OLMAK ZORUNDA (bkz. yukarıdaki IKI YONLU notu): ciplak
+        // `drawString` -> `text` kurali, ters yonde 1.21.11'de `text` -> `drawString`
+        // olarak kosup `texture` ve `getContext` gibi ALAKASIZ adlari bozuyordu
+        // (net.minecraft.client.renderer.drawStringure, parseResults.getCondrawString()).
+        // `ctx.text(` metni kaynakta hic gecmedigi icin bu kuralin tersi artik no-op.
+        replace 'ctx.drawString(', 'ctx.text('
+
+        // Fabric API entity-events 6.x: ServerEntityWorldChangeEvents yeniden adlandirildi
+        // (olculdu: jar icinde ServerEntityLevelChangeEvents, AFTER_PLAYER_CHANGE_LEVEL).
+        replace 'ServerEntityWorldChangeEvents', 'ServerEntityLevelChangeEvents'
+        replace 'AFTER_PLAYER_CHANGE_WORLD', 'AFTER_PLAYER_CHANGE_LEVEL'
+
+        // LivingEntity.swing(InteractionHand) -> swing(InteractionHand, SwingAnimation, boolean).
+        // SwingAnimation.DEFAULT + false, 1.21.x'teki swing(hand) == swing(hand, false)
+        // davranisini birebir verir. Iki cagri yeri de tam bu metni tasiyor.
+        replace 'swing(net.minecraft.world.InteractionHand.MAIN_HAND)',
+                'swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false)'
+
+        // Envantere geri koyma / dusurme artik bir Prediction aliyor. Her iki cagri da
+        // sunucu tarafinda, yani SERVER_ONLY.
+        replace 'player.drop(kitap, false)',
+                'player.drop(kitap, false, net.minecraft.util.Prediction.SERVER_ONLY)'
+        replace 'Denek239Book.olusturTam(true));',
+                'Denek239Book.olusturTam(true), net.minecraft.util.Prediction.SERVER_ONLY);'
+
+        // NOT: ServerBossEvent ctor'una UUID eklendi, ama o kural BURAYA yazilamaz --
+        // 'new ServerBossEvent(' aradigi metin uretilen metnin de PARCASI olurdu ve
+        // degistirmenin tek gecisli oldugu VARSAYIMINA dayanirdi. Tek cagri yeri oldugu
+        // icin TrueRealCandyEntity icinde //? if ile ayrildi.
+
+        // Istemci paket tasimalari / yeniden adlandirmalari.
+        // SADECE ciplak kural: tam nitelikli adi da o kapsiyor. FQN kurali ayri yazilsa
+        // 'GuiGraphics' -> 'GuiGraphicsExtractor' ikinci kez calisip
+        // 'GuiGraphicsExtractorExtractor' uretirdi (metin degistirme onek bilmiyor).
+        //
+        // LightTexture SINIF OLARAK Lightmap'e donustu AMA karartma hesabi orada DEGIL:
+        // 26.x'te Lightmap yalnizca GPU dokusunu tutuyor (render(LightmapRenderState)),
+        // calculateDarknessScale(LivingEntity, float, float) ise AYNI AD VE AYNI IMZAYLA
+        // net.minecraft.client.renderer.LightmapRenderStateExtractor'a tasindi. Mixin'in
+        // hedefi o sinif, bu yuzden kural Lightmap'e degil oraya gidiyor (LightTexture
+        // adi src icinde yalnizca LightmapTextureManagerMixin'de, 2 yerde geciyor).
+        replace 'LightTexture', 'LightmapRenderStateExtractor'
+        replace 'GuiGraphics', 'GuiGraphicsExtractor'
+        replace 'net.minecraft.client.renderer.state.CameraRenderState',
+                'net.minecraft.client.renderer.state.level.CameraRenderState'
     }
 }

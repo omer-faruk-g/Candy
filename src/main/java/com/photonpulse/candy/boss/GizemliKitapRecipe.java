@@ -29,13 +29,32 @@ public class GizemliKitapRecipe extends CustomRecipe {
     public static RecipeSerializer<GizemliKitapRecipe> SERIALIZER;
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("candy", "gizemli_kitap");
 
+    // 26.x'te CustomRecipe ctor'u parametresiz; craft kitabi kategorisi artik
+    // category() metodu ile veriliyor (CustomRecipe varsayilanini kullaniyoruz).
+    //? if >=26 {
+    /*public GizemliKitapRecipe() {}
+    */
+    //?}
+    //? if <26 {
     public GizemliKitapRecipe(CraftingBookCategory category) {
         super(category);
     }
+    //?}
 
     public static void register() {
+        // 26.x: CustomRecipe.Serializer kaldirildi, RecipeSerializer artik
+        // (MapCodec, StreamCodec) record'u. Tarifin alani olmadigi icin ikisi de unit.
+        //? if >=26 {
+        /*SERIALIZER = Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, ID,
+            new RecipeSerializer<>(
+                com.mojang.serialization.MapCodec.unit(new GizemliKitapRecipe()),
+                net.minecraft.network.codec.StreamCodec.unit(new GizemliKitapRecipe())));
+        */
+        //?}
+        //? if <26 {
         SERIALIZER = Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, ID,
             new CustomRecipe.Serializer<>(GizemliKitapRecipe::new));
+        //?}
         Candy.LOG.info("[Candy] GizemliKitap recipe serializer kayıtlı");
     }
 
@@ -56,10 +75,20 @@ public class GizemliKitapRecipe extends CustomRecipe {
         return sayfa == 8 && ruh == 1;
     }
 
+    // 26.x: Recipe.assemble(T) -- HolderLookup.Provider parametresi dustu.
+    //? if >=26 {
+    /*@Override
+    public ItemStack assemble(CraftingInput input) {
+        return GizemliKitap.olustur();
+    }
+    */
+    //?}
+    //? if <26 {
     @Override
     public ItemStack assemble(CraftingInput input, HolderLookup.Provider lookup) {
         return GizemliKitap.olustur();
     }
+    //?}
 
     @Override
     public RecipeSerializer<? extends CustomRecipe> getSerializer() {

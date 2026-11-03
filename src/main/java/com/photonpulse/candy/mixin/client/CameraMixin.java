@@ -3,6 +3,7 @@ package com.photonpulse.candy.mixin.client;
 import com.photonpulse.candy.client.CandyMixinConfig;
 import com.photonpulse.candy.client.IntensityState;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,6 +17,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * Sodium uyumlu — Camera sınıfına Sodium dokunmuyor.
  * Sin dalgası kullanılır (rastgele değil) — smooth shake, epileptik değil.
+ *
+ * Hedef metot sürüme bağlı (javap ile ölçüldü):
+ *   1.21.x  setup(BlockGetter, Entity, boolean, boolean, float)
+ *   26.x    update(DeltaTracker)
+ * 26.x'te setup kalmadı; kamerayı kare başına kuran metot update(DeltaTracker) ve
+ * gövdesinde alignWithEntity + setupPerspective çağrılıyor — yani aynı noktadaki aynı
+ * iş. @Shadow'lanan xRot/yRot alanları ve protected setRotation(float, float) 26.3'te
+ * de aynen var. İmza değiştiği için enjeksiyon metodu ikiye ayrıldı, sallama hesabı
+ * ise tek yerde (candy$shakeUygula).
  */
 @Mixin(Camera.class)
 public class CameraMixin {
@@ -24,9 +34,23 @@ public class CameraMixin {
     @Shadow private float xRot;
     @Shadow protected void setRotation(float yaw, float pitch) {}
 
+    //? if >=26 {
+    /*@Inject(method = "update", at = @At("TAIL"))
+    private void candy$shake(DeltaTracker tickCounter, CallbackInfo ci) {
+        candy$shakeUygula();
+    }
+    */
+    //?}
+    //? if <26 {
     @Inject(method = "setup", at = @At("TAIL"))
     private void candy$shake(BlockGetter area, Entity focused, boolean thirdPerson,
                              boolean inverseView, float tickDelta, CallbackInfo ci) {
+        candy$shakeUygula();
+    }
+    //?}
+
+    /** Sallama hesabı — iki sürümün enjeksiyon metodu da buraya giriyor. */
+    private void candy$shakeUygula() {
         try {
             if (!CandyMixinConfig.cameraShake) return;
             double intensity = IntensityState.get();

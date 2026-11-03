@@ -28,13 +28,32 @@ public class KuranRecipe extends CustomRecipe {
     public static RecipeSerializer<KuranRecipe> SERIALIZER;
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("candy", "kuran");
 
+    // 26.x'te CustomRecipe ctor'u parametresiz; craft kitabi kategorisi artik
+    // category() metodu ile veriliyor (CustomRecipe varsayilanini kullaniyoruz).
+    //? if >=26 {
+    /*public KuranRecipe() {}
+    */
+    //?}
+    //? if <26 {
     public KuranRecipe(CraftingBookCategory category) {
         super(category);
     }
+    //?}
 
     public static void register() {
+        // 26.x: CustomRecipe.Serializer kaldirildi, RecipeSerializer artik
+        // (MapCodec, StreamCodec) record'u. Tarifin alani olmadigi icin ikisi de unit.
+        //? if >=26 {
+        /*SERIALIZER = Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, ID,
+            new RecipeSerializer<>(
+                com.mojang.serialization.MapCodec.unit(new KuranRecipe()),
+                net.minecraft.network.codec.StreamCodec.unit(new KuranRecipe())));
+        */
+        //?}
+        //? if <26 {
         SERIALIZER = Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, ID,
             new CustomRecipe.Serializer<>(KuranRecipe::new));
+        //?}
         Candy.LOG.info("[Candy] Kuran recipe serializer kayıtlı");
     }
 
@@ -59,10 +78,20 @@ public class KuranRecipe extends CustomRecipe {
         };
     }
 
+    // 26.x: Recipe.assemble(T) -- HolderLookup.Provider parametresi dustu.
+    //? if >=26 {
+    /*@Override
+    public ItemStack assemble(CraftingInput input) {
+        return KuranKitap.olustur();
+    }
+    */
+    //?}
+    //? if <26 {
     @Override
     public ItemStack assemble(CraftingInput input, HolderLookup.Provider lookup) {
         return KuranKitap.olustur();
     }
+    //?}
 
     @Override
     public RecipeSerializer<? extends CustomRecipe> getSerializer() {

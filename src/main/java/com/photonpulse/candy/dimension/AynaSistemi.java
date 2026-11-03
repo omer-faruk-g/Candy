@@ -181,7 +181,12 @@ public class AynaSistemi {
         // NPC'ler oyuncu geldiğinde (spawnla) doğurulur — aksi halde oyuncusuz Ayna chunk'ı
         // yüklenmeden kalır ve kopya/bekçi kaybolabilir.
         bolgeKopyala(ow, ayna, merkez);
+        // 26.x'te zaman WorldClock'a tasindi: Level.setDayTime YOK ve saat seviye
+        // basina degil SAAT basina (WorldClocks.OVERWORLD gibi) tutuluyor, yani
+        // Ayna'ya tek tek zaman yazilamiyor. O surumde acik senkron atlaniyor.
+        //? if <26 {
         ayna.setDayTime(ow.getDayTime());  // gökyüzü senkron
+        //?}
 
         hazirlikBitis.put(player.getUUID(), simdi + HAZIRLIK_SURE);
         tp.sonAynaTakas = simdi;               // cooldown karar anından işler
@@ -194,7 +199,9 @@ public class AynaSistemi {
         ServerLevel ayna = server.getLevel(CandyDimensions.AYNA);
         if (ayna == null) return;
         BlockPos hedef = BlockPos.of(tp.aynaDonusPoz);
+        //? if <26 {
         ayna.setDayTime(server.overworld().getDayTime()); // son senkron
+        //?}
         player.teleportTo(ayna, hedef.getX() + 0.5, hedef.getY(), hedef.getZ() + 0.5,
             Collections.emptySet(), player.getYRot(), player.getXRot(), false);
         // Oyuncu artık Ayna'da (chunk yüklü) → kopya NPC + sessiz bekçiyi şimdi doğur

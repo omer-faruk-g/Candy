@@ -1,6 +1,8 @@
 package com.photonpulse.candy.client;
 
+//? if <26 {
 import com.mojang.blaze3d.platform.GLX;
+//?}
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.DonanimPayload;
@@ -55,6 +57,14 @@ public class DonanimGonder {
     private static String donanimTopla() {
         List<String> parcalar = new ArrayList<>();
 
+        // GPU + CPU: 26.x'te KARSILIGI YOK, bu yuzden o surumde atlaniyor.
+        //  - GpuDevice com.mojang.renderpearl.api.device'a tasindi ve renderer adi
+        //    veren bir metodu yok (getRenderer() kaldirildi).
+        //  - com.mojang.blaze3d.platform.GLX tamamen kaldirildi (Mojang SDL'e gecti),
+        //    _getCpuInfo()'nun yerine gecen bir API yok.
+        // 26.x'te donanim dizgisi yalnizca OS parcasini tasiyor; kaybolan davranis
+        // BUILD.md'de yazili. Uydurma bir kaynak kullanilmadi.
+        //? if <26 {
         // GPU
         try {
             var dev = RenderSystem.tryGetDevice();
@@ -69,6 +79,7 @@ public class DonanimGonder {
             String cpu = GLX._getCpuInfo();
             if (cpu != null && !cpu.isBlank()) parcalar.add(cpuTemizle(cpu));
         } catch (Throwable ignored) {}
+        //?}
 
         // OS
         try {

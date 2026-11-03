@@ -52,8 +52,16 @@ public class TrueRealCandyEntity extends Monster {
     private static final EntityDataAccessor<Integer> FAZ =
         SynchedEntityData.defineId(TrueRealCandyEntity.class, EntityDataSerializers.INT);
 
+    // 26.x: ServerBossEvent ctor'una bar kimligi (UUID) eklendi.
+    //? if >=26 {
+    /*private final ServerBossEvent bossBar = new ServerBossEvent(java.util.UUID.randomUUID(),
+        Component.translatable("candy.boss.isim"), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.NOTCHED_20);
+    */
+    //?}
+    //? if <26 {
     private final ServerBossEvent bossBar = new ServerBossEvent(
         Component.translatable("candy.boss.isim"), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.NOTCHED_20);
+    //?}
 
     // Faz zamanlayıcıları
     private int klonTimer = 0;

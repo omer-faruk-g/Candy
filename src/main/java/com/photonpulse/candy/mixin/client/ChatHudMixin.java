@@ -18,13 +18,27 @@ import net.minecraft.network.chat.MutableComponent;
  * "hello there" → "hlelo there"
  * Vanilla API ile yapılamaz — chat mesajı Text objesi olarak client-side'a geldiğinde
  * ChatComponent.addMessage'a girer, bu hook o noktada araya girer.
+ *
+ * Hedef tanımlayıcı sürüme bağlı (javap ile ölçüldü):
+ *   1.21.x  addMessage(Component)
+ *   26.x    addMessage(Component, MessageSignature, GuiMessageSource, GuiMessageTag)
+ * 26.x'te tek parametreli aşırı yükleme kalmadı (çağrı yolları addClientSystemMessage /
+ * addServerSystemMessage / addPlayerMessage'a ayrıldı), ama hepsi hâlâ bu tek private
+ * metottan geçiyor — yani süzgeç noktası aynı. @ModifyVariable(argsOnly = true) ilk
+ * Component argümanını hedeflediği için gövde de imza da aynen kalıyor.
  */
 @Mixin(ChatComponent.class)
 public class ChatHudMixin {
 
     private static final Random CANDY_RNG = new Random();
 
+    //? if >=26 {
+    /*@ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V", at = @At("HEAD"), argsOnly = true)
+    */
+    //?}
+    //? if <26 {
     @ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"), argsOnly = true)
+    //?}
     private Component candy$corruptMessage(Component original) {
         try {
             if (original == null) return original;
