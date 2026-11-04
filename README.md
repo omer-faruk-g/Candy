@@ -34,6 +34,13 @@ Candy deliberately breaks the fourth wall. By design it:
   was taken. Only Minecraft's own frame is read (no desktop, no other window), and
   no image file is written anywhere: it goes straight into map data
   (`ekranHaritasi: false` turns it off, `ekranHaritasiTus` changes the key)
+- **can reach your real inbox** — if you opt in, Candy sometimes sends one of its
+  in-game whispers to your own email, so the game can touch you after you close it.
+  This is **off until you turn it on**: it does nothing until you write your own
+  address into the config. The message is the same in-game observation it would
+  whisper anyway (no screenshot, no location, no file leaves your machine), it is sent
+  to the one address you entered, and every email says it is the Candy mod and how to
+  stop it (`mektup`, `mektupEposta`, `mektupUc`)
 
 If any of that is not what you want from a game, do not install this mod.
 
@@ -41,9 +48,14 @@ If any of that is not what you want from a game, do not install this mod.
 
 This list is a hard boundary in the code, not a promise in a readme:
 
-- no telemetry, no network calls to any server of ours — Candy talks to nothing
+- no silent telemetry: Candy never quietly phones home with who you are. It makes
+  only two kinds of outbound call, both switchable: an IP‑to‑city lookup used for the
+  horror text, and — **only if you opt in** — the email channel (see below). Neither
+  sends a screenshot, a file or your keystrokes
 - no personal data is ever written anywhere persistent: not to a sign, a book, a
-  `.txt` or the world save. City and hardware hints live in RAM only, for one session
+  `.txt` or the world save. City and hardware hints live in RAM only, for one session.
+  Your email address, if you enter one, lives only in your own config file — it is
+  never sent to the Minecraft server you connect to, only to the mail endpoint you set
 - the program whitelist is a **whitelist**, never a blacklist: anything not on those
   12 lines is never read, sent or stored. Your banking app, your documents, your
   other windows do not exist to Candy
@@ -56,6 +68,10 @@ This list is a hard boundary in the code, not a promise in a readme:
 - the screen map reads Minecraft's own frame buffer and nothing else. Your desktop,
   your browser, the window behind the game are not in that buffer, so they cannot be
   read; and the capture only ever happens on your own key press, never on a timer
+- the email channel is off by default and sends nothing until **you** fill in both
+  your address and an endpoint; it only ever mails the one address you wrote, the body
+  is the same whisper you'd get in chat, and every message states it is the Candy mod
+  and how to switch it off. It never attaches a screenshot or any file
 - the keyboard light is the lock-key LED and nothing else: no vendor driver, no RGB
   SDK, no device access. The only key Candy ever touches is **Scroll Lock** (Num Lock
   as a fallback) — a key nothing in Minecraft is bound to, flipped back within 140 ms.
@@ -112,6 +128,14 @@ no frame is ever read) and `ekranHaritasiTus`, a vanilla key name such as `"f12"
 `"f10"` or `"insert"` — change it if something else on your system already owns F12
 (recording overlays and some laptop hotkey drivers do). One map per 15 seconds;
 press it sooner and Candy answers instead of handing you a map.
+
+The email channel has three keys and is **off out of the box**. `mektupEposta` is your
+own address (empty = the channel never fires — this is the consent); `mektupUc` is the
+`https://` mail endpoint you run (empty = nowhere to send, so nothing is sent); `mektup`
+is the master switch. All three must be set before a single request leaves your machine.
+Candy sends at most one email every ~20 minutes, far rarer than its chat whispers. You
+have to stand up the endpoint yourself — a reference server, and why it must confirm an
+address before mailing it, is in [`araclar/mektup/`](araclar/mektup/).
 
 ## Building from source
 
@@ -213,6 +237,13 @@ Candy dördüncü duvarı bilerek kırar. Tasarım gereği:
   saatidir. Okunan tek şey Minecraft'ın kendi karesi (masaüstü yok, başka pencere
   yok) ve hiçbir görüntü dosyası yazılmaz: kare doğrudan harita verisine gider
   (`ekranHaritasi: false` kapatır, `ekranHaritasiTus` tuşu değiştirir)
+- **gerçek gelen kutuna ulaşabilir** — izin verirsen Candy, oyun-içi fısıltılarından
+  birini ara sıra kendi e-postana da yollar; oyunu kapattıktan sonra sana dokunabilsin
+  diye. Bu **sen açana kadar kapalı**: kendi adresini config'e yazmadıkça hiçbir şey
+  olmaz. Giden mesaj zaten fısıldayacağı oyun-içi gözlemin aynısıdır (ekran görüntüsü,
+  konum, dosya makineden çıkmaz), yalnızca senin girdiğin tek adrese gider ve her
+  e-posta bunun Candy modu olduğunu ve nasıl durdurulacağını yazar
+  (`mektup`, `mektupEposta`, `mektupUc`)
 
 Bunlar bir oyundan istediğin şeyler değilse bu modu kurma.
 
@@ -220,9 +251,14 @@ Bunlar bir oyundan istediğin şeyler değilse bu modu kurma.
 
 Bu liste readme'de bir vaat değil, kodda sert bir sınır:
 
-- telemetri yok, bize ait hiçbir sunucuya istek yok — Candy hiçbir yerle konuşmuyor
+- sessiz telemetri yok: Candy kim olduğunu arkadan hiçbir yere bildirmez. Yalnızca iki
+  tür dış istek yapar, ikisi de kapatılabilir: korku metni için bir IP→şehir sorgusu ve
+  — **yalnızca sen açarsan** — e-posta kanalı (aşağıda). Hiçbiri ekran görüntüsü, dosya
+  ya da tuş basımı yollamaz
 - kişisel veri kalıcı hiçbir yere yazılmaz: ne tabelaya, ne kitaba, ne `.txt`'ye,
-  ne dünya kaydına. Şehir ve donanım ipuçları yalnızca RAM'de, tek oturum boyunca
+  ne dünya kaydına. Şehir ve donanım ipuçları yalnızca RAM'de, tek oturum boyunca.
+  Girdiysen e-posta adresin yalnızca kendi config dosyanda durur — bağlandığın Minecraft
+  sunucusuna hiç gitmez, yalnızca senin ayarladığın mektup ucuna
 - program listesi bir **beyaz liste**, asla siyah liste değil: o 12 satırda olmayan
   hiçbir şey okunmaz, taşınmaz, saklanmaz. Banka uygulaman, belgelerin, diğer
   pencereleriniz Candy için yok
@@ -240,6 +276,10 @@ Bu liste readme'de bir vaat değil, kodda sert bir sınır:
   Minecraft'ta hiçbir şeye bağlı olmayan bir tuş, 140 ms içinde geri alınıyor. Oyunun
   ya da başka bir pencerenin tepki verdiği bir tuş asla yollanmıyor; alt-tab yaptığında
   hiçbir tuş basımı başka bir yere düşemez
+- e-posta kanalı varsayılan kapalı ve **sen** hem adresini hem ucu doldurmadan hiçbir
+  şey yollamaz; yalnızca yazdığın tek adrese gider, gövde sohbette alacağın fısıltının
+  aynısıdır ve her mesaj bunun Candy modu olduğunu ve nasıl kapatılacağını söyler.
+  Hiçbir zaman ekran görüntüsü ya da dosya eklemez
 
 ## Ayarlar
 
@@ -256,6 +296,14 @@ kare hiç okunmaz) ve `ekranHaritasiTus` — vanilla tuş adı, örneğin `"f12"
 ya da `"insert"`. Sistemde F12'yi başka bir şey kapıyorsa (ekran kaydı katmanları,
 bazı dizüstü hotkey sürücüleri) bunu değiştir. 15 saniyede bir harita; daha erken
 basarsan Candy harita yerine cevap verir.
+
+E-posta kanalının üç anahtarı var ve **kutudan kapalı** gelir. `mektupEposta` senin
+kendi adresin (boş = kanal hiç çalışmaz — rıza budur); `mektupUc` kurduğun `https://`
+mektup ucu (boş = gidecek yer yok, hiçbir şey gitmez); `mektup` ana anahtar. Tek bir
+istek bile makineden çıkmadan önce üçü de dolu olmalı. Candy en çok ~20 dakikada bir
+yollar, sohbet fısıltısından çok daha nadir. Ucu kendin kurmalısın — örnek sunucu ve
+bir adrese yollamadan önce neden onay istemesi gerektiği [`araclar/mektup/`](araclar/mektup/)
+içinde.
 
 ## Lisans
 

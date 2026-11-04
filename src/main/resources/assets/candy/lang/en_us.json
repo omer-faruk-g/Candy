@@ -536,5 +536,8 @@
   "candy.tanidik.kac": "§8§oyou always run the same way. i will be there.",
   "candy.tanidik.mesale": "§8§oyou break your own torches now.",
   "candy.tanidik.dunya": "§8§o\"%s\" was never yours.",
-  "candy.tanidik.gozlem": "§8§oi have watched you longer than you think."
+  "candy.tanidik.gozlem": "§8§oi have watched you longer than you think.",
+  "candy.mektup.konu": "Alt+F4 won't save you",
+  "candy.mektup.saat": "It is %s. i will come back.",
+  "candy.mektup.alt": "— Candy\n\nThis email was sent by the Minecraft mod named Candy, to the address you wrote yourself in your config file (config/candy-mixin.json). If you don't want it, set mektup to false in that file or clear the mektupEposta line."
 }

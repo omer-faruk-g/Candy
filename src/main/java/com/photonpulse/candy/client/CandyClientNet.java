@@ -1,6 +1,7 @@
 package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.Candy;
+import com.photonpulse.candy.net.BildirimPayload;
 import com.photonpulse.candy.net.BossCountdownPayload;
 import com.photonpulse.candy.net.CamscreenPayload;
 import com.photonpulse.candy.net.CandyIntensityPayload;
@@ -144,11 +145,29 @@ public class CandyClientNet {
             (payload, context) -> IkilikEkranState.tetikle(
                 payload.indeks(), payload.sureMs(), payload.kanal()));
 
+        // v9.2.0: dış kanal — Candy aynı oyun-içi fısıltıyı oyuncunun gerçek e-postasına
+        // da düşürebilir. İçerik TanidikFisilti ile aynı: sunucu yalnız anahtar+arg
+        // yolluyor, istemci kendi dilinde çözüyor. E-posta adresi bu pakette YOK; o
+        // yalnızca istemci config'inde. MektupGonder config boşsa hiçbir şey yapmaz.
+        try {
+            AgKayit.playS2C().register(BildirimPayload.ID, BildirimPayload.CODEC);
+        } catch (Throwable t) {
+            Candy.LOG.debug("[Candy] Bildirim payload zaten kayıtlı: {}", t.getMessage());
+        }
+        IstemciAg.registerGlobalReceiver(
+            BildirimPayload.ID,
+            (payload, context) -> {
+                String satir = payload.arg() == null || payload.arg().isEmpty()
+                    ? net.minecraft.network.chat.Component.translatable(payload.anahtar()).getString()
+                    : net.minecraft.network.chat.Component.translatable(payload.anahtar(), payload.arg()).getString();
+                MektupGonder.belki(satir);
+            });
+
         // NOT: Arkadaş'ın fısıltıları için ayrı payload YOK. Sunucu
         // Text.translatable(anahtar, oyuncuAdı) yolluyor, istemci kendi lang
         // dosyasından çözüyor — dialog sisteminin zaten kullandığı yol. Oyuncu adı
         // çok oyunculuda herkese görünür bir bilgi, gizlilik kuralını kırmıyor.
 
-        Candy.LOG.info("[Candy] CandyClientNet aktif — intensity + camscreen + hastalık + boss + karanlık + görüntü + altyazı + başlık + ikilik + klavye ışığı");
+        Candy.LOG.info("[Candy] CandyClientNet aktif — intensity + camscreen + hastalık + boss + karanlık + görüntü + altyazı + başlık + ikilik + klavye ışığı + mektup");
     }
 }

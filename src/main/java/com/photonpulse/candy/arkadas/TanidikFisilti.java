@@ -3,6 +3,9 @@ package com.photonpulse.candy.arkadas;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
+import com.photonpulse.candy.net.BildirimPayload;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
 import com.photonpulse.candy.platform.SunucuTick;
 import com.photonpulse.candy.sessizlik.SessizlikState;
 import net.minecraft.ChatFormatting;
@@ -50,7 +53,25 @@ public final class TanidikFisilti {
     /** Oyuncu UUID -> son fısıltı tick'i. */
     private static final Map<UUID, Long> sonFisilti = new HashMap<>();
 
+    // v9.2.0: DIŞ KANAL (e-posta). Sohbet fısıltısından ÇOK daha nadir ve daha geç —
+    // "pencerenin dışına çıktı" anı seyreltildikçe vurur. Sunucu yalnızca anahtar+arg
+    // yolluyor; e-postayı istemci kendi config'inden okuyup kendisi gönderiyor. Config
+    // boşsa paket istemcide sessizce düşer, yani sunucu oyuncunun adresini hiç görmez.
+    /** İki dış-kanal arası en az bu kadar tick (~30 dk). */
+    private static final long DIS_SOGUMA = 36_000L;
+    /** Dış kanal ancak Candy belirgin bir zemin kazandıysa (perde ≥ 2). */
+    private static final int MIN_KADEME_DIS = 2;
+    /** Uygun olduğunda bile her fısıltı dışarı taşmaz. */
+    private static final double DIS_IHTIMAL = 0.25;
+    /** Oyuncu UUID -> son dış-kanal tick'i. */
+    private static final Map<UUID, Long> sonDisKanal = new HashMap<>();
+
     public static void register() {
+        try {
+            AgKayit.playS2C().register(BildirimPayload.ID, BildirimPayload.CODEC);
+        } catch (Throwable t) {
+            Candy.LOG.debug("[Candy] Bildirim payload zaten kayıtlı (sunucu): {}", t.getMessage());
+        }
         SunucuTick.END_SERVER_TICK.register(TanidikFisilti::onTick);
         Candy.LOG.info("[Candy] TanidikFisilti aktif — Candy seni hatırlıyor");
     }
@@ -73,7 +94,7 @@ public final class TanidikFisilti {
             double ihtimal = 0.1 + Math.min(0.5, tp.korkuSkoru / 200.0);
             if (Math.random() > ihtimal) continue;
 
-            if (secVeYolla(server, player, tp)) {
+            if (secVeYolla(server, player, tp, simdi)) {
                 sonFisilti.put(player.getUUID(), simdi);
             }
         }
@@ -81,7 +102,7 @@ public final class TanidikFisilti {
 
     /** Oyuncunun durumundan uygun fısıltıları toplar, birini seçip yollar. */
     private static boolean secVeYolla(MinecraftServer server, ServerPlayer player,
-                                      TruePersonality tp) {
+                                      TruePersonality tp, long simdi) {
         List<Aday> adaylar = new ArrayList<>();
 
         // 1) Oyuncunun KENDİ tabela cevabı — en vurucu: kendi sözleri.
@@ -128,7 +149,33 @@ public final class TanidikFisilti {
         tp.metaFarkindalik = Math.min(100.0, tp.metaFarkindalik + 2.0);
         Candy.LOG.debug("[Candy] TanidikFisilti -> {} ({})",
             player.getGameProfile().getName(), sec.anahtar);
+
+        disKanalBelki(player, tp, sec, simdi);
         return true;
+    }
+
+    /**
+     * v9.2.0 — Aynı fısıltıyı NADİREN dış kanala da taşır (e-posta). Sunucu yalnızca
+     * "şu satırı dışarı ver" der; e-postayı istemci kendi config'inden okuyup kendi
+     * gönderir, bu yüzden adres sunucuya hiç uğramaz. İstemcide mektup kapalıysa paket
+     * sessizce düşer — yani bu çağrı "izin varsa" değil, "belki" çağrısıdır.
+     */
+    private static void disKanalBelki(ServerPlayer player, TruePersonality tp,
+                                      Aday sec, long simdi) {
+        if (tp.perdeKademe < MIN_KADEME_DIS) return;
+        Long son = sonDisKanal.get(player.getUUID());
+        if (son != null && simdi - son < DIS_SOGUMA) return;
+        if (Math.random() > DIS_IHTIMAL) return;
+
+        String arg0 = (sec.arglar != null && sec.arglar.length > 0) ? sec.arglar[0] : "";
+        try {
+            SunucuAg.send(player, new BildirimPayload(sec.anahtar, arg0));
+            sonDisKanal.put(player.getUUID(), simdi);
+            Candy.LOG.debug("[Candy] TanidikFisilti dış kanal -> {} ({})",
+                player.getGameProfile().getName(), sec.anahtar);
+        } catch (Throwable ignored) {
+            // vanilla/eski istemci kanalı taşımıyor olabilir — sorun değil, sus
+        }
     }
 
     /** tabelaCevaplari içinden yer tutucu olmayan ("<...>") rastgele bir cevap; yoksa null. */
@@ -147,6 +194,7 @@ public final class TanidikFisilti {
 
     public static void sunucuKapan() {
         sonFisilti.clear();
+        sonDisKanal.clear();
     }
 
     /** Fısıltı adayı: lang anahtarı + {@code %s} argümanları. */

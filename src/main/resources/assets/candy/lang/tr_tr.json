@@ -536,5 +536,8 @@
   "candy.tanidik.kac": "§8§ohep aynı yöne kaçıyorsun. orada olacağım.",
   "candy.tanidik.mesale": "§8§oartık meşaleni kendin kırıyorsun.",
   "candy.tanidik.dunya": "§8§o\"%s\" hiç senin olmadı.",
-  "candy.tanidik.gozlem": "§8§oseni sandığından uzun süredir izliyorum."
+  "candy.tanidik.gozlem": "§8§oseni sandığından uzun süredir izliyorum.",
+  "candy.mektup.konu": "Alt+F4 seni kurtaramaz",
+  "candy.mektup.saat": "Saat %s. yine geleceğim.",
+  "candy.mektup.alt": "— Candy\n\nBu e-postayı Candy adlı Minecraft modu, senin config dosyana (config/candy-mixin.json) kendi yazdığın adrese gönderdi. İstemiyorsan o dosyada mektup değerini false yap ya da mektupEposta satırını boşalt."
 }

@@ -77,6 +77,28 @@ public class CandyMixinConfig {
     public static String ekranHaritasiTus = "f12";
 
     /**
+     * v9.2.0 — Dış kanal (e-posta): Candy aynı oyun-içi fısıltıyı oyuncunun gerçek
+     * e-postasına da düşürebilsin mi ({@link MektupGonder}). Ana anahtar; <b>tek başına
+     * hiçbir şey yapmaz</b>. Kanal yalnızca {@link #mektupEposta} VE {@link #mektupUc}
+     * ikisi de dolu olunca açılır. false ise hiçbir ağ isteği açılmaz.
+     */
+    public static boolean mektup = true;
+
+    /**
+     * v9.2.0 — Oyuncunun KENDİ e-posta adresi. <b>Varsayılan boş = kanal kapalı.</b>
+     * Bu alanı doldurmak rızanın kendisidir: adres yalnızca bu istemcide durur, bağlanılan
+     * Minecraft sunucusuna gitmez, yalnızca {@link #mektupUc}'a yollanır. Silmek kapatır.
+     */
+    public static String mektupEposta = "";
+
+    /**
+     * v9.2.0 — Yazarın mektup sunucusunun {@code https://} adresi (dış kanalın gideceği
+     * uç). <b>Varsayılan boş = kanal kapalı</b>, yani taze kurulumda sıfır ağ trafiği.
+     * {@code http://} kabul edilmez. Örnek sunucu: {@code araclar/mektup/}.
+     */
+    public static String mektupUc = "";
+
+    /**
      * v8.4 — Yoğunluk tavanı (0.0–1.0). {@link IntensityState#get()} döndürdüğü değeri
      * bu tavanla kırpar, yani oyuncu "aynı mod, daha az kaos" diyebilir.
      *
@@ -98,6 +120,7 @@ public class CandyMixinConfig {
     private static final String[] BILINEN = {
         "chatCorruption", "hudFlash", "deathScreen", "cameraShake", "camscreen",
         "uygulamaSezgisi", "klavyeIsigi", "ekranHaritasi", "ekranHaritasiTus",
+        "mektup", "mektupEposta", "mektupUc",
         "yogunlukTavani"
     };
 
@@ -137,6 +160,9 @@ public class CandyMixinConfig {
             klavyeIsigi     = bool(o, "klavyeIsigi",     klavyeIsigi);
             ekranHaritasi   = bool(o, "ekranHaritasi",   ekranHaritasi);
             ekranHaritasiTus = metin(o, "ekranHaritasiTus", ekranHaritasiTus);
+            mektup          = bool(o, "mektup",          mektup);
+            mektupEposta    = metin(o, "mektupEposta",    mektupEposta);
+            mektupUc        = metin(o, "mektupUc",        mektupUc);
             yogunlukTavani  = kesir(o, "yogunlukTavani", yogunlukTavani);
 
             yabanci.clear();
@@ -216,6 +242,9 @@ public class CandyMixinConfig {
         o.addProperty("klavyeIsigi", klavyeIsigi);
         o.addProperty("ekranHaritasi", ekranHaritasi);
         o.addProperty("ekranHaritasiTus", ekranHaritasiTus);
+        o.addProperty("mektup", mektup);
+        o.addProperty("mektupEposta", mektupEposta);
+        o.addProperty("mektupUc", mektupUc);
         o.addProperty("yogunlukTavani", yogunlukTavani);
         for (Map.Entry<String, JsonElement> e : yabanci.entrySet()) {
             if (!bilinenMi(e.getKey())) o.add(e.getKey(), e.getValue());
