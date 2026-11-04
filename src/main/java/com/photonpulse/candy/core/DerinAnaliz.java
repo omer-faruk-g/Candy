@@ -298,7 +298,12 @@ public class DerinAnaliz {
                 if (tick % 200 == 0) yirtikSayfaKontrol(player);
 
                 // ── (14) Gerçek zaman farkındalığı ──
-                int gercekSaat = java.time.LocalTime.now().getHour();
+                // v9.1.0: önce OYUNCUNUN saati (istemciden, SaatBilgisi). Eskiden burada
+                // yalnızca sunucu JVM'inin saati okunuyordu; tek oyunculuda aynı şey, ama
+                // gerçek bir sunucuda barındırıcının saat dilimiydi — "gecenin üçü" uyarısı
+                // oyuncu için öğlen vakti düşebiliyordu. İstemci bildirmediyse eski yola düşer.
+                int gercekSaat = com.photonpulse.candy.meta.SaatBilgisi.saat(player);
+                if (gercekSaat < 0) gercekSaat = java.time.LocalTime.now().getHour();
                 tp.sonGercekSaat = gercekSaat;
                 // Gece yarısı-05 arası oynuyorsan, oturumda bir kez, nadir + korku yüksekse
                 if (gercekSaat >= 0 && gercekSaat <= 4

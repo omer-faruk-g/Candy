@@ -63,6 +63,10 @@ public class CandyClient {
         UygulamaGonder.register();
         // v9.0.0: gerçek klavyenin kilit LED'i — tuş yoklaması kendi thread'inde
         KlavyeIsigi.kur();
+        // v9.1.0: gerçek duvar saati join'de sunucuya gider (Steve/Alex saat diyalogları)
+        SaatGonder.register();
+        // v9.1.0: F12 → o anki kare haritaya basılır. Config'den SONRA: tuş adı oradan.
+        EkranGonder.register();
         // v8.1: temiz çıkışta da geri al — disk yedeği zaten güvence, bu hızlandırıyor.
         // v8.2: pencere başlığı ve altyazı da aynı anda temizlenir. Başlık diske
         // yazılmıyor (oyun her açılışta kendisi kuruyor), o yüzden disk yedeği gereksiz;

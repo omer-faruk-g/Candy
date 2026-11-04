@@ -25,6 +25,15 @@ Candy deliberately breaks the fourth wall. By design it:
 - **recognises a short, fixed whitelist of open programs** (Discord, Spotify, OBS,
   Steam and similar — 12 entries, matched on process name only) so it can mention
   one of them once, in one private chat line
+- **reads your computer's clock** — the real wall clock and the time zone name, so
+  Steve and Alex can say what time it is where you are ("why are you still awake?").
+  Nothing is written down and nothing leaves your machine; `saat` lines simply stop
+  if the client never reports (`candy:saat` payload)
+- **puts your own screen on a map** — press **F12** and whatever is on screen at that
+  moment is burned onto a locked map in your inventory, named with the real time it
+  was taken. Only Minecraft's own frame is read (no desktop, no other window), and
+  no image file is written anywhere: it goes straight into map data
+  (`ekranHaritasi: false` turns it off, `ekranHaritasiTus` changes the key)
 
 If any of that is not what you want from a game, do not install this mod.
 
@@ -41,7 +50,12 @@ This list is a hard boundary in the code, not a promise in a readme:
 - process reading is a single switch: `uygulamaSezgisi: false` turns it off
   completely, and Candy is forbidden from ever turning it back on
 - no terminal commands, no OS commands, no windows opened outside Minecraft
-- no files touched outside `config/candy-*` and the world save
+- no files touched outside `config/candy-*` and the world save. The screen map is
+  part of that rule: unlike vanilla F2 it writes **no** PNG to `screenshots/` — the
+  frame is read into memory, converted to 16 KB of map colours and freed
+- the screen map reads Minecraft's own frame buffer and nothing else. Your desktop,
+  your browser, the window behind the game are not in that buffer, so they cannot be
+  read; and the capture only ever happens on your own key press, never on a timer
 - the keyboard light is the lock-key LED and nothing else: no vendor driver, no RGB
   SDK, no device access. The only key Candy ever touches is **Scroll Lock** (Num Lock
   as a fallback) — a key nothing in Minecraft is bound to, flipped back within 140 ms.
@@ -92,6 +106,12 @@ set either to `false` if you are photosensitive or motion sensitive, and
 `klavyeIsigi` to `false` to stop Candy touching your keyboard's lock LED.
 `yogunlukTavani` (0.0–1.0) is an intensity ceiling: `0.5` is "same mod, half the
 chaos", and it is the setting to reach for instead of turning features off.
+
+The screen map has two keys: `ekranHaritasi` (`false` = the key is never polled and
+no frame is ever read) and `ekranHaritasiTus`, a vanilla key name such as `"f12"`,
+`"f10"` or `"insert"` — change it if something else on your system already owns F12
+(recording overlays and some laptop hotkey drivers do). One map per 15 seconds;
+press it sooner and Candy answers instead of handing you a map.
 
 ## Building from source
 
@@ -185,6 +205,14 @@ Candy dördüncü duvarı bilerek kırar. Tasarım gereği:
 - **açık programlardan kısa ve sabit bir beyaz listeyi tanır** (Discord, Spotify,
   OBS, Steam vb. — 12 madde, yalnızca süreç adı) ve birini tek bir özel sohbet
   satırında bir kez anar
+- **bilgisayarının saatini okur** — gerçek duvar saati ve saat dilimi adı; Steve ile
+  Alex senin orada saatin kaç olduğunu söyleyebilsin diye ("neden hâlâ ayaktasın?").
+  Hiçbir yere yazılmaz, makineden çıkmaz; istemci bildirmezse saat satırları susar
+- **kendi ekranını haritaya basar** — **F12**'ye bastığın anda ekranında ne varsa
+  kilitli bir haritaya işlenir ve envanterine düşer; haritanın adı o anın gerçek
+  saatidir. Okunan tek şey Minecraft'ın kendi karesi (masaüstü yok, başka pencere
+  yok) ve hiçbir görüntü dosyası yazılmaz: kare doğrudan harita verisine gider
+  (`ekranHaritasi: false` kapatır, `ekranHaritasiTus` tuşu değiştirir)
 
 Bunlar bir oyundan istediğin şeyler değilse bu modu kurma.
 
@@ -201,7 +229,12 @@ Bu liste readme'de bir vaat değil, kodda sert bir sınır:
 - süreç okuması tek anahtar: `uygulamaSezgisi: false` tamamen kapatır ve Candy'nin
   onu geri açması yasaktır
 - terminal yok, OS komutu yok, Minecraft dışında pencere açma yok
-- `config/candy-*` ve dünya kaydı dışında hiçbir dosyaya dokunulmaz
+- `config/candy-*` ve dünya kaydı dışında hiçbir dosyaya dokunulmaz. Ekran haritası
+  da bu kurala dahil: vanilla F2'nin aksine `screenshots/` klasörüne **hiçbir** PNG
+  yazılmaz — kare RAM'e okunur, 16 KB harita rengine çevrilir ve bırakılır
+- ekran haritası yalnızca Minecraft'ın kendi kare arabelleğini okur. Masaüstün,
+  tarayıcın, oyunun arkasındaki pencere o arabellekte yok, dolayısıyla okunamaz;
+  ayrıca kare yalnızca sen tuşa bastığında alınır, hiçbir zaman zamanlayıcıyla değil
 - klavye ışığı yalnızca kilit tuşu LED'i: üretici sürücüsü yok, RGB SDK'sı yok,
   aygıt erişimi yok. Candy'nin dokunduğu tek tuş **Scroll Lock** (yedeği Num Lock) —
   Minecraft'ta hiçbir şeye bağlı olmayan bir tuş, 140 ms içinde geri alınıyor. Oyunun
@@ -217,6 +250,12 @@ sallanması): ışığa veya harekete duyarlıysan birini ya da ikisini `false` 
 Candy'nin klavye kilit LED'ine dokunmasını durdurur. `yogunlukTavani`
 (0.0–1.0) yoğunluk tavanı: `0.5` = "aynı mod, yarı kaos" — efektleri kapatmak
 yerine önce buna bak.
+
+Ekran haritasının iki anahtarı var: `ekranHaritasi` (`false` = tuş hiç yoklanmaz,
+kare hiç okunmaz) ve `ekranHaritasiTus` — vanilla tuş adı, örneğin `"f12"`, `"f10"`
+ya da `"insert"`. Sistemde F12'yi başka bir şey kapıyorsa (ekran kaydı katmanları,
+bazı dizüstü hotkey sürücüleri) bunu değiştir. 15 saniyede bir harita; daha erken
+basarsan Candy harita yerine cevap verir.
 
 ## Lisans
 

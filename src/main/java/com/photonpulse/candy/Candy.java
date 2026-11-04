@@ -138,6 +138,8 @@ public class Candy {
             com.photonpulse.candy.meta.DonanimBilgisi.sunucuKapan();
             com.photonpulse.candy.meta.SehirBilgisi.sunucuKapan();
             com.photonpulse.candy.meta.UygulamaBilgisi.sunucuKapan();   // v8.1
+            com.photonpulse.candy.meta.SaatBilgisi.sunucuKapan();       // v9.1.0
+            com.photonpulse.candy.yuz.EkranHaritasi.sunucuKapan();      // v9.1.0
             com.photonpulse.candy.meta.GoruntuTetik.sunucuKapan();      // v8.1
             com.photonpulse.candy.meta.ArkaBakis.sunucuKapan();         // v8.2
             com.photonpulse.candy.kacis.KacisSensoru.sunucuKapan();
@@ -223,6 +225,8 @@ public class Candy {
             com.photonpulse.candy.meta.DonanimBilgisi.oyuncuAyrildi(uid);
             com.photonpulse.candy.meta.SehirBilgisi.oyuncuAyrildi(uid);
             com.photonpulse.candy.meta.UygulamaBilgisi.oyuncuAyrildi(uid);  // v8.1
+            com.photonpulse.candy.meta.SaatBilgisi.oyuncuAyrildi(uid);      // v9.1.0
+            com.photonpulse.candy.yuz.EkranHaritasi.oyuncuAyrildi(uid);     // v9.1.0
             com.photonpulse.candy.meta.GoruntuTetik.oyuncuAyrildi(uid);     // v8.1
             com.photonpulse.candy.meta.ArkaBakis.oyuncuAyrildi(uid);        // v8.2
             FearDetection.oyuncuAyrildi(uid);
@@ -337,6 +341,12 @@ public class Candy {
 
         // ─── v3.0: Yüz Haritası — kimlik korkusu ───
         com.photonpulse.candy.yuz.YuzHaritasi.register();
+
+        // ─── v9.1.0: Ekran Haritası — F12'de o anki kare haritaya basılır ───
+        com.photonpulse.candy.yuz.EkranHaritasi.register();
+
+        // ─── v9.1.0: Saat Farkındalığı — hayaletler oyuncunun GERÇEK saatini bilir ───
+        com.photonpulse.candy.meta.SaatBilgisi.register();
 
         // ─── v3.0: Mod Farkındalığı — Candy kurulu modları biliyor ───
         com.photonpulse.candy.meta.ModFarkindaligi.register();

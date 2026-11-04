@@ -61,6 +61,22 @@ public class CandyMixinConfig {
     public static boolean klavyeIsigi = true;
 
     /**
+     * v9.1.0 — Ekran haritası: tuşa basınca o anki oyun karesi bir haritaya basılsın mı
+     * ({@link EkranGonder}). false ise tuş hiç yoklanmaz ve kare hiç okunmaz.
+     */
+    public static boolean ekranHaritasi = true;
+
+    /**
+     * v9.1.0 — Ekran haritası tuşu. Vanilla tuş adı ("f12", "f10", "insert", "k");
+     * {@code key.keyboard.} öneki gerekmiyor. Tanınmayan değer F12'ye düşer.
+     *
+     * <p>Neden ayarlanabilir: F12 bazı sistemlerde ekran kaydı / üretici katmanı
+     * tarafından kapılıyor (GeForce Experience, bazı dizüstü hotkey sürücüleri).
+     * Tuş çakışırsa oyuncu modun yarısını kaybetmek yerine tuşu değiştirir.</p>
+     */
+    public static String ekranHaritasiTus = "f12";
+
+    /**
      * v8.4 — Yoğunluk tavanı (0.0–1.0). {@link IntensityState#get()} döndürdüğü değeri
      * bu tavanla kırpar, yani oyuncu "aynı mod, daha az kaos" diyebilir.
      *
@@ -81,7 +97,8 @@ public class CandyMixinConfig {
     /** Bilinen bayrak adları — yabancı anahtar ayıklaması bunun dışını alır. */
     private static final String[] BILINEN = {
         "chatCorruption", "hudFlash", "deathScreen", "cameraShake", "camscreen",
-        "uygulamaSezgisi", "klavyeIsigi", "yogunlukTavani"
+        "uygulamaSezgisi", "klavyeIsigi", "ekranHaritasi", "ekranHaritasiTus",
+        "yogunlukTavani"
     };
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -118,6 +135,8 @@ public class CandyMixinConfig {
             camscreen       = bool(o, "camscreen",       camscreen);
             uygulamaSezgisi = bool(o, "uygulamaSezgisi", uygulamaSezgisi);
             klavyeIsigi     = bool(o, "klavyeIsigi",     klavyeIsigi);
+            ekranHaritasi   = bool(o, "ekranHaritasi",   ekranHaritasi);
+            ekranHaritasiTus = metin(o, "ekranHaritasiTus", ekranHaritasiTus);
             yogunlukTavani  = kesir(o, "yogunlukTavani", yogunlukTavani);
 
             yabanci.clear();
@@ -125,9 +144,10 @@ public class CandyMixinConfig {
                 if (!bilinenMi(e.getKey())) yabanci.put(e.getKey(), e.getValue());
             }
 
-            Candy.LOG.info("[Candy] Mixin config yüklendi: chat={} hud={} death={} camera={} camscreen={} uygulama={} klavye={} tavan={} yabanci={}",
+            Candy.LOG.info("[Candy] Mixin config yüklendi: chat={} hud={} death={} camera={} camscreen={} uygulama={} klavye={} ekran={}/{} tavan={} yabanci={}",
                 chatCorruption, hudFlash, deathScreen, cameraShake, camscreen,
-                uygulamaSezgisi, klavyeIsigi, yogunlukTavani, yabanci.size());
+                uygulamaSezgisi, klavyeIsigi, ekranHaritasi, ekranHaritasiTus,
+                yogunlukTavani, yabanci.size());
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] Config yüklenemedi, defaults: {}", t.getMessage());
         }
@@ -138,6 +158,19 @@ public class CandyMixinConfig {
             JsonElement e = o.get(ad);
             if (e == null || !e.isJsonPrimitive()) return varsayilan;
             return e.getAsBoolean();
+        } catch (Throwable t) {
+            return varsayilan;
+        }
+    }
+
+    /** Metin okur; eksik/bozuk/aşırı uzun değer varsayılana düşer. */
+    private static String metin(JsonObject o, String ad, String varsayilan) {
+        try {
+            JsonElement e = o.get(ad);
+            if (e == null || !e.isJsonPrimitive()) return varsayilan;
+            String s = e.getAsString();
+            if (s == null || s.isBlank() || s.length() > 48) return varsayilan;
+            return s.trim();
         } catch (Throwable t) {
             return varsayilan;
         }
@@ -181,6 +214,8 @@ public class CandyMixinConfig {
         o.addProperty("camscreen", camscreen);
         o.addProperty("uygulamaSezgisi", uygulamaSezgisi);
         o.addProperty("klavyeIsigi", klavyeIsigi);
+        o.addProperty("ekranHaritasi", ekranHaritasi);
+        o.addProperty("ekranHaritasiTus", ekranHaritasiTus);
         o.addProperty("yogunlukTavani", yogunlukTavani);
         for (Map.Entry<String, JsonElement> e : yabanci.entrySet()) {
             if (!bilinenMi(e.getKey())) o.add(e.getKey(), e.getValue());

@@ -81,6 +81,8 @@ public class HayaletOyuncular {
     private static final int KOORDINAT_SAYI = 5;
     private static final int KRIZ_SAYI = 8;
     private static final int CEVAP_SAYI = 15;
+    /** v9.1.0: saat bandı başına satır sayısı (her bant, her hayalet için ayrı). */
+    private static final int SAAT_SATIR_SAYI = 2;
     private static final int OLUM_SAYI = 7;
 
     private static String steveKey(int i) { return "candy.hayalet.steve." + i; }
@@ -243,6 +245,11 @@ public class HayaletOyuncular {
                 } else if (rol < 0.30) {
                     // %20 koordinat mesajı
                     koordinatBirakVeSoyle(server, isim);
+                }
+                // v9.1.0: %8 ihtimalle SAAT mesajı — oyuncunun gerçek duvar saati.
+                // Koordinattan SONRA: üstteki pencerelerin hiçbiri daralmıyor.
+                else if (rol < 0.38 && saatMesaji(server, isim)) {
+                    // gönderildi
                 } else {
                     int idx = isim.equals("Steve")
                         ? RNG.nextInt(STEVE_MESAJ_SAYI)
@@ -436,6 +443,66 @@ public class HayaletOyuncular {
         Candy.LOG.info("[Candy] Hayalet[{}] uygulama (private): {}",
             isim, hedef.getName().getString());
         return true;
+    }
+
+    /**
+     * Saat mesajı (v9.1.0) — hayalet, oyuncunun <b>gerçek duvar saatine</b> göre konuşur.
+     *
+     * <p>Saat istemciden geliyor ({@link com.photonpulse.candy.meta.SaatBilgisi}), sunucu
+     * JVM'inin saatinden değil: korku "sen gecenin üçünde oynuyorsun" cümlesinde, sunucuyu
+     * barındıran makinenin saat diliminde değil.</p>
+     *
+     * <p>Diyalog günün bandına göre seçiliyor (ölü saatler / şafak / sabah / öğlen / akşam
+     * / gece) ve Steve ile Alex'in bandı ayrı: Steve sıradan bir oyuncu gibi laf atıyor,
+     * Alex saati bildiğini belli ediyor. Saat 03 ise "üç" özel satırı öne geçiyor.</p>
+     *
+     * <p>ÖZEL mesaj — saat kişisel veri, yalnızca sahibine gösterilir (şehir ve donanım
+     * ile aynı kural). Log'a saat DEĞİL, yalnızca oyuncu adı yazılır.</p>
+     *
+     * @return gönderildiyse true (saat bilinmiyorsa false → normal mesaja düş)
+     */
+    private static boolean saatMesaji(MinecraftServer server, String isim) {
+        var players = server.getPlayerList().getPlayers();
+        if (players.isEmpty()) return false;
+        ServerPlayer hedef = players.get(RNG.nextInt(players.size()));
+
+        int saat = com.photonpulse.candy.meta.SaatBilgisi.saat(hedef);
+        String saatMetni = com.photonpulse.candy.meta.SaatBilgisi.metin(hedef);
+        if (saat < 0 || saatMetni == null) return false;
+
+        String kim = isim.equals("Steve") ? "steve" : "alex";
+        String anahtar;
+        Object arg = saatMetni;
+
+        String dilim = com.photonpulse.candy.meta.SaatBilgisi.dilim(hedef);
+        if (dilim != null && RNG.nextDouble() < 0.10) {
+            // %10: saat dilimi adının kendisi — "Europe/Istanbul? benim saatim başka diyor."
+            anahtar = "candy.hayalet.saat.dilim";
+            arg = dilim;
+        } else if (saat == 3 && RNG.nextDouble() < 0.6) {
+            anahtar = "candy.hayalet.saat." + kim + ".uc";
+        } else {
+            anahtar = "candy.hayalet.saat." + kim + "." + saatBandi(saat)
+                + "." + RNG.nextInt(SAAT_SATIR_SAYI);
+        }
+
+        hedef.displayClientMessage(
+            Component.literal("<" + isim + "> ")
+                .append(Component.translatable(anahtar, arg))
+                .withStyle(ChatFormatting.YELLOW), false);
+        Candy.LOG.info("[Candy] Hayalet[{}] saat (private): {}",
+            isim, hedef.getName().getString());
+        return true;
+    }
+
+    /** Gerçek saat → diyalog bandı. */
+    private static String saatBandi(int saat) {
+        if (saat <= 4) return "olu";        // 00–04 — ölü saatler
+        if (saat <= 7) return "safak";      // 05–07
+        if (saat <= 11) return "sabah";     // 08–11
+        if (saat <= 16) return "oglen";     // 12–16
+        if (saat <= 20) return "aksam";     // 17–20
+        return "gece";                      // 21–23
     }
 
     /**
