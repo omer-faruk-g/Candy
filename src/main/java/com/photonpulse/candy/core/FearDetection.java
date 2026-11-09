@@ -2,11 +2,10 @@ package com.photonpulse.candy.core;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.psikoloji.Ozguven;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -35,16 +34,16 @@ public class FearDetection {
     private static int tickSayaci = 0;
 
     // Son bakış vektörü — yön değişimi hesabı için
-    private static final Map<UUID, Vec3d> onceBakis = new HashMap<>();
+    private static final Map<UUID, Vec3> onceBakis = new HashMap<>();
     // Son pozisyon — hız ve "aynı yere gel-git" için
-    private static final Map<UUID, Vec3d> oncePos = new HashMap<>();
+    private static final Map<UUID, Vec3> oncePos = new HashMap<>();
     // Yön değişim sayacı — kısa süre içindeki hızlı yön değişikliklerini biriktirir
     private static final Map<UUID, Double> yonDegisimAkumulator = new HashMap<>();
     // Aynı yerde ileri geri sinyali — pozisyon geçmişi
     private static final Map<UUID, Double> geriGelisAkumulator = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(FearDetection::onTick);
+        SunucuTick.END_SERVER_TICK.register(FearDetection::onTick);
         Candy.LOG.info("[Candy] FearDetection aktif");
     }
 
@@ -52,12 +51,12 @@ public class FearDetection {
         tickSayaci++;
         if (tickSayaci % SAMPLE_ARALIGI != 0) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             olc(player);
         }
 
         if (tickSayaci % LOG_ARALIGI == 0) {
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 Candy.LOG.debug("[Candy] korku[{}] = {}",
                     player.getName().getString(), String.format("%.1f", tp.korkuSkoru));
@@ -72,8 +71,8 @@ public class FearDetection {
         geriGelisAkumulator.remove(uuid);
     }
 
-    private static void olc(ServerPlayerEntity player) {
-        UUID uid = player.getUuid();
+    private static void olc(ServerPlayer player) {
+        UUID uid = player.getUUID();
         TruePersonality tp = PersonalityManager.get(player);
 
         // Kurulum bitmediyse skor 10'da tut, birikmesin
@@ -85,10 +84,10 @@ public class FearDetection {
         double dSkor = 0;
 
         // ── 1. Ani bakış / yön değişimi ──
-        Vec3d bakis = player.getRotationVector();
-        Vec3d oBakis = onceBakis.get(uid);
+        Vec3 bakis = player.getLookAngle();
+        Vec3 oBakis = onceBakis.get(uid);
         if (oBakis != null) {
-            double dot = bakis.dotProduct(oBakis);
+            double dot = bakis.dot(oBakis);
             // dot = 1 ise aynı yön, -1 ise ters. Küçük dot = büyük değişim.
             double degisim = Math.max(0, 1.0 - dot);
             double akumule = yonDegisimAkumulator.getOrDefault(uid, 0.0);
@@ -102,7 +101,7 @@ public class FearDetection {
         // ── 2. Sprint spike ──
         // isSprinting + koşma yönü kısa süre içinde ters çevrildi = paniğe girdi
         if (player.isSprinting() && oBakis != null) {
-            double dot = bakis.dotProduct(oBakis);
+            double dot = bakis.dot(oBakis);
             if (dot < 0.6) {
                 dSkor += 0.25;
                 Ozguven.artir(tp, 0.15);   // panik sprint = Candy özgüveni artar
@@ -112,8 +111,8 @@ public class FearDetection {
         }
 
         // ── 3. Aynı yerde ileri geri (köşe sıkışması) ──
-        Vec3d simdi = player.getPos();
-        Vec3d oPos = oncePos.get(uid);
+        Vec3 simdi = player.position();
+        Vec3 oPos = oncePos.get(uid);
         if (oPos != null) {
             double mesafe = simdi.distanceTo(oPos);
             double geri = geriGelisAkumulator.getOrDefault(uid, 0.0);
@@ -128,7 +127,7 @@ public class FearDetection {
         oncePos.put(uid, simdi);
 
         // ── 4. Sneaking + hızlı hareket (sinirlilik tahmini) ──
-        if (player.isSneaking() && oPos != null) {
+        if (player.isShiftKeyDown() && oPos != null) {
             double mesafe = simdi.distanceTo(oPos);
             if (mesafe > 0.15) {
                 dSkor += 0.05;
@@ -138,9 +137,9 @@ public class FearDetection {
 
         // ── 5. Alçalma (soğuma) ──
         // Gündüz + yüzey ışığı yüksek + hareketsiz → korku çok yavaş azalır
-        long timeOfDay = player.getWorld().getTimeOfDay() % 24000L;
+        long timeOfDay = player.level().getDayTime() % 24000L;
         boolean gunduz = timeOfDay < 12000L;
-        int isik = player.getWorld().getLightLevel(player.getBlockPos());
+        int isik = player.level().getMaxLocalRawBrightness(player.blockPosition());
         if (gunduz && isik > 10 && dSkor < 0.05) {
             dSkor -= 0.03;
         }

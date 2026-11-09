@@ -1,12 +1,12 @@
 package com.photonpulse.candy.item;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 
 /**
  * KuranKitap — Kuran-ı Kerim eşyası.
@@ -24,22 +24,22 @@ public class KuranKitap {
 
     public static ItemStack olustur() {
         ItemStack stack = new ItemStack(Items.BOOK); // düz kitap — açılmaz
-        NbtCompound nbt = new NbtCompound();
+        CompoundTag nbt = new CompoundTag();
         nbt.putBoolean(MARKER, true);
-        stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbt));
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt));
         // İsim her dilde aynı — çeviri yok
-        stack.set(DataComponentTypes.CUSTOM_NAME,
-            Text.literal("Kuran-ı Kerim")
-                .styled(s -> s.withColor(Formatting.GOLD).withBold(true).withItalic(false)));
-        stack.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true); // kutsal parıltı
-        stack.set(DataComponentTypes.MAX_STACK_SIZE, 1);
+        stack.set(DataComponents.CUSTOM_NAME,
+            Component.literal("Kuran-ı Kerim")
+                .withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(true).withItalic(false)));
+        stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true); // kutsal parıltı
+        stack.set(DataComponents.MAX_STACK_SIZE, 1);
         return stack;
     }
 
     /** Verilen stack Kuran-ı Kerim mi? */
     public static boolean esittir(ItemStack stack) {
         if (stack == null || stack.isEmpty() || stack.getItem() != Items.BOOK) return false;
-        NbtComponent data = stack.get(DataComponentTypes.CUSTOM_DATA);
-        return data != null && data.copyNbt().contains(MARKER);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data != null && data.copyTag().contains(MARKER);
     }
 }

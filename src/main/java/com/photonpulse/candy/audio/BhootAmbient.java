@@ -4,11 +4,10 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sessizlik.SessizlikState;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import java.util.UUID;
 
 /**
@@ -27,23 +26,23 @@ public class BhootAmbient {
     private static final float VOLUME = 0.5f;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(BhootAmbient::onTick);
+        SunucuTick.END_SERVER_TICK.register(BhootAmbient::onTick);
         Candy.LOG.info("[Candy] BhootAmbient aktif — ana ses (MASTER, loop 7sn)");
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
         if (SessizlikState.sessizlikte(simdi)) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (player.isSpectator()) continue;
 
             try {
                 SesGonder.tek(player,
-                    CandySounds.BHOOT, SoundCategory.MASTER,
+                    CandySounds.BHOOT, SoundSource.MASTER,
                     VOLUME, 1.0f);
             } catch (Throwable ignored) {}
         }

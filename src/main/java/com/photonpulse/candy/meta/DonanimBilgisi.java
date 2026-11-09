@@ -2,10 +2,9 @@ package com.photonpulse.candy.meta;
 
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.net.DonanimPayload;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,12 +33,12 @@ public class DonanimBilgisi {
     public static void register() {
         // C2S payload tipini sunucu tarafinda da kaydet (client zaten kaydediyor)
         try {
-            PayloadTypeRegistry.playC2S().register(DonanimPayload.ID, DonanimPayload.CODEC);
+            AgKayit.playC2S().register(DonanimPayload.ID, DonanimPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Donanim C2S zaten kayitli: {}", t.getMessage());
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(DonanimPayload.ID, (payload, context) -> {
+        SunucuAg.registerGlobalReceiver(DonanimPayload.ID, (payload, context) -> {
             try {
                 String veri = payload.veri();
                 if (veri == null || veri.isBlank()) return;
@@ -49,7 +48,7 @@ public class DonanimBilgisi {
                     if (!t.isEmpty() && t.length() <= 64) liste.add(t);
                 }
                 if (!liste.isEmpty()) {
-                    parcalar.put(context.player().getUuid(), liste);
+                    parcalar.put(context.player().getUUID(), liste);
                     Candy.LOG.info("[Candy] Donanim alindi [{}]: {} parca",
                         context.player().getName().getString(), liste.size());
                 }
@@ -63,8 +62,8 @@ public class DonanimBilgisi {
      * Oyuncu icin rastgele bir parca adi doner. Client parca gondermisse ondan;
      * yoksa sunucu-yani fallback (OS + cekirdek sayisi).
      */
-    public static String rastgeleParca(ServerPlayerEntity player) {
-        List<String> liste = parcalar.get(player.getUuid());
+    public static String rastgeleParca(ServerPlayer player) {
+        List<String> liste = parcalar.get(player.getUUID());
         if (liste != null && !liste.isEmpty()) {
             return liste.get(RNG.nextInt(liste.size()));
         }

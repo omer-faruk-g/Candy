@@ -5,9 +5,8 @@ import com.photonpulse.candy.clone.CloneManager;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Random;
 
 /**
@@ -30,14 +29,14 @@ public class SessizlikYoneticisi {
     private static final Random RNG = new Random();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            long simdi = server.getOverworld().getTime();
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            long simdi = server.overworld().getGameTime();
 
             // Sessizlik bittiyse → forced event
             if (SessizlikState.tuketBitis(simdi)) {
-                var players = server.getPlayerManager().getPlayerList();
+                var players = server.getPlayerList().getPlayers();
                 if (!players.isEmpty()) {
-                    ServerPlayerEntity target = players.get(RNG.nextInt(players.size()));
+                    ServerPlayer target = players.get(RNG.nextInt(players.size()));
                     TruePersonality tp = PersonalityManager.get(target);
                     if (tp.kurulumTamam && !target.isCreative() && !target.isSpectator()) {
                         boolean spawn = CloneManager.zorlaKlonSpawn(target, tp);
@@ -51,16 +50,16 @@ public class SessizlikYoneticisi {
                 }
             }
 
-            if (server.getTicks() % KONTROL_ARALIGI != 0) return;
+            if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
             if (SessizlikState.sessizlikte(simdi)) return;
             if (simdi - SessizlikState.getSonBaslangic() < MIN_ARA_TICK) return;
 
-            var players = server.getPlayerManager().getPlayerList();
+            var players = server.getPlayerList().getPlayers();
             if (players.isEmpty()) return;
 
             // En agresif oyuncuyu bul (agresivlik >2.0 ise başlat)
             double maxAgr = 0;
-            for (ServerPlayerEntity p : players) {
+            for (ServerPlayer p : players) {
                 TruePersonality tp = PersonalityManager.get(p);
                 if (!tp.kurulumTamam) continue;
                 double agr = Psikoloji.agresivlikCarpani(tp);

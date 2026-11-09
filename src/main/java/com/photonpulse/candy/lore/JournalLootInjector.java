@@ -1,18 +1,19 @@
 package com.photonpulse.candy.lore;
 
 import com.photonpulse.candy.Candy;
+//? if fabric {
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.WrittenBookContentComponent;
-import net.minecraft.item.Items;
-import net.minecraft.loot.LootPool;
-import net.minecraft.loot.condition.RandomChanceLootCondition;
-import net.minecraft.loot.entry.ItemEntry;
-import net.minecraft.loot.function.SetComponentsLootFunction;
-import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
-import net.minecraft.text.RawFilteredPair;
-import net.minecraft.text.Text;
-
+//?}
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.network.Filterable;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.SetComponentsFunction;
+import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
+import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import java.util.List;
 
 /**
@@ -31,20 +32,21 @@ public class JournalLootInjector {
     private static final float SANDIK_IHTIMAL = 0.10f;
 
     public static void register() {
+        //? if fabric {
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
             if (key == null) return;
-            String path = key.getValue().getPath();
+            String path = key.location().getPath();
             if (!path.startsWith("chests/")) return;
 
-            LootPool.Builder havuz = LootPool.builder()
-                .rolls(ConstantLootNumberProvider.create(1))
-                .conditionally(RandomChanceLootCondition.builder(SANDIK_IHTIMAL));
+            LootPool.Builder havuz = LootPool.lootPool()
+                .setRolls(ConstantValue.exactly(1))
+                .when(LootItemRandomChanceCondition.randomChance(SANDIK_IHTIMAL));
 
             for (JournalTexts.Journal j : JournalTexts.HEPSI) {
-                havuz.with(
-                    ItemEntry.builder(Items.WRITTEN_BOOK)
-                        .apply(SetComponentsLootFunction.builder(
-                            DataComponentTypes.WRITTEN_BOOK_CONTENT,
+                havuz.add(
+                    LootItem.lootTableItem(Items.WRITTEN_BOOK)
+                        .apply(SetComponentsFunction.setComponent(
+                            DataComponents.WRITTEN_BOOK_CONTENT,
                             kitapIcerik(j)))
                 );
             }
@@ -52,19 +54,24 @@ public class JournalLootInjector {
             tableBuilder.pool(havuz.build());
         });
         Candy.LOG.info("[Candy] JournalLootInjector aktif — sandıklara %10 ihtimalle günlük");
+        //?}
+        //? if neoforge {
+        /*Candy.LOG.info("[Candy] JournalLootInjector KAPALI — NeoForge'da LootTableEvents karşılığı yok");
+        */
+        //?}
     }
 
-    private static WrittenBookContentComponent kitapIcerik(JournalTexts.Journal j) {
+    private static WrittenBookContent kitapIcerik(JournalTexts.Journal j) {
         // Translation key'lerini translatable Text'lere çevir — client kendi dilinde renderler.
-        List<RawFilteredPair<Text>> sayfalar = j.sayfaKeys.stream()
-            .map(key -> RawFilteredPair.<Text>of(Text.translatable(key)))
+        List<Filterable<Component>> sayfalar = j.sayfaKeys.stream()
+            .map(key -> Filterable.<Component>passThrough(Component.translatable(key)))
             .toList();
         // Kitap başlığı String — Text.translatable().getString() ile server-side lang'e resolve et.
         // (Kitap title'ı String, translation key değil — Minecraft protokolü böyle.)
-        String baslikStr = Text.translatable(j.baslikKey).getString();
-        String yazarStr = Text.translatable(j.yazarKey).getString();
-        return new WrittenBookContentComponent(
-            RawFilteredPair.of(baslikStr),
+        String baslikStr = Component.translatable(j.baslikKey).getString();
+        String yazarStr = Component.translatable(j.yazarKey).getString();
+        return new WrittenBookContent(
+            Filterable.passThrough(baslikStr),
             yazarStr,
             0,
             sayfalar,

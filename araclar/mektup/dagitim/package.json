@@ -1,0 +1,1 @@
+{ "name": "candy-mektup", "private": true, "type": "module", "engines": { "node": ">=20" } }

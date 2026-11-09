@@ -3,14 +3,13 @@ package com.photonpulse.candy.net;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -43,19 +42,19 @@ public class CamscreenTetikleyici {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(
+            AgKayit.playS2C().register(
                 CamscreenPayload.ID, CamscreenPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Camscreen payload zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % KONTROL_ARALIGI != 0) return;
-            long simdi = server.getOverworld().getTime();
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
+            long simdi = server.overworld().getGameTime();
             // v1.9.0: sessizlik protokolü aktifse camscreen atma
             if (com.photonpulse.candy.sessizlik.SessizlikState.sessizlikte(simdi)) return;
 
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 if (player.isCreative() || player.isSpectator()) continue;
@@ -80,11 +79,11 @@ public class CamscreenTetikleyici {
                 if (tp.korkuSkoru >= 70) ihtimal *= 1.2;
                 ihtimal = Math.min(0.95, ihtimal);
 
-                Long son = sonTetik.get(player.getUuid());
+                Long son = sonTetik.get(player.getUUID());
                 if (son != null && simdi - son < cooldownTick) continue;
                 if (RNG.nextDouble() > ihtimal) continue;
 
-                sonTetik.put(player.getUuid(), simdi);
+                sonTetik.put(player.getUUID(), simdi);
 
                 // Text (1/3) vs image (2/3). Image ise 4 varyanttan uniform:
                 // smiley / neverdie / mask / sssss (denge korunur, çeşit artar)
@@ -98,17 +97,17 @@ public class CamscreenTetikleyici {
                 int sure = image ? (400 + RNG.nextInt(300)) : (350 + RNG.nextInt(200));
 
                 try {
-                    ServerPlayNetworking.send(player, new CamscreenPayload(idx, sure));
+                    SunucuAg.send(player, new CamscreenPayload(idx, sure));
                 } catch (Throwable t) {
                     // Vanilla client — payload bilinmiyor, sessizce geç
                     continue;
                 }
 
                 // Warden sonic boom sesi
-                ((ServerWorld) player.getWorld()).playSound(
-                    null, player.getBlockPos(),
-                    SoundEvents.ENTITY_WARDEN_SONIC_BOOM,
-                    SoundCategory.HOSTILE, 1.2f, 1.0f);
+                ((ServerLevel) player.level()).playSound(
+                    null, player.blockPosition(),
+                    SoundEvents.WARDEN_SONIC_BOOM,
+                    SoundSource.HOSTILE, 1.2f, 1.0f);
 
                 Candy.LOG.info("[Candy] CAMSCREEN[{}] kotuluk={} idx={} sure={}ms",
                     player.getName().getString(),

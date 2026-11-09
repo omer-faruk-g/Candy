@@ -3,11 +3,10 @@ package com.photonpulse.candy.arkadas;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.List;
 
 /**
@@ -69,15 +68,15 @@ public final class ArkadasFisilti {
         if (server == null) return false;
         if (tickSayaci - sonFisilti < SOGUMA) return false;
 
-        List<ServerPlayerEntity> oyuncular = server.getPlayerManager().getPlayerList();
+        List<ServerPlayer> oyuncular = server.getPlayerList().getPlayers();
         if (oyuncular.size() < 2) return false;   // kalabalık yoksa araç yok
 
         int a = (int) (Math.random() * oyuncular.size());
         int b = (int) (Math.random() * oyuncular.size());
         if (a == b) b = (b + 1) % oyuncular.size();
 
-        ServerPlayerEntity alici = oyuncular.get(a);
-        ServerPlayerEntity hakkinda = oyuncular.get(b);
+        ServerPlayer alici = oyuncular.get(a);
+        ServerPlayer hakkinda = oyuncular.get(b);
 
         TruePersonality tp = PersonalityManager.get(alici);
         if (tp == null) return false;
@@ -85,10 +84,10 @@ public final class ArkadasFisilti {
         if (tp.perdeKademe < 1) return false;
 
         int indeks = (int) (Math.random() * FISILTI_SAYISI);
-        alici.sendMessage(Text.translatable(
+        alici.displayClientMessage(Component.translatable(
                 "candy.arkadas.fisilti." + indeks,
                 hakkinda.getGameProfile().getName())
-            .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
 
         tp.paranoyaSkoru = Math.min(100.0, tp.paranoyaSkoru + 3.0);
         tp.metaFarkindalik = Math.min(100.0, tp.metaFarkindalik + 1.0);

@@ -2,14 +2,14 @@ package com.photonpulse.candy.mixin.client;
 
 import com.photonpulse.candy.client.CandyMixinConfig;
 import com.photonpulse.candy.client.IntensityState;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import java.util.Random;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 /**
  * ChatHudMixin — gelen chat mesajlarını bozar (v1.5.0-mixin).
@@ -17,15 +17,15 @@ import java.util.Random;
  * Intensity yüksekken (>0.5) gelen mesajlarda %5 ihtimalle rastgele iki harf yer değişir.
  * "hello there" → "hlelo there"
  * Vanilla API ile yapılamaz — chat mesajı Text objesi olarak client-side'a geldiğinde
- * ChatHud.addMessage'a girer, bu hook o noktada araya girer.
+ * ChatComponent.addMessage'a girer, bu hook o noktada araya girer.
  */
-@Mixin(ChatHud.class)
+@Mixin(ChatComponent.class)
 public class ChatHudMixin {
 
     private static final Random CANDY_RNG = new Random();
 
-    @ModifyVariable(method = "addMessage(Lnet/minecraft/text/Text;)V", at = @At("HEAD"), argsOnly = true)
-    private Text candy$corruptMessage(Text original) {
+    @ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"), argsOnly = true)
+    private Component candy$corruptMessage(Component original) {
         try {
             if (original == null) return original;
             if (!CandyMixinConfig.chatCorruption) return original;
@@ -48,7 +48,7 @@ public class ChatHudMixin {
             karakter[i1] = karakter[i2];
             karakter[i2] = geciciKarakter;
 
-            MutableText yeni = Text.literal(new String(karakter));
+            MutableComponent yeni = Component.literal(new String(karakter));
             yeni.setStyle(original.getStyle());
             return yeni;
         } catch (Throwable t) {

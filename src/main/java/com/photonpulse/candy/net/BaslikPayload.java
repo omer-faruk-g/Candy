@@ -1,10 +1,10 @@
 package com.photonpulse.candy.net;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * S2C — pencere başlığı müdahalesi: hangi başlık metni, ya da geri al.
@@ -17,20 +17,20 @@ import net.minecraft.util.Identifier;
  * @param indeks başlık dizisindeki sıra; {@code geriAl} true ise okunmaz
  * @param geriAl true ise özgün başlığa dönülür
  */
-public record BaslikPayload(int indeks, boolean geriAl) implements CustomPayload {
+public record BaslikPayload(int indeks, boolean geriAl) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<BaslikPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("candy", "baslik"));
+    public static final CustomPacketPayload.Type<BaslikPayload> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("candy", "baslik"));
 
-    public static final PacketCodec<RegistryByteBuf, BaslikPayload> CODEC =
-        PacketCodec.tuple(
-            PacketCodecs.VAR_INT, BaslikPayload::indeks,
-            PacketCodecs.BOOLEAN, BaslikPayload::geriAl,
+    public static final StreamCodec<RegistryFriendlyByteBuf, BaslikPayload> CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, BaslikPayload::indeks,
+            ByteBufCodecs.BOOL, BaslikPayload::geriAl,
             BaslikPayload::new
         );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

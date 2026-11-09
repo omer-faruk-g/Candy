@@ -4,12 +4,11 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.net.GoruntuPayload;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuBaglanti;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.UUID;
@@ -43,23 +42,23 @@ public final class GoruntuTetik {
 
     public static void register() {
         try {
-            PayloadTypeRegistry.playS2C().register(GoruntuPayload.ID, GoruntuPayload.CODEC);
+            AgKayit.playS2C().register(GoruntuPayload.ID, GoruntuPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Goruntu payload zaten kayıtlı: {}", t.getMessage());
         }
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+        SunucuBaglanti.DISCONNECT.register((handler, server) -> {
             try {
-                ServerPlayerEntity p = handler.getPlayer();
+                ServerPlayer p = handler.getPlayer();
                 geriAl(p);
-                oyuncuAyrildi(p.getUuid());
+                oyuncuAyrildi(p.getUUID());
             } catch (Throwable ignored) {}
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            final long simdi = server.getTicks();
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            final long simdi = server.getTickCount();
             if (simdi % 20 != 0) return;
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 try {
                     oyuncuAdimi(player, simdi);
                 } catch (Throwable t) {
@@ -75,8 +74,8 @@ public final class GoruntuTetik {
      * Aktif müdahalenin süresi dolduysa geri alır, dolmadıysa bekler; müdahale yoksa
      * yeni bir tane açıp açmayacağına bakar.
      */
-    private static void oyuncuAdimi(ServerPlayerEntity player, long simdi) {
-        final UUID id = player.getUuid();
+    private static void oyuncuAdimi(ServerPlayer player, long simdi) {
+        final UUID id = player.getUUID();
 
         Long bit = bitis.get(id);
         if (bit != null) {
@@ -119,20 +118,20 @@ public final class GoruntuTetik {
     }
 
     /** FOV ve/veya render mesafesini değiştirir. -1 → o ayara dokunulmaz. */
-    public static void uygula(ServerPlayerEntity player, int fov, int render) {
+    public static void uygula(ServerPlayer player, int fov, int render) {
         if (player == null) return;
         try {
-            ServerPlayNetworking.send(player, new GoruntuPayload(fov, render, false));
+            SunucuAg.send(player, new GoruntuPayload(fov, render, false));
         } catch (Throwable ignored) {
             // Vanilla client — görüntü müdahalesi yalnızca modlu client'ta.
         }
     }
 
     /** Oyuncunun kendi ayarlarına döner. */
-    public static void geriAl(ServerPlayerEntity player) {
+    public static void geriAl(ServerPlayer player) {
         if (player == null) return;
         try {
-            ServerPlayNetworking.send(player, new GoruntuPayload(-1, -1, true));
+            SunucuAg.send(player, new GoruntuPayload(-1, -1, true));
         } catch (Throwable ignored) {}
     }
 }

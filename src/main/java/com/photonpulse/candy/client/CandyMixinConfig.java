@@ -6,7 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.photonpulse.candy.Candy;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -55,6 +55,50 @@ public class CandyMixinConfig {
     public static boolean uygulamaSezgisi = true;
 
     /**
+     * v9.0.0 — Gerçek klavyenin kilit LED'i korkuya tepki versin mi
+     * ({@link KlavyeIsigi}). false ise AWT'ye hiç dokunulmaz ve LED'e hiç yazılmaz.
+     */
+    public static boolean klavyeIsigi = true;
+
+    /**
+     * v9.1.0 — Ekran haritası: tuşa basınca o anki oyun karesi bir haritaya basılsın mı
+     * ({@link EkranGonder}). false ise tuş hiç yoklanmaz ve kare hiç okunmaz.
+     */
+    public static boolean ekranHaritasi = true;
+
+    /**
+     * v9.1.0 — Ekran haritası tuşu. Vanilla tuş adı ("f12", "f10", "insert", "k");
+     * {@code key.keyboard.} öneki gerekmiyor. Tanınmayan değer F12'ye düşer.
+     *
+     * <p>Neden ayarlanabilir: F12 bazı sistemlerde ekran kaydı / üretici katmanı
+     * tarafından kapılıyor (GeForce Experience, bazı dizüstü hotkey sürücüleri).
+     * Tuş çakışırsa oyuncu modun yarısını kaybetmek yerine tuşu değiştirir.</p>
+     */
+    public static String ekranHaritasiTus = "f12";
+
+    /**
+     * v9.2.0 — Dış kanal (e-posta): Candy aynı oyun-içi fısıltıyı oyuncunun gerçek
+     * e-postasına da düşürebilsin mi ({@link MektupGonder}). Ana anahtar; <b>tek başına
+     * hiçbir şey yapmaz</b>. Kanal yalnızca {@link #mektupEposta} VE {@link #mektupUc}
+     * ikisi de dolu olunca açılır. false ise hiçbir ağ isteği açılmaz.
+     */
+    public static boolean mektup = true;
+
+    /**
+     * v9.2.0 — Oyuncunun KENDİ e-posta adresi. <b>Varsayılan boş = kanal kapalı.</b>
+     * Bu alanı doldurmak rızanın kendisidir: adres yalnızca bu istemcide durur, bağlanılan
+     * Minecraft sunucusuna gitmez, yalnızca {@link #mektupUc}'a yollanır. Silmek kapatır.
+     */
+    public static String mektupEposta = "";
+
+    /**
+     * v9.2.0 — Yazarın mektup sunucusunun {@code https://} adresi (dış kanalın gideceği
+     * uç). <b>Varsayılan boş = kanal kapalı</b>, yani taze kurulumda sıfır ağ trafiği.
+     * {@code http://} kabul edilmez. Örnek sunucu: {@code araclar/mektup/}.
+     */
+    public static String mektupUc = "";
+
+    /**
      * v8.4 — Yoğunluk tavanı (0.0–1.0). {@link IntensityState#get()} döndürdüğü değeri
      * bu tavanla kırpar, yani oyuncu "aynı mod, daha az kaos" diyebilir.
      *
@@ -75,13 +119,15 @@ public class CandyMixinConfig {
     /** Bilinen bayrak adları — yabancı anahtar ayıklaması bunun dışını alır. */
     private static final String[] BILINEN = {
         "chatCorruption", "hudFlash", "deathScreen", "cameraShake", "camscreen",
-        "uygulamaSezgisi", "yogunlukTavani"
+        "uygulamaSezgisi", "klavyeIsigi", "ekranHaritasi", "ekranHaritasiTus",
+        "mektup", "mektupEposta", "mektupUc",
+        "yogunlukTavani"
     };
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static Path yol() {
-        return FabricLoader.getInstance().getConfigDir().resolve("candy-mixin.json");
+        return Yukleyici.ayarDizini().resolve("candy-mixin.json");
     }
 
     /** Dosya yolu — {@link KonfigMudahale} aynı dosyaya yazıyor. */
@@ -111,6 +157,15 @@ public class CandyMixinConfig {
             cameraShake     = bool(o, "cameraShake",     cameraShake);
             camscreen       = bool(o, "camscreen",       camscreen);
             uygulamaSezgisi = bool(o, "uygulamaSezgisi", uygulamaSezgisi);
+            klavyeIsigi     = bool(o, "klavyeIsigi",     klavyeIsigi);
+            ekranHaritasi   = bool(o, "ekranHaritasi",   ekranHaritasi);
+            ekranHaritasiTus = metin(o, "ekranHaritasiTus", ekranHaritasiTus, 48);
+            mektup          = bool(o, "mektup",          mektup);
+            // Sınır alan başına: tek bir 48 karakterlik sınır gerçek bir Vercel adresini
+            // ("https://<proje>-<hash>-<ekip>.vercel.app/api/gonder" ~60+) sessizce boşa
+            // düşürüyordu; sonraki save() de o adresi dosyadan siliyordu.
+            mektupEposta    = metin(o, "mektupEposta",    mektupEposta, 254);   // RFC 5321
+            mektupUc        = metin(o, "mektupUc",        mektupUc, 512);
             yogunlukTavani  = kesir(o, "yogunlukTavani", yogunlukTavani);
 
             yabanci.clear();
@@ -118,9 +173,10 @@ public class CandyMixinConfig {
                 if (!bilinenMi(e.getKey())) yabanci.put(e.getKey(), e.getValue());
             }
 
-            Candy.LOG.info("[Candy] Mixin config yüklendi: chat={} hud={} death={} camera={} camscreen={} uygulama={} tavan={} yabanci={}",
+            Candy.LOG.info("[Candy] Mixin config yüklendi: chat={} hud={} death={} camera={} camscreen={} uygulama={} klavye={} ekran={}/{} tavan={} yabanci={}",
                 chatCorruption, hudFlash, deathScreen, cameraShake, camscreen,
-                uygulamaSezgisi, yogunlukTavani, yabanci.size());
+                uygulamaSezgisi, klavyeIsigi, ekranHaritasi, ekranHaritasiTus,
+                yogunlukTavani, yabanci.size());
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] Config yüklenemedi, defaults: {}", t.getMessage());
         }
@@ -131,6 +187,24 @@ public class CandyMixinConfig {
             JsonElement e = o.get(ad);
             if (e == null || !e.isJsonPrimitive()) return varsayilan;
             return e.getAsBoolean();
+        } catch (Throwable t) {
+            return varsayilan;
+        }
+    }
+
+    /** Metin okur; eksik/bozuk/{@code maks}'tan uzun değer varsayılana düşer. */
+    private static String metin(JsonObject o, String ad, String varsayilan, int maks) {
+        try {
+            JsonElement e = o.get(ad);
+            if (e == null || !e.isJsonPrimitive()) return varsayilan;
+            String s = e.getAsString();
+            if (s == null || s.isBlank() || s.length() > maks) {
+                if (s != null && s.length() > maks) {
+                    Candy.LOG.warn("[Candy] config '{}' {} karakterden uzun, yok sayıldı", ad, maks);
+                }
+                return varsayilan;
+            }
+            return s.trim();
         } catch (Throwable t) {
             return varsayilan;
         }
@@ -158,7 +232,16 @@ public class CandyMixinConfig {
         try {
             Path yol = yol();
             Files.createDirectories(yol.getParent());
-            Files.writeString(yol, GSON.toJson(nesne()), StandardCharsets.UTF_8);
+            // Temp + taşıma: yazım yarıda kalırsa (çökme, güç) oyuncunun dosyası —
+            // e-posta adresi dahil — bozulmasın.
+            Path tmp = yol.resolveSibling(yol.getFileName() + ".tmp");
+            Files.writeString(tmp, GSON.toJson(nesne()), StandardCharsets.UTF_8);
+            try {
+                Files.move(tmp, yol, java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(tmp, yol, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] Config yazılamadı: {}", t.getMessage());
         }
@@ -173,6 +256,12 @@ public class CandyMixinConfig {
         o.addProperty("cameraShake", cameraShake);
         o.addProperty("camscreen", camscreen);
         o.addProperty("uygulamaSezgisi", uygulamaSezgisi);
+        o.addProperty("klavyeIsigi", klavyeIsigi);
+        o.addProperty("ekranHaritasi", ekranHaritasi);
+        o.addProperty("ekranHaritasiTus", ekranHaritasiTus);
+        o.addProperty("mektup", mektup);
+        o.addProperty("mektupEposta", mektupEposta);
+        o.addProperty("mektupUc", mektupUc);
         o.addProperty("yogunlukTavani", yogunlukTavani);
         for (Map.Entry<String, JsonElement> e : yabanci.entrySet()) {
             if (!bilinenMi(e.getKey())) o.add(e.getKey(), e.getValue());

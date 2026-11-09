@@ -2,10 +2,9 @@ package com.photonpulse.candy.sign;
 
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.tree.TreeNode;
-import net.minecraft.text.Text;
-
 import java.util.List;
 import java.util.Random;
+import net.minecraft.network.chat.Component;
 
 /**
  * SignTemplates — tabelalara yazılacak metin.
@@ -32,7 +31,7 @@ public class SignTemplates {
     /**
      * Gözlem cümlesi — translatable Text döner (sign'a doğrudan konabilir).
      */
-    public static Text gozlemUret(TruePersonality tp, TreeNode baskin) {
+    public static Component gozlemUret(TruePersonality tp, TreeNode baskin) {
         String key;
         double en = Math.max(tp.kacOrani, Math.max(tp.donOrani, tp.kesfetOrani));
         if (en == tp.kacOrani && en > 0.3)
@@ -44,7 +43,7 @@ public class SignTemplates {
         else
             key = "candy.observation.silent." + RNG.nextInt(GOZLEM_SESSIZ_N);
 
-        return traitTabanliStil(Text.translatable(key), baskin);
+        return traitTabanliStil(Component.translatable(key), baskin);
     }
 
     /**
@@ -52,8 +51,8 @@ public class SignTemplates {
      * Bu client-side'da lang string alınıp modifiye edilemez, o yüzden text'i "olduğu gibi"
      * kullanıp trait'e göre suffix Text ekleyip birleştiriyoruz.
      */
-    private static Text traitTabanliStil(Text temel, TreeNode baskin) {
-        if (baskin == null || baskin.trait == null) return Text.literal("").append(temel).append(".");
+    private static Component traitTabanliStil(Component temel, TreeNode baskin) {
+        if (baskin == null || baskin.trait == null) return Component.literal("").append(temel).append(".");
 
         double inkar = baskin.trait.getOrDefault("inkarEgilimi", 0.0);
         double aciklik = baskin.trait.getOrDefault("aciklik", 0.0);
@@ -67,30 +66,30 @@ public class SignTemplates {
         else if (aciklik > 0.5 && RNG.nextDouble() < 0.5) suffix = ".";
         else suffix = ".";
 
-        return Text.literal("").append(temel).append(suffix);
+        return Component.literal("").append(temel).append(suffix);
     }
 
     /**
      * Kişisel atıf — oyuncunun geçmiş verisine dokunur.
      */
-    public static Text kisiselAtif(TruePersonality tp, TreeNode baskin) {
-        Text temel;
+    public static Component kisiselAtif(TruePersonality tp, TreeNode baskin) {
+        Component temel;
         double r = RNG.nextDouble();
         // v8.2: RUTİN ATFI önce denenir — en spesifik atıf bu.
         // Archivist'in bulunan kitapları sabit metin; buradaki metin oyuncunun
         // kendi en sık tekrarladığı (saat dilimi + aktivite) alışkanlığından türer.
-        Text rutin = rutinAtif(tp);
+        Component rutin = rutinAtif(tp);
         if (rutin != null && r < 0.40) return traitTabanliStil(rutin, baskin);
         if (tp.geceKonumu != null && r < 0.35) {
-            temel = Text.translatable("candy.attribution.night_location");
+            temel = Component.translatable("candy.attribution.night_location");
         } else if (tp.enSikEkipman() != null && r < 0.6) {
             String ekipman = tp.enSikEkipman();
             String kisa = ekipman.substring(ekipman.indexOf(':') + 1);
-            temel = Text.translatable("candy.attribution.equipment", kisa);
+            temel = Component.translatable("candy.attribution.equipment", kisa);
         } else if (tp.tabelaCevaplari.size() > 3) {
-            temel = Text.translatable("candy.attribution.lied");
+            temel = Component.translatable("candy.attribution.lied");
         } else {
-            temel = Text.translatable("candy.attribution.watching");
+            temel = Component.translatable("candy.attribution.watching");
         }
         return traitTabanliStil(temel, baskin);
     }
@@ -109,15 +108,15 @@ public class SignTemplates {
      *
      * @return atıf metni, ya da yeterli tekrar kanıtı yoksa {@code null}
      */
-    public static Text rutinAtif(TruePersonality tp) {
+    public static Component rutinAtif(TruePersonality tp) {
         if (tp == null) return null;
         long paket = com.photonpulse.candy.rutin.RutinKaydi.enSik(tp, 4);
         if (!com.photonpulse.candy.rutin.RutinKaydi.dolu(paket)) return null;
         int dilim = com.photonpulse.candy.rutin.RutinKaydi.saatDilimi(paket);
         String aktivite = com.photonpulse.candy.rutin.RutinKaydi.aktivite(paket);
-        return Text.translatable("candy.rutin.atif",
-            Text.translatable("candy.rutin.dilim." + dilim),
-            Text.translatable("candy.rutin.aktivite." + aktivite));
+        return Component.translatable("candy.rutin.atif",
+            Component.translatable("candy.rutin.dilim." + dilim),
+            Component.translatable("candy.rutin.aktivite." + aktivite));
     }
 
     /**

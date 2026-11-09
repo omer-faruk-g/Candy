@@ -4,16 +4,15 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.block.Blocks;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -41,7 +40,7 @@ public class MesaleKirici {
     private static final Map<UUID, Long> sonPatlamaTick = new HashMap<>();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(MesaleKirici::onTick);
+        SunucuTick.END_SERVER_TICK.register(MesaleKirici::onTick);
         Candy.LOG.info("[Candy] MesaleKirici aktif — mağara meşale patlaması");
     }
 
@@ -58,21 +57,21 @@ public class MesaleKirici {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        long simdi = server.getOverworld().getTime();
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        long simdi = server.overworld().getGameTime();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
             if (tp.korkuSkoru < MIN_KORKU) continue;
 
             // Mağara kontrolü
-            ServerWorld world = (ServerWorld) player.getWorld();
-            BlockPos pos = player.getBlockPos();
+            ServerLevel world = (ServerLevel) player.level();
+            BlockPos pos = player.blockPosition();
             int seaLevel = world.getSeaLevel();
-            int yuzeyY = world.getTopY(Heightmap.Type.WORLD_SURFACE, pos.getX(), pos.getZ());
+            int yuzeyY = world.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
             boolean uzeriKapali = yuzeyY > player.getY() + 3;
             if (!(player.getY() < seaLevel && uzeriKapali)) continue;
 
-            Long son = sonPatlamaTick.get(player.getUuid());
+            Long son = sonPatlamaTick.get(player.getUUID());
             double agresivlik = Psikoloji.agresivlikCarpani(tp);
             long cooldown = (long) (OYUNCU_COOLDOWN_TICK / agresivlik);
             if (son != null && simdi - son < cooldown) continue;
@@ -81,7 +80,7 @@ public class MesaleKirici {
 
             int patlayan = mesaleleriPatlat(world, pos);
             if (patlayan > 0) {
-                sonPatlamaTick.put(player.getUuid(), simdi);
+                sonPatlamaTick.put(player.getUUID(), simdi);
                 // v1.9.3: elveda_mesale başarımı — toplam 10 meşale kırılınca
                 tp.kirilanMesaleSayisi += patlayan;
                 if (tp.kirilanMesaleSayisi >= 10) {
@@ -97,19 +96,19 @@ public class MesaleKirici {
      * Verilen merkez etrafında YARICAP içindeki tüm meşale/wall_torch/soul_torch'ları
      * havaya çevirir. Sayısını döner.
      */
-    private static int mesaleleriPatlat(ServerWorld world, BlockPos merkez) {
+    private static int mesaleleriPatlat(ServerLevel world, BlockPos merkez) {
         int sayac = 0;
         for (int dx = -YARICAP; dx <= YARICAP; dx++) {
             for (int dy = -8; dy <= 8; dy++) {
                 for (int dz = -YARICAP; dz <= YARICAP; dz++) {
-                    BlockPos p = merkez.add(dx, dy, dz);
+                    BlockPos p = merkez.offset(dx, dy, dz);
                     var b = world.getBlockState(p).getBlock();
                     if (b == Blocks.TORCH || b == Blocks.WALL_TORCH
                         || b == Blocks.SOUL_TORCH || b == Blocks.SOUL_WALL_TORCH) {
-                        world.setBlockState(p, Blocks.AIR.getDefaultState());
+                        world.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
                         // Söndürme sesi
-                        world.playSound(null, p, SoundEvents.BLOCK_FIRE_EXTINGUISH,
-                            SoundCategory.BLOCKS, 0.4f, 0.8f);
+                        world.playSound(null, p, SoundEvents.FIRE_EXTINGUISH,
+                            SoundSource.BLOCKS, 0.4f, 0.8f);
                         sayac++;
                     }
                 }

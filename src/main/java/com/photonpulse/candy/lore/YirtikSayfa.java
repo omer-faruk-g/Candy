@@ -1,19 +1,20 @@
 package com.photonpulse.candy.lore;
 
 import com.photonpulse.candy.Candy;
+//? if fabric {
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.LoreComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.loot.LootPool;
-import net.minecraft.loot.condition.RandomChanceLootCondition;
-import net.minecraft.loot.entry.ItemEntry;
-import net.minecraft.loot.function.SetComponentsLootFunction;
-import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+//?}
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ItemLore;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.SetComponentsFunction;
+import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
+import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import java.util.List;
 
 /**
@@ -45,29 +46,35 @@ public class YirtikSayfa {
     };
 
     public static void register() {
+        //? if fabric {
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
             if (key == null) return;
-            String path = key.getValue().getPath();
+            String path = key.location().getPath();
             if (!path.startsWith("chests/")) return;
 
-            LootPool.Builder havuz = LootPool.builder()
-                .rolls(ConstantLootNumberProvider.create(1))
-                .conditionally(RandomChanceLootCondition.builder(SANDIK_IHTIMAL));
+            LootPool.Builder havuz = LootPool.lootPool()
+                .setRolls(ConstantValue.exactly(1))
+                .when(LootItemRandomChanceCondition.randomChance(SANDIK_IHTIMAL));
 
             for (int i = 0; i < SAYFA_ISIMLERI.length; i++) {
-                Text isim = Text.literal(SAYFA_ISIMLERI[i]).formatted(Formatting.GRAY, Formatting.ITALIC);
-                Text metin = Text.literal(SAYFA_METINLERI[i]).formatted(Formatting.DARK_GRAY, Formatting.ITALIC);
-                havuz.with(
-                    ItemEntry.builder(Items.PAPER)
-                        .apply(SetComponentsLootFunction.builder(DataComponentTypes.CUSTOM_NAME, isim))
-                        .apply(SetComponentsLootFunction.builder(
-                            DataComponentTypes.LORE, new LoreComponent(List.of(metin))))
+                Component isim = Component.literal(SAYFA_ISIMLERI[i]).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC);
+                Component metin = Component.literal(SAYFA_METINLERI[i]).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);
+                havuz.add(
+                    LootItem.lootTableItem(Items.PAPER)
+                        .apply(SetComponentsFunction.setComponent(DataComponents.CUSTOM_NAME, isim))
+                        .apply(SetComponentsFunction.setComponent(
+                            DataComponents.LORE, new ItemLore(List.of(metin))))
                 );
             }
 
             tableBuilder.pool(havuz.build());
         });
         Candy.LOG.info("[Candy] YirtikSayfa aktif — sandıklara %5 ihtimalle yırtık sayfa");
+        //?}
+        //? if neoforge {
+        /*Candy.LOG.info("[Candy] YirtikSayfa KAPALI — NeoForge'da LootTableEvents karşılığı yok");
+        */
+        //?}
     }
 
     /**
@@ -76,10 +83,10 @@ public class YirtikSayfa {
     public static ItemStack olustur(int sayfaIdx) {
         int idx = Math.max(0, Math.min(4, sayfaIdx));
         ItemStack stack = new ItemStack(Items.PAPER);
-        stack.set(DataComponentTypes.CUSTOM_NAME,
-            Text.literal(SAYFA_ISIMLERI[idx]).formatted(Formatting.GRAY, Formatting.ITALIC));
-        stack.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-            Text.literal(SAYFA_METINLERI[idx]).formatted(Formatting.DARK_GRAY, Formatting.ITALIC)
+        stack.set(DataComponents.CUSTOM_NAME,
+            Component.literal(SAYFA_ISIMLERI[idx]).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        stack.set(DataComponents.LORE, new ItemLore(List.of(
+            Component.literal(SAYFA_METINLERI[idx]).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC)
         )));
         return stack;
     }

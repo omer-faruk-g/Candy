@@ -3,13 +3,13 @@ package com.photonpulse.candy.environment;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.LightType;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.level.LightLayer;
 
 /**
  * KarartmaSistemi — basit ışık karartma formülü (v1.4.1).
@@ -31,21 +31,21 @@ public class KarartmaSistemi {
     private static final int EFEKT_SURESI = 100;     // 5 sn (check'ten uzun = kesintisiz)
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % TICK_ARALIGI != 0) return;
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % TICK_ARALIGI != 0) return;
 
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 if (player.isCreative() || player.isSpectator()) continue;
 
-                ServerWorld dunya = (ServerWorld) player.getWorld();
-                BlockPos pos = player.getBlockPos();
-                long gunSaati = dunya.getTimeOfDay() % 24000L;
+                ServerLevel dunya = (ServerLevel) player.level();
+                BlockPos pos = player.blockPosition();
+                long gunSaati = dunya.getDayTime() % 24000L;
                 boolean gece = gunSaati >= 13000L && gunSaati <= 23000L;
 
-                int gokIsik = dunya.getLightLevel(LightType.SKY, pos);
-                int blokIsik = dunya.getLightLevel(LightType.BLOCK, pos);
+                int gokIsik = dunya.getBrightness(LightLayer.SKY, pos);
+                int blokIsik = dunya.getBrightness(LightLayer.BLOCK, pos);
 
                 // Formül: gerçek ışık - 2 (gece -6)
                 int algilananIsik = Math.max(gokIsik, blokIsik) - (gece ? 6 : 2);
@@ -53,8 +53,8 @@ public class KarartmaSistemi {
                 // Yeterince aydınlıksa efekt yok (gündüz açık alan güvenli)
                 if (algilananIsik >= 13) continue;
 
-                player.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.DARKNESS,
+                player.addEffect(new MobEffectInstance(
+                    MobEffects.DARKNESS,
                     EFEKT_SURESI,
                     0,
                     true,   // ambient
@@ -63,7 +63,7 @@ public class KarartmaSistemi {
                 ));
 
                 // v1.9.14: karanlikta başarımı — 3 dk kesintisiz karartma altında yaşa
-                long simdi = dunya.getTime();
+                long simdi = dunya.getGameTime();
                 if (tp.ilkKarartmaBaslangicTick == 0L) {
                     tp.ilkKarartmaBaslangicTick = simdi;
                 }

@@ -4,19 +4,18 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.tree.TreeBranch;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.mob.HostileEntity;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.world.Heightmap;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
 import java.util.Random;
 
 /**
@@ -55,7 +54,7 @@ public class MobSpawnBooster {
     };
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(MobSpawnBooster::onTick);
+        SunucuTick.END_SERVER_TICK.register(MobSpawnBooster::onTick);
         Candy.LOG.info("[Candy] MobSpawnBooster aktif — veri açlığı");
     }
 
@@ -63,21 +62,21 @@ public class MobSpawnBooster {
         tickSayaci++;
         if (tickSayaci % TICK_ARALIGI != 0) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             oyuncuIcinBoost(player);
         }
     }
 
-    private static void oyuncuIcinBoost(ServerPlayerEntity player) {
+    private static void oyuncuIcinBoost(ServerPlayer player) {
         double sabir = sabirSeviyesi(player);
         if (sabir < 0.05) return;   // Candy neredeyse hiç sabırlı değil — boost yok
 
-        ServerWorld world = (ServerWorld) player.getWorld();
-        BlockPos merkez = player.getBlockPos();
+        ServerLevel world = (ServerLevel) player.level();
+        BlockPos merkez = player.blockPosition();
 
         // Perf tavanı
-        Box aramaKutusu = new Box(merkez).expand(TAVAN_YARICAP);
-        int mevcutMob = world.getEntitiesByClass(LivingEntity.class, aramaKutusu, e -> true).size();
+        AABB aramaKutusu = new AABB(merkez).inflate(TAVAN_YARICAP);
+        int mevcutMob = world.getEntitiesOfClass(LivingEntity.class, aramaKutusu, e -> true).size();
         if (mevcutMob >= MOB_TAVAN) return;
 
         Ortam ortam = ortamSinifi(world, player);
@@ -91,7 +90,7 @@ public class MobSpawnBooster {
             BlockPos hedef = uygunSpawnKonumu(world, merkez, ortam);
             if (hedef == null) continue;
             EntityType<?> tur = havuz[RNG.nextInt(havuz.length)];
-            Entity spawned = tur.spawn(world, hedef, SpawnReason.NATURAL);
+            Entity spawned = tur.spawn(world, hedef, EntitySpawnReason.NATURAL);
             if (spawned != null) spawnedCount++;
         }
 
@@ -105,8 +104,8 @@ public class MobSpawnBooster {
      * sabirSeviyesi = 1 - Tepki kökünün aktifliği. TreeGrowth.get() ve
      * TreeBranch.TEPKI.id public arayüzü — okuma amaçlı, değiştirilmez.
      */
-    private static double sabirSeviyesi(ServerPlayerEntity player) {
-        TreeNode tepki = TreeGrowth.get(player.getUuid()).nodes.get(TreeBranch.TEPKI.id);
+    private static double sabirSeviyesi(ServerPlayer player) {
+        TreeNode tepki = TreeGrowth.get(player.getUUID()).nodes.get(TreeBranch.TEPKI.id);
         if (tepki == null) return 0.5;   // fallback — kök yoksa ortalama
         return Math.max(0, Math.min(1, 1.0 - tepki.aktiflik));
     }
@@ -115,17 +114,17 @@ public class MobSpawnBooster {
 
     private enum Ortam { MAGARA, YUZEY_GECE, YUZEY_GUNDUZ }
 
-    private static Ortam ortamSinifi(ServerWorld world, ServerPlayerEntity player) {
-        BlockPos pos = player.getBlockPos();
+    private static Ortam ortamSinifi(ServerLevel world, ServerPlayer player) {
+        BlockPos pos = player.blockPosition();
         int denizSeviyesi = world.getSeaLevel();
-        int isik = world.getLightLevel(pos);
-        int yuzeyY = world.getTopY(Heightmap.Type.WORLD_SURFACE, pos.getX(), pos.getZ());
+        int isik = world.getMaxLocalRawBrightness(pos);
+        int yuzeyY = world.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
         boolean uzeriKapali = yuzeyY > player.getY() + 3;
 
         if (pos.getY() < denizSeviyesi && isik < 8 && uzeriKapali) {
             return Ortam.MAGARA;
         }
-        long gunSaati = world.getTimeOfDay() % 24000L;
+        long gunSaati = world.getDayTime() % 24000L;
         boolean gece = gunSaati > 13000L && gunSaati < 23000L;
         return gece ? Ortam.YUZEY_GECE : Ortam.YUZEY_GUNDUZ;
     }
@@ -151,7 +150,7 @@ public class MobSpawnBooster {
 
     // ── Konum bulma ──
 
-    private static BlockPos uygunSpawnKonumu(ServerWorld world, BlockPos merkez, Ortam o) {
+    private static BlockPos uygunSpawnKonumu(ServerLevel world, BlockPos merkez, Ortam o) {
         for (int deneme = 0; deneme < 10; deneme++) {
             double angle = RNG.nextDouble() * Math.PI * 2;
             double mesafe = MIN_MESAFE + RNG.nextDouble() * (MAX_MESAFE - MIN_MESAFE);
@@ -164,18 +163,18 @@ public class MobSpawnBooster {
                 int dy = RNG.nextInt(11) - 5;
                 aday = new BlockPos(x, merkez.getY() + dy, z);
             } else {
-                int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+                int y = world.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                 aday = new BlockPos(x, y, z);
             }
 
             if (!world.getBlockState(aday).isAir()) continue;
-            if (!world.getBlockState(aday.up()).isAir()) continue;
-            if (!world.getBlockState(aday.down()).isSolidBlock(world, aday.down())) continue;
+            if (!world.getBlockState(aday.above()).isAir()) continue;
+            if (!world.getBlockState(aday.below()).isRedstoneConductor(world, aday.below())) continue;
 
             // Düşman mob'lar için ışık kontrolü — vanilla mekaniğine uy
             EntityType<?>[] havuz = havuzSec(o);
-            if (havuz.length > 0 && HostileEntity.class.isAssignableFrom(havuz[0].getBaseClass())) {
-                if (world.getLightLevel(aday) > 7) continue;
+            if (havuz.length > 0 && Monster.class.isAssignableFrom(havuz[0].getBaseClass())) {
+                if (world.getMaxLocalRawBrightness(aday) > 7) continue;
             }
             return aday;
         }

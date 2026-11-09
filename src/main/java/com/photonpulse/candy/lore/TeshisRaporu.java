@@ -3,17 +3,16 @@ package com.photonpulse.candy.lore;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.WrittenBookContentComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.RawFilteredPair;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.Filterable;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.WrittenBookContent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,19 +33,19 @@ public class TeshisRaporu {
     private static int tick = 0;
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(TeshisRaporu::onTick);
+        SunucuTick.END_SERVER_TICK.register(TeshisRaporu::onTick);
         Candy.LOG.info("[Candy] TeshisRaporu aktif — klinik profil (v3.2)");
     }
 
     private static void onTick(MinecraftServer server) {
         tick++;
         if (tick % ARALIK != 0) return;
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 if (tp.bossOldurulmeTick > 0) continue; // WIN sessizliği
-                long simdi = server.getOverworld().getTime();
+                long simdi = server.overworld().getGameTime();
 
                 boolean yeterliVeri = tp.kehanetToplam >= 15;
                 boolean ilkSefer = !tp.teshisVerildi && yeterliVeri && tp.korkuSkoru > 40;
@@ -57,9 +56,9 @@ public class TeshisRaporu {
                     tp.teshisVerildi = true;
                     tp.sonTeshisTick = simdi;
                     boolean turkce = varsayilanTurkce(player);
-                    player.giveItemStack(olustur(player, tp, turkce));
-                    player.sendMessage(Text.translatable("candy.teshis.verildi")
-                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC), false);
+                    player.addItem(olustur(player, tp, turkce));
+                    player.displayClientMessage(Component.translatable("candy.teshis.verildi")
+                        .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC), false);
                     Candy.LOG.info("[Candy] Teşhis raporu verildi: {} (baskın={})",
                         player.getName().getString(), tp.baskinHipotez());
                 }
@@ -70,7 +69,7 @@ public class TeshisRaporu {
     }
 
     /** Oyuncunun canlı verisinden dinamik klinik profil kitabı üret. */
-    public static ItemStack olustur(ServerPlayerEntity player, TruePersonality tp, boolean turkce) {
+    public static ItemStack olustur(ServerPlayer player, TruePersonality tp, boolean turkce) {
         long dk = tp.toplamGozlemTick / 60L; // toplamGozlemTick saniye birimli (20 tick/artış) → dakika
         String isim = player.getName().getString();
         String baskin = hipotezLabel(tp.baskinHipotez(), turkce);
@@ -123,16 +122,16 @@ public class TeshisRaporu {
                 + "\n\nSigned:\n???dy");
         }
 
-        List<RawFilteredPair<Text>> sayfaTextleri = sayfalar.stream()
-            .map(s -> RawFilteredPair.<Text>of((Text) Text.literal(s)))
+        List<Filterable<Component>> sayfaTextleri = sayfalar.stream()
+            .map(s -> Filterable.<Component>passThrough((Component) Component.literal(s)))
             .toList();
-        WrittenBookContentComponent icerik = new WrittenBookContentComponent(
-            RawFilteredPair.of(turkce ? "Denek Profili" : "Subject Profile"),
+        WrittenBookContent icerik = new WrittenBookContent(
+            Filterable.passThrough(turkce ? "Denek Profili" : "Subject Profile"),
             "???dy", 0, sayfaTextleri, true);
         ItemStack kitap = new ItemStack(Items.WRITTEN_BOOK);
-        kitap.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, icerik);
-        kitap.set(DataComponentTypes.CUSTOM_NAME,
-            Text.translatable("candy.item.teshis").formatted(Formatting.DARK_GRAY, Formatting.ITALIC));
+        kitap.set(DataComponents.WRITTEN_BOOK_CONTENT, icerik);
+        kitap.set(DataComponents.CUSTOM_NAME,
+            Component.translatable("candy.item.teshis").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         return kitap;
     }
 
@@ -141,9 +140,9 @@ public class TeshisRaporu {
      * Oyuncu "kaç hâlini tanıdığını", "ne kadar isabetli tahmin ettiğini" ve
      * "kaç dünyada aynı kaldığını" okur; nöron/sinaps/lob kelimeleri asla geçmez.
      */
-    private static void beyinSayfalari(ServerPlayerEntity player, List<String> sayfalar, boolean tr) {
+    private static void beyinSayfalari(ServerPlayer player, List<String> sayfalar, boolean tr) {
         try {
-            var b = com.photonpulse.candy.beyin.BeyinMotoru.get(player.getUuid());
+            var b = com.photonpulse.candy.beyin.BeyinMotoru.get(player.getUUID());
             if (b == null) return;
 
             // ── Sinir haritası sayfası ──
@@ -256,9 +255,9 @@ public class TeshisRaporu {
             .orElse(null);
     }
 
-    private static boolean varsayilanTurkce(ServerPlayerEntity player) {
+    private static boolean varsayilanTurkce(ServerPlayer player) {
         try {
-            String lang = player.getClientOptions().language();
+            String lang = player.clientInformation().language();
             return lang != null && lang.toLowerCase().startsWith("tr");
         } catch (Throwable t) {
             return true; // varsayılan TR

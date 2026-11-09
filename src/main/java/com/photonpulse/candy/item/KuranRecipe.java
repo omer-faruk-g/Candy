@@ -1,17 +1,17 @@
 package com.photonpulse.candy.item;
 
 import com.photonpulse.candy.Candy;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.SpecialCraftingRecipe;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.World;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.level.Level;
 
 /**
  * KuranRecipe — shaped özel craft → Kuran-ı Kerim.
@@ -23,26 +23,26 @@ import net.minecraft.world.World;
  *   [D][B][D]   K = Elmas Kılıç (diamond_sword), D = Elmas, B = Kitap (düz)
  *   [E][H][E]   H = Kalkan (shield)
  */
-public class KuranRecipe extends SpecialCraftingRecipe {
+public class KuranRecipe extends CustomRecipe {
 
     public static RecipeSerializer<KuranRecipe> SERIALIZER;
-    public static final Identifier ID = Identifier.of("candy", "kuran");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("candy", "kuran");
 
-    public KuranRecipe(CraftingRecipeCategory category) {
+    public KuranRecipe(CraftingBookCategory category) {
         super(category);
     }
 
     public static void register() {
-        SERIALIZER = Registry.register(Registries.RECIPE_SERIALIZER, ID,
-            new SpecialCraftingRecipe.SpecialRecipeSerializer<>(KuranRecipe::new));
+        SERIALIZER = Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, ID,
+            new CustomRecipe.Serializer<>(KuranRecipe::new));
         Candy.LOG.info("[Candy] Kuran recipe serializer kayıtlı");
     }
 
     @Override
-    public boolean matches(CraftingRecipeInput input, World world) {
-        if (input.getWidth() != 3 || input.getHeight() != 3) return false;
+    public boolean matches(CraftingInput input, Level world) {
+        if (input.width() != 3 || input.height() != 3) return false;
         for (int i = 0; i < 9; i++) {
-            if (!slotDogru(i, input.getStackInSlot(i))) return false;
+            if (!slotDogru(i, input.getItem(i))) return false;
         }
         return true;
     }
@@ -60,12 +60,12 @@ public class KuranRecipe extends SpecialCraftingRecipe {
     }
 
     @Override
-    public ItemStack craft(CraftingRecipeInput input, RegistryWrapper.WrapperLookup lookup) {
+    public ItemStack assemble(CraftingInput input, HolderLookup.Provider lookup) {
         return KuranKitap.olustur();
     }
 
     @Override
-    public RecipeSerializer<? extends SpecialCraftingRecipe> getSerializer() {
+    public RecipeSerializer<? extends CustomRecipe> getSerializer() {
         return SERIALIZER;
     }
 }

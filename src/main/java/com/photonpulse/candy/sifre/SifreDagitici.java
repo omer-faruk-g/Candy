@@ -3,16 +3,6 @@ package com.photonpulse.candy.sifre;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.JsonDepo;
 import com.photonpulse.candy.core.TruePersonality;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.WrittenBookContentComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.RawFilteredPair;
-import net.minecraft.text.Text;
-import net.minecraft.util.WorldSavePath;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +10,15 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.Filterable;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.level.storage.LevelResource;
 
 /**
  * SifreDagitici (v8.1) — ikilik kodlu şifreyi üç kanala bırakır: dünya kaydı, kitap,
@@ -58,12 +57,12 @@ public final class SifreDagitici {
      *
      * @return dağıtılan indeks, ya da -1 (kapalı / sıra değil / şifre kalmadı)
      */
-    public static int dagit(ServerPlayerEntity player, TruePersonality tp) {
+    public static int dagit(ServerPlayer player, TruePersonality tp) {
         SifreAyar ayar = SifreAyar.al();
         if (!ayar.acik) return -1;
-        if (!(player.getWorld() instanceof ServerWorld dunya)) return -1;
+        if (!(player.level() instanceof ServerLevel dunya)) return -1;
 
-        final long simdi = dunya.getTime();
+        final long simdi = dunya.getGameTime();
         if (tp.sifreSonDagitim != 0L && simdi - tp.sifreSonDagitim < ayar.aralikTick()) return -1;
 
         int indeks = sonrakiIndeks(tp);
@@ -109,9 +108,9 @@ public final class SifreDagitici {
 
     // ── Kanal 1: dünya kaydı ("haritaya") ───────────────────────────────────────
 
-    private static boolean haritayaBirak(ServerWorld dunya, int indeks, String ikilik) {
+    private static boolean haritayaBirak(ServerLevel dunya, int indeks, String ikilik) {
         try {
-            Path kok = dunya.getServer().getSavePath(WorldSavePath.ROOT);
+            Path kok = dunya.getServer().getWorldPath(LevelResource.ROOT);
             JsonDepo.yaz(kok.resolve(ON_AD + ikiHane(indeks) + SON_AD), ikilik);
             return true;
         } catch (Throwable t) {
@@ -126,8 +125,9 @@ public final class SifreDagitici {
         Path d = masaustuBul(ayar);
         if (d == null) return false;
         try {
-            eskileriTemizle(d, ayar.maksMasaustuDosya);
-            JsonDepo.yaz(d.resolve(ON_AD + ikiHane(indeks) + SON_AD), ikilik);
+            String ad = ON_AD + ikiHane(indeks) + SON_AD;
+            eskileriTemizle(d, ayar.maksMasaustuDosya, ad);
+            JsonDepo.yaz(d.resolve(ad), ikilik);
             return true;
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] masaüstü şifresi bırakılamadı: {}", t.getMessage());
@@ -168,13 +168,16 @@ public final class SifreDagitici {
     /**
      * {@code maks} sınırını aşan <b>kendi</b> dosyalarını siler. Yalnızca
      * {@code candy_NN.txt} kalıbına uyanlara dokunur — başka hiçbir dosyaya bakmaz.
+     * Yazılacak dosya ({@code yeni}) zaten varsa üstüne yazılacağı için sayılmaz:
+     * önceden o durumda sınır dolu sayılıp başka bir Candy dosyası boşuna siliniyordu
+     * (yeni dünyada indeks 0'dan başlar, eski dünyanın candy_00'ı masaüstündeyken).
      */
-    private static void eskileriTemizle(Path klasor, int maks) throws IOException {
+    private static void eskileriTemizle(Path klasor, int maks, String yeni) throws IOException {
         List<Path> benim = new ArrayList<>();
         try (Stream<Path> s = Files.list(klasor)) {
             s.forEach(p -> {
                 String ad = p.getFileName().toString();
-                if (!ad.startsWith(ON_AD) || !ad.endsWith(SON_AD)) return;
+                if (!ad.startsWith(ON_AD) || !ad.endsWith(SON_AD) || ad.equals(yeni)) return;
                 String orta = ad.substring(ON_AD.length(), ad.length() - SON_AD.length());
                 if (orta.length() != 2) return;
                 for (int i = 0; i < 2; i++) {
@@ -198,22 +201,22 @@ public final class SifreDagitici {
 
     // ── Kanal 3: yazılı kitap ───────────────────────────────────────────────────
 
-    private static boolean kitabaYaz(ServerPlayerEntity player, int indeks, String ikilik) {
+    private static boolean kitabaYaz(ServerPlayer player, int indeks, String ikilik) {
         try {
             ItemStack kitap = new ItemStack(Items.WRITTEN_BOOK);
-            List<RawFilteredPair<Text>> sayfalar = new ArrayList<>();
+            List<Filterable<Component>> sayfalar = new ArrayList<>();
             for (String sayfa : sayfalaraBol(ikilik)) {
-                sayfalar.add(RawFilteredPair.of(Text.literal(sayfa)));
+                sayfalar.add(Filterable.passThrough(Component.literal(sayfa)));
             }
-            kitap.set(DataComponentTypes.WRITTEN_BOOK_CONTENT,
-                new WrittenBookContentComponent(
-                    RawFilteredPair.of(ikiHane(indeks)),   // başlık: sadece numara
+            kitap.set(DataComponents.WRITTEN_BOOK_CONTENT,
+                new WrittenBookContent(
+                    Filterable.passThrough(ikiHane(indeks)),   // başlık: sadece numara
                     "",                                     // yazar yok
                     0,                                      // generation: orijinal
                     sayfalar,
                     true));                                 // resolved — sunucu çözmeye kalkmasın
-            if (!player.giveItemStack(kitap)) {
-                player.dropItem(kitap, false);
+            if (!player.addItem(kitap)) {
+                player.drop(kitap, false);
             }
             return true;
         } catch (Throwable t) {

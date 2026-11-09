@@ -3,14 +3,13 @@ package com.photonpulse.candy.meta;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.SpiderEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
-
+import com.photonpulse.candy.platform.SunucuTick;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Spider;
+import net.minecraft.world.phys.AABB;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,17 +46,17 @@ public class OrumcekYonlendirme {
 
     public static void register() {
         // Her tick: aktif yönlendirmelerin hedefini yeniden uygula (goal geri almasın)
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        SunucuTick.END_SERVER_TICK.register(server -> {
             if (aktifYonlendirmeler.isEmpty()) return;
-            long simdi = server.getOverworld().getTime();
+            long simdi = server.overworld().getGameTime();
             var iter = aktifYonlendirmeler.entrySet().iterator();
             while (iter.hasNext()) {
                 var e = iter.next();
                 if (simdi >= e.getValue().bitisTick()) { iter.remove(); continue; }
                 boolean bulundu = false;
-                for (ServerWorld w : server.getWorlds()) {
+                for (ServerLevel w : server.getAllLevels()) {
                     var ent = w.getEntity(e.getKey());
-                    if (!(ent instanceof SpiderEntity orumcek) || !orumcek.isAlive()) continue;
+                    if (!(ent instanceof Spider orumcek) || !orumcek.isAlive()) continue;
                     var hedefEnt = w.getEntity(e.getValue().hedefId());
                     if (hedefEnt instanceof LivingEntity hedef && hedef.isAlive()) {
                         // Sadece goal hedefi geri çevirdiyse yeniden uygula
@@ -70,49 +69,49 @@ public class OrumcekYonlendirme {
             }
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % KONTROL_ARALIGI != 0) return;
-            long simdi = server.getOverworld().getTime();
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % KONTROL_ARALIGI != 0) return;
+            long simdi = server.overworld().getGameTime();
 
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
 
                 if (tp.bossOldurulmeTick > 0) continue; // WIN 30dk sessizlik
-                Long son = sonTetik.get(player.getUuid());
+                Long son = sonTetik.get(player.getUUID());
                 long cd = tp.badEndingAktif ? COOLDOWN / 2 : COOLDOWN; // BAD ENDING 2x
                 if (son != null && simdi - son < cd) continue;
                 if (RNG.nextDouble() >= IHTIMAL) continue;
 
-                ServerWorld world = (ServerWorld) player.getWorld();
-                Box box = new Box(player.getBlockPos()).expand(YARICAP);
+                ServerLevel world = (ServerLevel) player.level();
+                AABB box = new AABB(player.blockPosition()).inflate(YARICAP);
 
                 // Yakındaki örümcekler (SpiderEntity + CaveSpiderEntity alt sınıf)
-                List<SpiderEntity> orumcekler = world.getEntitiesByClass(
-                    SpiderEntity.class, box, s -> s.isAlive());
+                List<Spider> orumcekler = world.getEntitiesOfClass(
+                    Spider.class, box, s -> s.isAlive());
                 if (orumcekler.isEmpty()) continue;
 
                 // Alternatif hedefler: player HARİÇ, örümcekler hariç, canlı mob'lar
-                List<MobEntity> hedefler = world.getEntitiesByClass(MobEntity.class, box,
-                    m -> m.isAlive() && !(m instanceof SpiderEntity));
+                List<Mob> hedefler = world.getEntitiesOfClass(Mob.class, box,
+                    m -> m.isAlive() && !(m instanceof Spider));
                 if (hedefler.isEmpty()) continue;
 
                 // Hepsi AYNI rastgele hedefe saldırsın (senkron)
                 LivingEntity yeniHedef = hedefler.get(RNG.nextInt(hedefler.size()));
                 long bitis = simdi + SURE_TICK;
                 int yonlendirilen = 0;
-                for (SpiderEntity orumcek : orumcekler) {
+                for (Spider orumcek : orumcekler) {
                     orumcek.setTarget(yeniHedef);
                     // Süre boyunca her tick yeniden uygulanacak (goal geri almasın)
-                    aktifYonlendirmeler.put(orumcek.getUuid(),
-                        new Yonlendirme(yeniHedef.getUuid(), bitis));
+                    aktifYonlendirmeler.put(orumcek.getUUID(),
+                        new Yonlendirme(yeniHedef.getUUID(), bitis));
                     yonlendirilen++;
                 }
 
-                sonTetik.put(player.getUuid(), simdi);
+                sonTetik.put(player.getUUID(), simdi);
                 Candy.LOG.info("[Candy] OrumcekYonlendirme[{}] — {} örümcek → {} (başka tarafa)",
                     player.getName().getString(), yonlendirilen,
-                    yeniHedef.getType().getName().getString());
+                    yeniHedef.getType().getDescription().getString());
             }
         });
 

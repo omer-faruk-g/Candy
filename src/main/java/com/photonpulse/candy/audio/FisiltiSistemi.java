@@ -4,13 +4,12 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.sessizlik.SessizlikState;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.photonpulse.candy.platform.SunucuTick;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import java.util.Random;
 
 /**
@@ -33,16 +32,16 @@ public class FisiltiSistemi {
     private static final Random RNG = new Random();
 
     public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(FisiltiSistemi::onTick);
+        SunucuTick.END_SERVER_TICK.register(FisiltiSistemi::onTick);
         Candy.LOG.info("[Candy] FisiltiSistemi aktif — ambient rahatsızlık");
     }
 
     private static void onTick(MinecraftServer server) {
-        if (server.getTicks() % TICK_ARALIGI != 0) return;
-        long simdi = server.getOverworld().getTime();
+        if (server.getTickCount() % TICK_ARALIGI != 0) return;
+        long simdi = server.overworld().getGameTime();
         if (SessizlikState.sessizlikte(simdi)) return;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (player.isCreative() || player.isSpectator()) continue;
             TruePersonality tp = PersonalityManager.get(player);
             if (!tp.kurulumTamam) continue;
@@ -67,8 +66,8 @@ public class FisiltiSistemi {
         return Math.min(1.0, f + bonus);
     }
 
-    private static void calFisilti(ServerPlayerEntity player, double yogunluk) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+    private static void calFisilti(ServerPlayer player, double yogunluk) {
+        ServerLevel world = (ServerLevel) player.level();
         double aci = RNG.nextDouble() * Math.PI * 2;
         double mesafe = 3 + RNG.nextDouble() * 7;
         double x = player.getX() + Math.cos(aci) * mesafe;
@@ -82,25 +81,25 @@ public class FisiltiSistemi {
             case 0 -> {
                 // v1.9.2: Custom murmur (gerçek fısıltı ses kaydı)
                 world.playSound(null, x, y, z,
-                    CandySounds.MURMUR, SoundCategory.AMBIENT,
+                    CandySounds.MURMUR, SoundSource.AMBIENT,
                     vol, 0.9f + RNG.nextFloat() * 0.3f);
             }
             case 6 -> {
                 // v1.9.3: Crowd — kalabalık uğultu (-35 dB attenuated OGG)
                 world.playSound(null, x, y, z,
-                    CandySounds.CROWD, SoundCategory.AMBIENT,
+                    CandySounds.CROWD, SoundSource.AMBIENT,
                     vol * 1.2f, 0.8f + RNG.nextFloat() * 0.3f);
             }
             case 5 -> {
                 // Cave whisper — düşük pitch
                 world.playSound(null, x, y, z,
-                    SoundEvents.AMBIENT_CAVE, SoundCategory.AMBIENT,
+                    SoundEvents.AMBIENT_CAVE, SoundSource.AMBIENT,
                     vol, 0.3f + RNG.nextFloat() * 0.4f);
             }
             case 1 -> {
                 // Kalp atışı (warden heartbeat)
                 world.playSound(null, x, y, z,
-                    SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.AMBIENT,
+                    SoundEvents.WARDEN_HEARTBEAT, SoundSource.AMBIENT,
                     vol * 0.7f, 0.7f + RNG.nextFloat() * 0.3f);
             }
             case 2 -> {
@@ -108,20 +107,20 @@ public class FisiltiSistemi {
                 int adet = 3 + RNG.nextInt(4);
                 for (int i = 0; i < adet; i++) {
                     world.playSound(null, x, y, z,
-                        SoundEvents.ENTITY_ITEM_PICKUP, SoundCategory.AMBIENT,
+                        SoundEvents.ITEM_PICKUP, SoundSource.AMBIENT,
                         0.2f, 1.8f + RNG.nextFloat() * 0.4f);
                 }
             }
             case 3 -> {
                 // Fare tıkı
                 world.playSound(null, x, y, z,
-                    SoundEvents.BLOCK_LEVER_CLICK, SoundCategory.AMBIENT,
+                    SoundEvents.LEVER_CLICK, SoundSource.AMBIENT,
                     vol * 0.8f, 1.5f + RNG.nextFloat() * 0.5f);
             }
             case 4 -> {
                 // Yakında nefes — düşük pitch
                 world.playSound(null, x, y, z,
-                    SoundEvents.ENTITY_PLAYER_BREATH, SoundCategory.AMBIENT,
+                    SoundEvents.PLAYER_BREATH, SoundSource.AMBIENT,
                     vol * 0.5f, 0.4f);
             }
         }

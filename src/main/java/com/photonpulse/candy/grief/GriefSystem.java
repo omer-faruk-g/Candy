@@ -4,10 +4,10 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.tree.PersonalityTree;
 import com.photonpulse.candy.tree.TreeGrowth;
 import com.photonpulse.candy.tree.TreeNode;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.server.network.ServerPlayerEntity;
+import com.photonpulse.candy.platform.CanliOlaylari;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
 
 /**
  * GriefSystem — Yas Sistemi.
@@ -27,25 +27,25 @@ public class GriefSystem {
     private static final double YAS_SOK_CARPANI = 0.4;   // aktiflik *= 0.4
 
     public static void register() {
-        ServerLivingEntityEvents.AFTER_DEATH.register(GriefSystem::onOlum);
+        CanliOlaylari.AFTER_DEATH.register(GriefSystem::onOlum);
         Candy.LOG.info("[Candy] GriefSystem aktif — yas ve travma sonrası büyüme");
     }
 
     private static void onOlum(LivingEntity entity, DamageSource damageSource) {
         // v1.9.16 fix: kim_gercek başarımı — klon seni öldürürse
-        if (entity instanceof ServerPlayerEntity kurbanPlayer) {
-            var attacker = damageSource.getAttacker();
-            if (attacker != null && attacker.getCommandTags().contains(KLON_ETIKETI)) {
+        if (entity instanceof ServerPlayer kurbanPlayer) {
+            var attacker = damageSource.getEntity();
+            if (attacker != null && attacker.getTags().contains(KLON_ETIKETI)) {
                 com.photonpulse.candy.basarim.CandyBasarimlar.tetikle(kurbanPlayer, "kim_gercek");
             }
             return; // player ölümü — grief mekaniği için değil
         }
 
         // Sadece Candy klonları
-        if (!entity.getCommandTags().contains(KLON_ETIKETI)) return;
+        if (!entity.getTags().contains(KLON_ETIKETI)) return;
 
         // Öldüren bir oyuncu mu?
-        if (!(damageSource.getAttacker() instanceof ServerPlayerEntity player)) return;
+        if (!(damageSource.getEntity() instanceof ServerPlayer player)) return;
 
         // v1.9.3: hayalet_avi başarımı — klon öldürdün
         var tp = com.photonpulse.candy.core.PersonalityManager.get(player);
@@ -57,7 +57,7 @@ public class GriefSystem {
         // Eskiden '.' → '_' encoding vardı ama reverse'de "tepki.dal_1" → "tepki.dal.1"
         // bilgi kaybı yaratıyordu → descendant node'lar için yas hiç tetiklenmiyordu.
         String nodeId = null;
-        for (String tag : entity.getCommandTags()) {
+        for (String tag : entity.getTags()) {
             if (tag.startsWith(DAL_ETIKET_PREFIX)) {
                 nodeId = tag.substring(DAL_ETIKET_PREFIX.length());
                 break;
@@ -65,7 +65,7 @@ public class GriefSystem {
         }
         if (nodeId == null) return;
 
-        PersonalityTree tree = TreeGrowth.get(player.getUuid());
+        PersonalityTree tree = TreeGrowth.get(player.getUUID());
         TreeNode node = tree.nodes.get(nodeId);
         if (node == null) {
             Candy.LOG.debug("[Candy] klon öldürüldü ama node bulunamadı: {}", nodeId);
@@ -81,7 +81,7 @@ public class GriefSystem {
         } else {
             // Yas başlat: ani aktiflik düşüşü (şok anı)
             node.aktiflik *= YAS_SOK_CARPANI;
-            node.yasBasladiTick = entity.getWorld().getTime();
+            node.yasBasladiTick = entity.level().getGameTime();
             node.yasSuresindeMi = true;
             Candy.LOG.info("[Candy] Yas başladı: {} dalı için", nodeId);
         }

@@ -13,8 +13,8 @@
   "license": "CC-BY-NC-SA-4.0",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.photonpulse.candy.Candy"],
-    "client": ["com.photonpulse.candy.client.CandyClient"]
+    "main": ["com.photonpulse.candy.platform.FabricGiris"],
+    "client": ["com.photonpulse.candy.platform.FabricIstemciGiris"]
   },
   "mixins": [
     "candy.mixins.json"

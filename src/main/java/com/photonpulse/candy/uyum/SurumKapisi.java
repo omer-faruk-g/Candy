@@ -1,7 +1,7 @@
 package com.photonpulse.candy.uyum;
 
 import com.photonpulse.candy.Candy;
-import net.fabricmc.loader.api.FabricLoader;
+import com.photonpulse.candy.platform.Yukleyici;
 
 /**
  * SurumKapisi (v8.4) — Candy'nin hangi Minecraft sürümünde ve hangi komşularla
@@ -61,9 +61,8 @@ public final class SurumKapisi {
     /** Minecraft sürümü — loader'dan okunur, yani mapping'e ve tarafa bağımlı değil. */
     private static String oku() {
         try {
-            return FabricLoader.getInstance().getModContainer("minecraft")
-                .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                .orElse("bilinmiyor");
+            String surum = Yukleyici.minecraftSurumu();
+            return surum == null ? "bilinmiyor" : surum;
         } catch (Throwable t) {
             return "bilinmiyor";
         }
@@ -106,7 +105,7 @@ public final class SurumKapisi {
     /** Komşu mod var mı — çakışabilecek alanlarda kendini geri çekmek için. */
     public static boolean modVar(String id) {
         try {
-            return FabricLoader.getInstance().isModLoaded(id);
+            return Yukleyici.modYuklu(id);
         } catch (Throwable t) {
             return false;
         }

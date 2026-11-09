@@ -1,14 +1,13 @@
 package com.photonpulse.candy.arkadas;
 
 import com.photonpulse.candy.Candy;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.WorldSavePath;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.LevelResource;
 import java.util.Map;
 
 /**
@@ -43,21 +42,21 @@ public final class ArkadasKaydi {
     /** Dünya başına bellek içi önbellek — her tick disk okumayalım. */
     private static final Map<String, Boolean> onbellek = new ConcurrentHashMap<>();
 
-    private static Path yol(ServerWorld world) {
+    private static Path yol(ServerLevel world) {
         try {
-            return world.getServer().getSavePath(WorldSavePath.ROOT).resolve(DOSYA);
+            return world.getServer().getWorldPath(LevelResource.ROOT).resolve(DOSYA);
         } catch (Throwable t) {
             return null;
         }
     }
 
-    private static String anahtar(ServerWorld world) {
+    private static String anahtar(ServerLevel world) {
         Path p = yol(world);
         return p == null ? "?" : p.toString();
     }
 
     /** Arkadaş bu dünyada öldürüldü mü. */
-    public static boolean olduMu(ServerWorld world) {
+    public static boolean olduMu(ServerLevel world) {
         if (world == null) return true;   // bilinmiyorsa spawn etme
         String k = anahtar(world);
         Boolean b = onbellek.get(k);
@@ -85,7 +84,7 @@ public final class ArkadasKaydi {
     }
 
     /** Ölümü kalıcı olarak yazar. */
-    public static void olduruldu(ServerWorld world) {
+    public static void olduruldu(ServerLevel world) {
         if (world == null) return;
         String k = anahtar(world);
         onbellek.put(k, Boolean.TRUE);

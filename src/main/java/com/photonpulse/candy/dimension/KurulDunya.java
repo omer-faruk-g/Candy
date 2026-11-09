@@ -1,10 +1,10 @@
 package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.World;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 
 /**
  * KurulDunya — kurulun 5 dakikada bir "seni oraya atayım mı?" diye tarttığı 8 dünya.
@@ -45,16 +45,16 @@ public enum KurulDunya {
 
     public final String id;
     public final Sekil sekil;
-    public final RegistryKey<World> anahtar;
+    public final ResourceKey<Level> anahtar;
 
     KurulDunya(String id, Sekil sekil) {
         this.id = id;
         this.sekil = sekil;
-        this.anahtar = RegistryKey.of(RegistryKeys.WORLD, Identifier.of(Candy.MOD_ID, id));
+        this.anahtar = ResourceKey.create(Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath(Candy.MOD_ID, id));
     }
 
     /** Bir dünya anahtarının hangi KurulDunya olduğunu bulur (yoksa null). */
-    public static KurulDunya bul(RegistryKey<World> anahtar) {
+    public static KurulDunya bul(ResourceKey<Level> anahtar) {
         if (anahtar == null) return null;
         for (KurulDunya d : values()) if (d.anahtar.equals(anahtar)) return d;
         return null;

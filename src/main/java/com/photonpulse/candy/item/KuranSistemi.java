@@ -1,22 +1,21 @@
 package com.photonpulse.candy.item;
 
 import com.photonpulse.candy.Candy;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.BlokaSaldiri;
+import com.photonpulse.candy.platform.EtkilesimOlaylari;
+import com.photonpulse.candy.platform.VarligaSaldiri;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -55,69 +54,69 @@ public class KuranSistemi {
 
     public static void register() {
         // SAĞ TIK — Ayetel Kürsi (düz book zaten açılmaz)
-        UseItemCallback.EVENT.register((player, world, hand) -> {
-            if (world.isClient()) return ActionResult.PASS;
-            if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.PASS;
-            if (!KuranKitap.esittir(player.getStackInHand(hand))) return ActionResult.PASS;
-            int now = sp.getWorld().getServer().getTicks();
-            Integer son = sonOkuma.get(sp.getUuid());
-            if (son != null && now - son < OKUMA_COOLDOWN) return ActionResult.SUCCESS;
-            sonOkuma.put(sp.getUuid(), now);
+        EtkilesimOlaylari.ESYA.register((player, world, hand) -> {
+            if (world.isClientSide()) return InteractionResult.PASS;
+            if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
+            if (!KuranKitap.esittir(player.getItemInHand(hand))) return InteractionResult.PASS;
+            int now = sp.level().getServer().getTickCount();
+            Integer son = sonOkuma.get(sp.getUUID());
+            if (son != null && now - son < OKUMA_COOLDOWN) return InteractionResult.SUCCESS;
+            sonOkuma.put(sp.getUUID(), now);
             ayetelKursiOku(sp);
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         });
 
         // SOL TIK (bloğa) — tüket + çile + nimet
-        AttackBlockCallback.EVENT.register((player, world, hand, pos, dir) -> {
-            if (world.isClient() || hand != Hand.MAIN_HAND) return ActionResult.PASS;
-            if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.PASS;
-            if (!KuranKitap.esittir(sp.getMainHandStack())) return ActionResult.PASS;
+        BlokaSaldiri.EVENT.register((player, world, hand, pos, dir) -> {
+            if (world.isClientSide() || hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
+            if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
+            if (!KuranKitap.esittir(sp.getMainHandItem())) return InteractionResult.PASS;
             solTik(sp);
-            return ActionResult.SUCCESS; // blok kırma iptal
+            return InteractionResult.SUCCESS; // blok kırma iptal
         });
 
         // SOL TIK (varlığa)
-        AttackEntityCallback.EVENT.register((player, world, hand, target, hit) -> {
-            if (world.isClient() || hand != Hand.MAIN_HAND) return ActionResult.PASS;
-            if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.PASS;
-            if (!KuranKitap.esittir(sp.getMainHandStack())) return ActionResult.PASS;
+        VarligaSaldiri.EVENT.register((player, world, hand, target, hit) -> {
+            if (world.isClientSide() || hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
+            if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
+            if (!KuranKitap.esittir(sp.getMainHandItem())) return InteractionResult.PASS;
             solTik(sp);
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(KuranSistemi::onTick);
+        SunucuTick.END_SERVER_TICK.register(KuranSistemi::onTick);
         Candy.LOG.info("[Candy] KuranSistemi aktif — Ayetel Kürsi + İmanın Gücü");
     }
 
-    private static void ayetelKursiOku(ServerPlayerEntity sp) {
+    private static void ayetelKursiOku(ServerPlayer sp) {
         for (String satir : AYET) {
-            sp.sendMessage(Text.literal(satir).formatted(Formatting.GOLD), false);
+            sp.displayClientMessage(Component.literal(satir).withStyle(ChatFormatting.GOLD), false);
         }
-        ((ServerWorld) sp.getWorld()).playSound(null, sp.getBlockPos(),
-            SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 0.8f, 1.0f);
+        ((ServerLevel) sp.level()).playSound(null, sp.blockPosition(),
+            SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8f, 1.0f);
     }
 
-    private static void solTik(ServerPlayerEntity sp) {
-        sp.getMainHandStack().decrement(1); // Kuran'ı tüket
+    private static void solTik(ServerPlayer sp) {
+        sp.getMainHandItem().shrink(1); // Kuran'ı tüket
         // Çile — önce zehir II + körlük
-        sp.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, CILE_TICK, 1, false, true, true));
-        sp.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, CILE_TICK, 0, false, true, true));
-        ((ServerWorld) sp.getWorld()).playSound(null, sp.getBlockPos(),
-            SoundEvents.AMBIENT_CAVE.value(), SoundCategory.PLAYERS, 1.0f, 0.5f);
+        sp.addEffect(new MobEffectInstance(MobEffects.POISON, CILE_TICK, 1, false, true, true));
+        sp.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, CILE_TICK, 0, false, true, true));
+        ((ServerLevel) sp.level()).playSound(null, sp.blockPosition(),
+            SoundEvents.AMBIENT_CAVE.value(), SoundSource.PLAYERS, 1.0f, 0.5f);
         // Nimeti çile bitince uygula
-        bekleyenNimet.put(sp.getUuid(), sp.getWorld().getServer().getTicks() + CILE_TICK);
+        bekleyenNimet.put(sp.getUUID(), sp.level().getServer().getTickCount() + CILE_TICK);
         Candy.LOG.info("[Candy] Kuran sol-tık[{}] → çile başladı", sp.getName().getString());
     }
 
     private static void onTick(MinecraftServer server) {
         if (bekleyenNimet.isEmpty()) return;
-        int now = server.getTicks();
+        int now = server.getTickCount();
         Iterator<Map.Entry<UUID, Integer>> it = bekleyenNimet.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<UUID, Integer> e = it.next();
             if (now < e.getValue()) continue;
             it.remove();
-            ServerPlayerEntity sp = server.getPlayerManager().getPlayer(e.getKey());
+            ServerPlayer sp = server.getPlayerList().getPlayer(e.getKey());
             if (sp != null && sp.isAlive()) imaninGucu(sp);
         }
     }
@@ -126,18 +125,18 @@ public class KuranSistemi {
      * İmanın Gücü — HUD'da tek görünür özel efekt; buff'lar (Kuvvet V, Hız I, Emme IV,
      * Yenilenme III) aynı süre boyunca GİZLİ (showIcon=false) vanilla efektlerle sağlanır.
      */
-    private static void imaninGucu(ServerPlayerEntity sp) {
+    private static void imaninGucu(ServerPlayer sp) {
         // Görünür işaretleyici efekt (tek HUD ikonu: "İmanın Gücü")
-        sp.addStatusEffect(new StatusEffectInstance(CandyEfektler.IMANIN_GUCU, NIMET_TICK, 0, false, true, true));
+        sp.addEffect(new MobEffectInstance(CandyEfektler.IMANIN_GUCU, NIMET_TICK, 0, false, true, true));
         // Mekanik buff'lar — gizli (ikon yok)
-        sp.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, NIMET_TICK, 4, false, false, false));
-        sp.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, NIMET_TICK, 0, false, false, false));
-        sp.addStatusEffect(new StatusEffectInstance(StatusEffects.ABSORPTION, NIMET_TICK, 3, false, false, false));
-        sp.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, NIMET_TICK, 2, false, false, false));
-        sp.sendMessage(Text.literal("✦ İmanın Gücü ✦")
-            .styled(s -> s.withColor(Formatting.GOLD).withBold(true)), false);
-        ((ServerWorld) sp.getWorld()).playSound(null, sp.getBlockPos(),
-            SoundEvents.ITEM_TOTEM_USE, SoundCategory.PLAYERS, 0.7f, 1.2f);
+        sp.addEffect(new MobEffectInstance(MobEffects.STRENGTH, NIMET_TICK, 4, false, false, false));
+        sp.addEffect(new MobEffectInstance(MobEffects.SPEED, NIMET_TICK, 0, false, false, false));
+        sp.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, NIMET_TICK, 3, false, false, false));
+        sp.addEffect(new MobEffectInstance(MobEffects.REGENERATION, NIMET_TICK, 2, false, false, false));
+        sp.displayClientMessage(Component.literal("✦ İmanın Gücü ✦")
+            .withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(true)), false);
+        ((ServerLevel) sp.level()).playSound(null, sp.blockPosition(),
+            SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 0.7f, 1.2f);
         Candy.LOG.info("[Candy] İmanın Gücü verildi: {}", sp.getName().getString());
     }
 

@@ -1,12 +1,12 @@
 package com.photonpulse.candy.item;
 
 import com.photonpulse.candy.Candy;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectCategory;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectCategory;
 
 /**
  * CandyEfektler — modun özel status effect'leri.
@@ -17,18 +17,18 @@ import net.minecraft.util.Identifier;
  */
 public class CandyEfektler {
 
-    public static RegistryEntry<StatusEffect> IMANIN_GUCU;
+    public static Holder<MobEffect> IMANIN_GUCU;
 
     /** İmanın Gücü — nimet kategorisi, altın renk. Kendisi işaretleyici; buff'lar dışarıdan. */
-    private static final class ImaninGucuEfekti extends StatusEffect {
+    private static final class ImaninGucuEfekti extends MobEffect {
         private ImaninGucuEfekti() {
-            super(StatusEffectCategory.BENEFICIAL, 0xFFD700); // altın
+            super(MobEffectCategory.BENEFICIAL, 0xFFD700); // altın
         }
     }
 
     public static void register() {
-        IMANIN_GUCU = Registry.registerReference(Registries.STATUS_EFFECT,
-            Identifier.of(Candy.MOD_ID, "imanin_gucu"), new ImaninGucuEfekti());
+        IMANIN_GUCU = Registry.registerForHolder(BuiltInRegistries.MOB_EFFECT,
+            ResourceLocation.fromNamespaceAndPath(Candy.MOD_ID, "imanin_gucu"), new ImaninGucuEfekti());
         Candy.LOG.info("[Candy] İmanın Gücü efekti kayıtlı");
     }
 }

@@ -1,8 +1,8 @@
 package com.photonpulse.candy.mixin.client;
 
 import com.photonpulse.candy.client.KaranlikState;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * LightmapTextureManagerMixin (v3.0 Faz 1.2, v8.1 şifre karanlığı) — lightmap karartma.
  *
- * getDarkness(LivingEntity, float, float) private methodu return değerini modifiye eder.
+ * calculateDarknessScale(LivingEntity, float, float) private methodu return değerini modifiye eder.
  * Bu vanilla lightmap pipeline'ına yerleşir → tüm blok aydınlatması etkilenir.
  *
  * İki ayrı kaynak:
@@ -19,14 +19,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *   2. Çözülen şifre sayısı → her kademe ~1/15 karanlık ekler (v8.1). Boyuttan bağımsız,
  *      yani overworld'de de geçerli — "dünyanın genel ışık seviyesi" istenen buydu.
  */
-@Mixin(LightmapTextureManager.class)
+@Mixin(LightTexture.class)
 public class LightmapTextureManagerMixin {
 
-    @Inject(method = "getDarkness", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "calculateDarknessScale", at = @At("RETURN"), cancellable = true)
     private void candy$mirrorDarkness(LivingEntity entity, float f, float g,
                                        CallbackInfoReturnable<Float> cir) {
         try {
-            if (entity == null || entity.getWorld() == null) return;
+            if (entity == null || entity.level() == null) return;
             float mevcut = cir.getReturnValueF();
             float sonuc = mevcut;
 
@@ -36,7 +36,7 @@ public class LightmapTextureManagerMixin {
                 sonuc = Math.min(1.0f, sonuc + (1.0f - sonuc) * taban);
             }
 
-            String dimId = entity.getWorld().getRegistryKey().getValue().toString();
+            String dimId = entity.level().dimension().location().toString();
             if (dimId.equals("candy:mirror") || dimId.equals("candy:anti_mirror")) {
                 // Mirror'da minimum %55 karanlık — DARKNESS effect üstüne ekstra baseline
                 float min = dimId.equals("candy:anti_mirror") ? 0.75f : 0.55f;

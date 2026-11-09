@@ -3,7 +3,7 @@ package com.photonpulse.candy.shadow;
 import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.clone.CloneManager;
 import com.photonpulse.candy.core.TruePersonality;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * ShadowState — Candy'nin bastırılmış müdahale isteği.
@@ -28,7 +28,7 @@ public class ShadowState {
     // Patlamadan sonra kalıcı iz: saldirOrani buna eklenir
     private static final double KALICI_IZ = 0.05;
 
-    public static void kontrolEt(ServerPlayerEntity player, TruePersonality tp, long simdi) {
+    public static void kontrolEt(ServerPlayer player, TruePersonality tp, long simdi) {
         if (!tp.kurulumTamam) return;
 
         // Kurulum yeni bittiyse sonMudahaleTick henüz 0 olabilir — simdi'yi damga vur
@@ -47,7 +47,7 @@ public class ShadowState {
         }
     }
 
-    private static void patla(ServerPlayerEntity player, TruePersonality tp, long simdi) {
+    private static void patla(ServerPlayer player, TruePersonality tp, long simdi) {
         boolean basarili = CloneManager.zorlaKlonSpawn(player, tp);
         if (!basarili) return;   // uygun konum yok — baskıyı tut, sonraki tick'te tekrar dene
 

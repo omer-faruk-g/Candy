@@ -1,10 +1,10 @@
 package com.photonpulse.candy.net;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * S2C — ikilik fısıltı: hangi metin, kaç milisaniye, hangi kanal.
@@ -19,24 +19,24 @@ import net.minecraft.util.Identifier;
  * @param sureMs ekranda kalma süresi
  * @param kanal  0 = tam ekran (camscreen kalıbı), 1 = köşe (altyazı kalıbı)
  */
-public record IkilikEkranPayload(int indeks, int sureMs, int kanal) implements CustomPayload {
+public record IkilikEkranPayload(int indeks, int sureMs, int kanal) implements CustomPacketPayload {
 
     public static final int KANAL_TAM_EKRAN = 0;
     public static final int KANAL_KOSE = 1;
 
-    public static final CustomPayload.Id<IkilikEkranPayload> ID =
-        new CustomPayload.Id<>(Identifier.of("candy", "ikilik_ekran"));
+    public static final CustomPacketPayload.Type<IkilikEkranPayload> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("candy", "ikilik_ekran"));
 
-    public static final PacketCodec<RegistryByteBuf, IkilikEkranPayload> CODEC =
-        PacketCodec.tuple(
-            PacketCodecs.VAR_INT, IkilikEkranPayload::indeks,
-            PacketCodecs.VAR_INT, IkilikEkranPayload::sureMs,
-            PacketCodecs.VAR_INT, IkilikEkranPayload::kanal,
+    public static final StreamCodec<RegistryFriendlyByteBuf, IkilikEkranPayload> CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, IkilikEkranPayload::indeks,
+            ByteBufCodecs.VAR_INT, IkilikEkranPayload::sureMs,
+            ByteBufCodecs.VAR_INT, IkilikEkranPayload::kanal,
             IkilikEkranPayload::new
         );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return ID;
     }
 }

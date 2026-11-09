@@ -1,7 +1,7 @@
 package com.photonpulse.candy.client;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.effect.MobEffects;
 
 /**
  * IntensityState (v1.5.0-mixin) — 0-1 arası korku yoğunluğu.
@@ -51,14 +51,14 @@ public final class IntensityState {
             return serverIntensity;
         }
         // Fallback: client-side türetme
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc == null || mc.player == null || mc.world == null) return 0.0;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || mc.level == null) return 0.0;
         double i = 0.0;
         var p = mc.player;
-        if (p.hasStatusEffect(StatusEffects.DARKNESS)) i += 0.4;
-        if (p.hasStatusEffect(StatusEffects.BLINDNESS)) i += 0.3;
-        if (p.hasStatusEffect(StatusEffects.WEAKNESS)) i += 0.2;
-        long tod = mc.world.getTimeOfDay() % 24000L;
+        if (p.hasEffect(MobEffects.DARKNESS)) i += 0.4;
+        if (p.hasEffect(MobEffects.BLINDNESS)) i += 0.3;
+        if (p.hasEffect(MobEffects.WEAKNESS)) i += 0.2;
+        long tod = mc.level.getDayTime() % 24000L;
         boolean gece = tod >= 13000L && tod <= 23000L;
         if (gece) i += 0.1;
         return Math.min(1.0, i);

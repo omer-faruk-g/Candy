@@ -1,14 +1,14 @@
 package com.photonpulse.candy.dimension;
 
 import com.photonpulse.candy.Candy;
-import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.Block;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 
 /**
  * CandyBloklar — modun tek özel bloğu: {@code candy:me}.
@@ -20,18 +20,18 @@ import net.minecraft.util.Identifier;
  */
 public final class CandyBloklar {
 
-    public static final Identifier ME_ID = Identifier.of(Candy.MOD_ID, "me");
+    public static final ResourceLocation ME_ID = ResourceLocation.fromNamespaceAndPath(Candy.MOD_ID, "me");
     public static Block ME;
 
     private CandyBloklar() {}
 
     public static void register() {
-        RegistryKey<Block> key = RegistryKey.of(RegistryKeys.BLOCK, ME_ID);
-        ME = new Block(AbstractBlock.Settings.create()
-            .registryKey(key)
+        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, ME_ID);
+        ME = new Block(BlockBehaviour.Properties.of()
+            .setId(key)
             .strength(50.0f, 1200.0f)       // zor kırılır ama imkânsız değil
-            .sounds(BlockSoundGroup.WOOL));  // sessiz, tuhaf; tam katı küp
-        Registry.register(Registries.BLOCK, key, ME);
+            .sound(SoundType.WOOL));  // sessiz, tuhaf; tam katı küp
+        Registry.register(BuiltInRegistries.BLOCK, key, ME);
         Candy.LOG.info("[Candy] candy:me bloğu kayıtlı (ME dünyası)");
     }
 }

@@ -1,8 +1,10 @@
 package com.photonpulse.candy.client;
 
 import com.photonpulse.candy.sifre.IkilikMetin;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+//?}
 
 /**
  * IkilikEkranState (v8.3, istemci) — ikilik fısıltının görünür durumu.
@@ -16,7 +18,9 @@ import net.fabricmc.api.Environment;
  * basamağı çizemiyor. Camscreen'i genişletmek orada beş dalı olan bir switch'i daha da
  * dallandıracaktı; ayrı durum daha ucuz.</p>
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class IkilikEkranState {
 
     private IkilikEkranState() {}

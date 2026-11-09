@@ -3,13 +3,14 @@ package com.photonpulse.candy.client;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.photonpulse.candy.Candy;
+//? if fabric {
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.SimpleOption;
-
+//?}
+import com.photonpulse.candy.platform.Yukleyici;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.OptionInstance;
+import net.minecraft.client.Options;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,7 +38,9 @@ import java.nio.file.Path;
  * İkinci bir müdahale geldiğinde yedek <i>güncellenmez</i>. Yoksa Candy'nin kendi
  * değiştirdiği değer "orijinal" sanılır ve geri dönüş yolu kaybolur.
  */
+//? if fabric {
 @Environment(EnvType.CLIENT)
+//?}
 public final class GoruntuMudahale {
 
     private GoruntuMudahale() {}
@@ -53,7 +56,7 @@ public final class GoruntuMudahale {
     private static final int RENDER_MIN = 2, RENDER_MAKS = 32;
 
     private static Path yol() {
-        return FabricLoader.getInstance().getConfigDir().resolve("candy-goruntu-yedek.json");
+        return Yukleyici.ayarDizini().resolve("candy-goruntu-yedek.json");
     }
 
     /**
@@ -71,16 +74,16 @@ public final class GoruntuMudahale {
      * Değerler vanilla sınırlarına kırpılır.
      */
     public static void uygula(int fov, int render) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.options == null) return;
-        GameOptions o = mc.options;
+        Options o = mc.options;
 
         try {
             // Yedek YOKSA al — varsa dokunma (bkz. "yedek üzerine yazılmaz").
             if (!Files.exists(yol())) {
                 Yedek y = new Yedek();
-                y.fov = o.getFov().getValue();
-                y.render = o.getViewDistance().getValue();
+                y.fov = o.fov().get();
+                y.render = o.renderDistance().get();
                 Path p = yol();
                 Files.createDirectories(p.getParent());
                 Files.writeString(p, GSON.toJson(y), StandardCharsets.UTF_8);
@@ -92,8 +95,8 @@ public final class GoruntuMudahale {
         }
 
         try {
-            if (fov >= 0) ayarla(o.getFov(), kirp(fov, FOV_MIN, FOV_MAKS));
-            if (render >= 0) ayarla(o.getViewDistance(), kirp(render, RENDER_MIN, RENDER_MAKS));
+            if (fov >= 0) ayarla(o.fov(), kirp(fov, FOV_MIN, FOV_MAKS));
+            if (render >= 0) ayarla(o.renderDistance(), kirp(render, RENDER_MIN, RENDER_MAKS));
             Candy.LOG.debug("[Candy] görüntü müdahalesi: fov={} render={}", fov, render);
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] görüntü ayarlanamadı: {}", t.getMessage());
@@ -116,15 +119,15 @@ public final class GoruntuMudahale {
             return;
         }
 
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.options != null) {
             try {
-                if (y.fov >= 0) ayarla(mc.options.getFov(), kirp(y.fov, FOV_MIN, FOV_MAKS));
+                if (y.fov >= 0) ayarla(mc.options.fov(), kirp(y.fov, FOV_MIN, FOV_MAKS));
                 if (y.render >= 0) {
-                    ayarla(mc.options.getViewDistance(), kirp(y.render, RENDER_MIN, RENDER_MAKS));
+                    ayarla(mc.options.renderDistance(), kirp(y.render, RENDER_MIN, RENDER_MAKS));
                 }
                 // options.json'a da yaz — oyuncu bir daha mod olmadan açsa bile düzgün olsun.
-                mc.options.write();
+                mc.options.save();
             } catch (Throwable t) {
                 Candy.LOG.warn("[Candy] görüntü geri alınamadı: {}", t.getMessage());
                 return;   // dosyayı silme: bir sonraki açılışta tekrar denenir
@@ -135,14 +138,16 @@ public final class GoruntuMudahale {
             Files.deleteIfExists(p);
         } catch (Throwable ignored) {}
         KaranlikState.sifirla();
+        // v9.0.0: karanlık kademesi sıfırlandıysa klavye nabzı da susmalı — ikisi aynı sayı.
+        KlavyeIsigi.kademe(0);
         Candy.LOG.info("[Candy] görüntü ayarları geri alındı (fov={} render={})", y.fov, y.render);
     }
 
-    private static void ayarla(SimpleOption<Integer> opt, int deger) {
+    private static void ayarla(OptionInstance<Integer> opt, int deger) {
         if (opt == null) return;
-        Integer mevcut = opt.getValue();
+        Integer mevcut = opt.get();
         if (mevcut != null && mevcut == deger) return;
-        opt.setValue(deger);
+        opt.set(deger);
     }
 
     private static int kirp(int v, int min, int maks) {

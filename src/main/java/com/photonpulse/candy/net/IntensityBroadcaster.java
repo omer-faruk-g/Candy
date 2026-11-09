@@ -4,10 +4,10 @@ import com.photonpulse.candy.Candy;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.Psikoloji;
 import com.photonpulse.candy.core.TruePersonality;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
+import com.photonpulse.candy.platform.SunucuTick;
+import com.photonpulse.candy.platform.AgKayit;
+import com.photonpulse.candy.platform.SunucuAg;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * IntensityBroadcaster — server her saniye oyuncularına korku/agresivlik değerini yollar.
@@ -21,22 +21,22 @@ public class IntensityBroadcaster {
         // Payload type — single-player'da client de aynı JVM'de register etmeye çalışır.
         // Duplicate registration exception atar, o yüzden try/catch.
         try {
-            PayloadTypeRegistry.playS2C().register(
+            AgKayit.playS2C().register(
                 CandyIntensityPayload.ID, CandyIntensityPayload.CODEC);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Payload zaten kayıtlı (client tarafından): {}", t.getMessage());
         }
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % 20 != 0) return;
-            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        SunucuTick.END_SERVER_TICK.register(server -> {
+            if (server.getTickCount() % 20 != 0) return;
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 TruePersonality tp = PersonalityManager.get(player);
                 if (!tp.kurulumTamam) continue;
                 double agr = Psikoloji.agresivlikCarpani(tp);
                 double korku = tp.korkuSkoru;
                 double ozguven = tp.candyOzguven;
                 try {
-                    ServerPlayNetworking.send(player,
+                    SunucuAg.send(player,
                         new CandyIntensityPayload(agr, korku, ozguven));
                 } catch (Throwable t) {
                     // Client bu payload'ı bilmiyorsa (vanilla client) hata verir — sessizce yut
