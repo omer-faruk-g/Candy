@@ -158,6 +158,18 @@ const sunucu = https.createServer(
   }
 );
 
-sunucu.listen(PORT, "127.0.0.1", () => {
-  console.log(`[yerel-uc] HAZIR https://localhost:${PORT}/api/gonder`);
-});
+// "localhost" JVM'e gore degisiyor: NeoForge (ModDevGradle) -Djava.net.preferIPv6Addresses=system
+// veriyor, istemci ::1'e gidiyor; Fabric 127.0.0.1'e. Ikisini de dinle. Sertifika SAN'i
+// DNS:localhost oldugu icin iki adreste de dogrulanir. Biri doluysa digeri yine acilir.
+const sunucu6 = https.createServer(
+  {
+    key: fs.readFileSync(path.join(BURADA, "localhost-key.pem")),
+    cert: fs.readFileSync(path.join(BURADA, "localhost-cert.pem")),
+  },
+  sunucu.listeners("request")[0]
+);
+for (const [s, adres] of [[sunucu, "127.0.0.1"], [sunucu6, "::1"]]) {
+  s.on("error", (e) => console.log(`[yerel-uc] ${adres}:${PORT} dinlenemedi (${e.code})`));
+  s.listen(PORT, adres, () =>
+    console.log(`[yerel-uc] HAZIR https://localhost:${PORT}/api/gonder (${adres})`));
+}

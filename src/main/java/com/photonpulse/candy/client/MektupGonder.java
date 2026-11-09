@@ -69,22 +69,31 @@ public final class MektupGonder {
     private static final long SOGUMA_MS = 20L * 60L * 1000L;
     private static volatile long sonGonderim = 0L;
 
+    /** Dev koşumda sessiz vazgeçişler görünür olsun (normal oyunda debug seviyesinde kalır). */
+    private static final boolean DEBUG = Boolean.getBoolean("candy.debug");
+
+    private static void iz(String msg, Object... arg) {
+        if (DEBUG) Candy.LOG.warn("[Candy][mektup] " + msg, arg);
+        else Candy.LOG.debug("[Candy][mektup] " + msg, arg);
+    }
+
     /**
      * Sunucu "dış kanaldan şunu ver" dedi; satır zaten istemcide oyuncunun diline
      * çevrildi. Config izin veriyorsa e-postayı arka planda yollar; vermiyorsa sessizce
      * hiçbir şey yapmaz (ağ isteği bile açılmaz). Çağıran thread beklemez.
      */
     public static void belki(String satir) {
-        if (!CandyMixinConfig.mektup) return;
+        iz("bildirim istemciye ulasti");
+        if (!CandyMixinConfig.mektup) { iz("kapi: mektup=false"); return; }
         String eposta = CandyMixinConfig.mektupEposta == null ? "" : CandyMixinConfig.mektupEposta.trim();
         String uc = CandyMixinConfig.mektupUc == null ? "" : CandyMixinConfig.mektupUc.trim();
-        if (eposta.isEmpty() || uc.isEmpty()) return;            // çift kapı: ikisi de dolu değil
-        if (!epostaGecerli(eposta) || !uc.startsWith("https://")) return;  // uydurma değer / http = sus
-        if (satir == null || satir.isBlank()) return;
+        if (eposta.isEmpty() || uc.isEmpty()) { iz("kapi: eposta/uc bos"); return; }  // çift kapı
+        if (!epostaGecerli(eposta) || !uc.startsWith("https://")) { iz("kapi: gecersiz eposta/uc"); return; }
+        if (satir == null || satir.isBlank()) { iz("kapi: bos satir"); return; }
 
         long simdi = System.currentTimeMillis();
         synchronized (MektupGonder.class) {
-            if (simdi - sonGonderim < SOGUMA_MS) return;
+            if (simdi - sonGonderim < SOGUMA_MS) { iz("kapi: istemci sogumasi"); return; }
             sonGonderim = simdi;
         }
 
@@ -121,11 +130,11 @@ public final class MektupGonder {
             if (resp.statusCode() / 100 == 2) {
                 Candy.LOG.info("[Candy] Mektup dış kanala yollandı");
             } else {
-                Candy.LOG.debug("[Candy] Mektup sunucusu {} döndü", resp.statusCode());
+                iz("sunucu {} dondu", resp.statusCode());
             }
         } catch (Throwable t) {
             // Ağ yok / adres yanlış / sunucu kapalı → sessizce vazgeç, oyun etkilenmez.
-            Candy.LOG.debug("[Candy] Mektup yollanamadı: {}", t.getMessage());
+            iz("yollanamadi: {}: {}", t.getClass().getSimpleName(), t.getMessage());
         }
     }
 
