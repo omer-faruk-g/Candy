@@ -83,6 +83,8 @@ public class HayaletOyuncular {
     private static final int CEVAP_SAYI = 15;
     /** v9.1.0: saat bandı başına satır sayısı (her bant, her hayalet için ayrı). */
     private static final int SAAT_SATIR_SAYI = 2;
+    /** Dev testi: seçilen saat satırını log'a yazmak için (yalnız -Dcandy.debug=true). */
+    private static final boolean DEV = Boolean.getBoolean("candy.debug");
     private static final int OLUM_SAYI = 7;
 
     private static String steveKey(int i) { return "candy.hayalet.steve." + i; }
@@ -490,9 +492,22 @@ public class HayaletOyuncular {
             Component.literal("<" + isim + "> ")
                 .append(Component.translatable(anahtar, arg))
                 .withStyle(ChatFormatting.YELLOW), false);
+        // Dev testi: hangi satırın seçildiği YALNIZ -Dcandy.debug=true JVM'inde loglanır.
+        // Normal oyunda saat log'a hiç yazılmaz (kişisel veri) — bu satır o kuralı
+        // bozmuyor, çünkü debug JVM'i dışında hiç çalışmıyor.
+        if (DEV) Candy.LOG.info("[Candy][dev] saat anahtar={} arg={}", anahtar, arg);
         Candy.LOG.info("[Candy] Hayalet[{}] saat (private): {}",
             isim, hedef.getName().getString());
         return true;
+    }
+
+    /**
+     * Dev testi — saat diyalogunu ihtimal beklemeden kendi gerçek yolundan çalıştırır.
+     * Dönüş: gönderildi mi (false = saat bilinmiyor, eski yola düşüldü).
+     */
+    public static boolean devSaatMesaji(MinecraftServer server, String isim) {
+        if (!DEV) return false;
+        return saatMesaji(server, isim);
     }
 
     /** Gerçek saat → diyalog bandı. */

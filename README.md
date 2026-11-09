@@ -16,8 +16,9 @@ Candy deliberately breaks the fourth wall. By design it:
   nights you went without sleep, the name of your world (in-game observation only;
   nothing from outside Minecraft)
 - **changes your window title**, your HUD and your death screen
-- **blinks a light on your real keyboard** (the Scroll Lock LED, or Num Lock if your
-  keyboard has no Scroll Lock — flipped back within 140 ms, Windows only;
+- **blinks a light on your real keyboard** (the Caps Lock LED — the one lock light
+  almost every keyboard, laptops included, really has; flipped back within 140 ms,
+  only while Windows itself reports the game as the window in front, Windows only;
   `klavyeIsigi: false` turns it off)
 - **edits its own config file** — you will find a line you did not write
 - **damages the world around you**: torches go out, signs appear, your base is
@@ -73,10 +74,10 @@ This list is a hard boundary in the code, not a promise in a readme:
   is the same whisper you'd get in chat, and every message states it is the Candy mod
   and how to switch it off. It never attaches a screenshot or any file
 - the keyboard light is the lock-key LED and nothing else: no vendor driver, no RGB
-  SDK, no device access. The only key Candy ever touches is **Scroll Lock** (Num Lock
-  as a fallback) — a key nothing in Minecraft is bound to, flipped back within 140 ms.
-  Candy never sends a key the game or another window acts on, so an alt-tab can
-  never catch a keystroke from it
+  SDK, no device access. The only keys Candy ever touches are lock keys — **Caps Lock**
+  (Scroll Lock / Num Lock as fallbacks) — and only while Windows reports the game as the
+  window in front, with no chat, sign or book open, flipped back within 140 ms. Alt-tab and it stops,
+  so nothing you type in another window can come out in the wrong case
 
 ## Requirements
 
@@ -220,8 +221,9 @@ Candy dördüncü duvarı bilerek kırar. Tasarım gereği:
   uyumadığın, dünyanın adı (yalnızca oyun-içi gözlem; Minecraft dışından hiçbir şey
   okunmuyor)
 - **pencere başlığını, HUD'ı, ölüm ekranını değiştirir**
-- **gerçek klavyendeki bir ışığı yakıp söndürür** (Scroll Lock LED'i; klavyende yoksa
-  Num Lock — 140 ms içinde geri alınır, yalnızca Windows'ta;
+- **gerçek klavyendeki bir ışığı yakıp söndürür** (Caps Lock ışığı — dizüstüler dahil
+  neredeyse her klavyede gerçekten bulunan tek kilit ışığı; 140 ms içinde geri alınır,
+  yalnızca Windows'a göre öndeki pencere oyunun kendisiyken, yalnızca Windows'ta;
   `klavyeIsigi: false` kapatır)
 - **kendi ayar dosyasını düzenler** — koymadığın bir satır bulursun
 - **çevreni bozar**: meşaleler söner, tabelalar çıkar, üsse müdahale edilir,
@@ -272,10 +274,10 @@ Bu liste readme'de bir vaat değil, kodda sert bir sınır:
   tarayıcın, oyunun arkasındaki pencere o arabellekte yok, dolayısıyla okunamaz;
   ayrıca kare yalnızca sen tuşa bastığında alınır, hiçbir zaman zamanlayıcıyla değil
 - klavye ışığı yalnızca kilit tuşu LED'i: üretici sürücüsü yok, RGB SDK'sı yok,
-  aygıt erişimi yok. Candy'nin dokunduğu tek tuş **Scroll Lock** (yedeği Num Lock) —
-  Minecraft'ta hiçbir şeye bağlı olmayan bir tuş, 140 ms içinde geri alınıyor. Oyunun
-  ya da başka bir pencerenin tepki verdiği bir tuş asla yollanmıyor; alt-tab yaptığında
-  hiçbir tuş basımı başka bir yere düşemez
+  aygıt erişimi yok. Candy'nin dokunduğu tuşlar yalnızca kilit tuşları — **Caps Lock**
+  (yedekleri Scroll Lock / Num Lock) — o da yalnızca Windows'a göre öndeki pencere oyunun
+  kendisiyken ve sohbet, tabela, kitap açık değilken; 140 ms içinde geri alınıyor. Alt-tab yaptığında durur;
+  başka bir pencerede yazdığın harf asla ters büyüklükte çıkmaz
 - e-posta kanalı varsayılan kapalı ve **sen** hem adresini hem ucu doldurmadan hiçbir
   şey yollamaz; yalnızca yazdığın tek adrese gider, gövde sohbette alacağın fısıltının
   aynısıdır ve her mesaj bunun Candy modu olduğunu ve nasıl kapatılacağını söyler.

@@ -125,8 +125,9 @@ public final class SifreDagitici {
         Path d = masaustuBul(ayar);
         if (d == null) return false;
         try {
-            eskileriTemizle(d, ayar.maksMasaustuDosya);
-            JsonDepo.yaz(d.resolve(ON_AD + ikiHane(indeks) + SON_AD), ikilik);
+            String ad = ON_AD + ikiHane(indeks) + SON_AD;
+            eskileriTemizle(d, ayar.maksMasaustuDosya, ad);
+            JsonDepo.yaz(d.resolve(ad), ikilik);
             return true;
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] masaüstü şifresi bırakılamadı: {}", t.getMessage());
@@ -167,13 +168,16 @@ public final class SifreDagitici {
     /**
      * {@code maks} sınırını aşan <b>kendi</b> dosyalarını siler. Yalnızca
      * {@code candy_NN.txt} kalıbına uyanlara dokunur — başka hiçbir dosyaya bakmaz.
+     * Yazılacak dosya ({@code yeni}) zaten varsa üstüne yazılacağı için sayılmaz:
+     * önceden o durumda sınır dolu sayılıp başka bir Candy dosyası boşuna siliniyordu
+     * (yeni dünyada indeks 0'dan başlar, eski dünyanın candy_00'ı masaüstündeyken).
      */
-    private static void eskileriTemizle(Path klasor, int maks) throws IOException {
+    private static void eskileriTemizle(Path klasor, int maks, String yeni) throws IOException {
         List<Path> benim = new ArrayList<>();
         try (Stream<Path> s = Files.list(klasor)) {
             s.forEach(p -> {
                 String ad = p.getFileName().toString();
-                if (!ad.startsWith(ON_AD) || !ad.endsWith(SON_AD)) return;
+                if (!ad.startsWith(ON_AD) || !ad.endsWith(SON_AD) || ad.equals(yeni)) return;
                 String orta = ad.substring(ON_AD.length(), ad.length() - SON_AD.length());
                 if (orta.length() != 2) return;
                 for (int i = 0; i < 2; i++) {

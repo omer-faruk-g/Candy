@@ -61,6 +61,25 @@ if (loader == 'fabric') {
                 vmArg "-Dcandy.debug=true"   // /candy komutu + kisa cooldown
                 vmArg "-Dcandy.nolock=true"  // /gamemode /tp /time gibi vanilla komutlar
             }
+            // ./gradlew :<surum>:runOtoTest — KLAVYESIZ kosum.
+            // Dunyaya kendiliginden girer (run/saves/ototest) ve CandyOtoTest ekran
+            // yolunu + /candy adimlarini kendi tetikler; cikti tamamen log'a duser.
+            // Dis kanal testi icin yerel mektup ucu: araclar/mektup/yerel-test/
+            otoTest {
+                client()
+                name = "Candy Oto Test"
+                vmArg "-Dcandy.debug=true"
+                vmArg "-Dcandy.nolock=true"
+                vmArg "-Dcandy.ototest=true"
+                programArgs "--quickPlaySingleplayer", "ototest"
+                // Yerel ucun sertifikasini taniyan guven deposu (kur.sh uretiyor).
+                // Yoksa sessizce atlanir: oto test mektup disindaki adimlari kosar.
+                def candyGuven = rootProject.file("araclar/mektup/yerel-test/candy-test-cacerts")
+                if (candyGuven.exists()) {
+                    vmArg "-Djavax.net.ssl.trustStore=${candyGuven.absolutePath}"
+                    vmArg "-Djavax.net.ssl.trustStorePassword=changeit"
+                }
+            }
         }
     }
 } else {
@@ -86,6 +105,19 @@ if (loader == 'fabric') {
                 client()
                 systemProperty 'candy.debug', 'true'
                 systemProperty 'candy.nolock', 'true'
+            }
+            // Fabric'teki runOtoTest'in NeoForge esi: klavyesiz kosum.
+            otoTest {
+                client()
+                systemProperty 'candy.debug', 'true'
+                systemProperty 'candy.nolock', 'true'
+                systemProperty 'candy.ototest', 'true'
+                programArguments.addAll '--quickPlaySingleplayer', 'ototest'
+                def candyGuven = rootProject.file("araclar/mektup/yerel-test/candy-test-cacerts")
+                if (candyGuven.exists()) {
+                    systemProperty 'javax.net.ssl.trustStore', candyGuven.absolutePath
+                    systemProperty 'javax.net.ssl.trustStorePassword', 'changeit'
+                }
             }
         }
         mods {

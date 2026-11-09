@@ -129,6 +129,27 @@ public final class MektupGonder {
         }
     }
 
+    /** Dış kanalın kabul ettiği tek anahtar ailesi — {@code TanidikFisilti}'nin satırları. */
+    private static final String ANAHTAR_ONEK = "candy.tanidik.";
+    /** Argüman: tabela alıntısı (48) ya da dünya adı. Daha uzunu Candy'nin satırı değil. */
+    private static final int ARG_MAKS = 64;
+    /** Link ya da alan adı gibi görünen argüman maile hiç girmez. */
+    private static final java.util.regex.Pattern LINK = java.util.regex.Pattern.compile(
+        "(?i)(://|www\\.|@|[a-z0-9-]+\\.[a-z]{2,})");
+
+    /**
+     * Sunucudan gelen dış kanal paketi Candy'nin kendi fısıltısı mı? Anahtar
+     * {@code candy.tanidik.*} ailesinden olmalı VE istemcinin dil dosyasında gerçekten
+     * bulunmalı (bilinmeyen anahtar kendisi olarak çözülür, yani serbest metin olur);
+     * argüman kısa olmalı ve link/alan adı/adres içermemeli.
+     */
+    public static boolean bildirimGuvenli(String anahtar, String arg) {
+        if (anahtar == null || !anahtar.startsWith(ANAHTAR_ONEK)) return false;
+        if (!net.minecraft.locale.Language.getInstance().has(anahtar)) return false;
+        if (arg == null || arg.isEmpty()) return true;
+        return arg.length() <= ARG_MAKS && !LINK.matcher(arg).find();
+    }
+
     /** Kaba doğrulama: tek @, nokta içeren alan adı, boşluk yok. Amaç yazım hatasını elemek. */
     private static boolean epostaGecerli(String e) {
         int at = e.indexOf('@');

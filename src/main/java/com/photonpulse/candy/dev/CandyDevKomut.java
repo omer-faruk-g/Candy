@@ -11,7 +11,12 @@ import com.photonpulse.candy.beyin.Perde;
 import com.photonpulse.candy.core.PersonalityManager;
 import com.photonpulse.candy.core.TruePersonality;
 import com.photonpulse.candy.entity.CandyEntities;
+import com.photonpulse.candy.hayalet.HayaletOyuncular;
+import com.photonpulse.candy.meta.SaatBilgisi;
+import com.photonpulse.candy.net.BildirimPayload;
+import com.photonpulse.candy.platform.SunucuAg;
 import com.photonpulse.candy.sifre.IkilikFisilti;
+import com.photonpulse.candy.sifre.SifreDagitici;
 import com.photonpulse.candy.sifre.TuzakYayini;
 import com.photonpulse.candy.platform.KomutKayit;
 import net.minecraft.ChatFormatting;
@@ -76,8 +81,16 @@ public final class CandyDevKomut {
                     .executes(c -> tuzak(c.getSource())))
                 .then(Commands.literal("ikilik")
                     .executes(c -> ikilik(c.getSource())))
+                .then(Commands.literal("sifre")
+                    .executes(c -> sifre(c.getSource())))
                 .then(Commands.literal("arkadas")
-                    .executes(c -> arkadas(c.getSource())))));
+                    .executes(c -> arkadas(c.getSource())))
+                .then(Commands.literal("mektup")
+                    .executes(c -> mektup(c.getSource())))
+                .then(Commands.literal("saat")
+                    .executes(c -> saat(c.getSource()))
+                    .then(Commands.literal("sil")
+                        .executes(c -> saatSil(c.getSource()))))));
 
         Candy.LOG.warn("[Candy] DEV KOMUTU AKTIF — /candy (yalnizca -Dcandy.debug=true)");
     }
@@ -125,13 +138,17 @@ public final class CandyDevKomut {
     }
 
     private static void kapi(CommandSourceStack src, String ad, boolean acik, String sart) {
-        src.sendSuccess(() -> Component.literal(
-            (acik ? "  [ACIK]  " : "  [KAPALI] ") + ad + "  " + sart)
+        String satir = (acik ? "  [ACIK]  " : "  [KAPALI] ") + ad + "  " + sart;
+        src.sendSuccess(() -> Component.literal(satir)
             .withStyle(acik ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY), false);
+        Candy.LOG.info("[Candy][dev] {}", satir);
     }
 
     private static void yaz(CommandSourceStack src, String s, ChatFormatting f) {
         src.sendSuccess(() -> Component.literal(s).withStyle(f), false);
+        // Otomatik koşumda sohbeti okuyacak göz yok; aynı satır log'a da düşsün.
+        // Yalnızca debug JVM'inde çalışıyor, normal oyunda bu sınıf hiç yüklenmiyor.
+        Candy.LOG.info("[Candy][dev] {}", s);
     }
 
     // ─── kapi acma ───
@@ -170,6 +187,86 @@ public final class CandyDevKomut {
         yaz(src, duz == null ? "fisilti gonderilemedi" : "fisilti: \"" + duz + "\"",
             duz == null ? ChatFormatting.RED : ChatFormatting.GREEN);
         return duz == null ? 0 : 1;
+    }
+
+    // --- test kancasi: sifre dagitimini elden tetikle ---
+    /**
+     * {@code /candy sifre} -- {@code SifreDagitici}'yi ELDEN calistirir.
+     *
+     * <p>Atlanan tek sey {@code SifreMotoru}'nun seyreltmesi ({@code kurulumTamam},
+     * baski esigi, %2'lik zar): bunlar "ne zaman" sorusunun cevabi, mekanigin kendisi
+     * degil. Kanal kapilari ({@code acik}, {@code haritaDosyasi},
+     * {@code masaustuDosyasi}, {@code kitap}) hic atlanmiyor -- dosyalar gercek
+     * yoldan yaziliyor.</p>
+     */
+    private static int sifre(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) return 0;
+        int indeks = SifreDagitici.dagit(p, PersonalityManager.get(p));
+        yaz(src, indeks < 0
+                ? "sifre dagitilamadi (kapi kapali ya da soguma)"
+                : "sifre #" + indeks + " dagitildi",
+            indeks < 0 ? ChatFormatting.RED : ChatFormatting.GREEN);
+        return indeks < 0 ? 0 : 1;
+    }
+
+    // ─── v10.0.0 dis kanal: ihtimal + ~30 dk soguma + kademe kapisini atla ───
+    /**
+     * {@code /candy mektup} — {@code TanidikFisilti}'nin dis kanal paketini ELDEN yollar.
+     *
+     * <p>Atlanan tek sey SUNUCU tarafindaki seyreltme (perde kademesi, %25 ihtimal,
+     * ~30 dk soguma): bunlar "ne zaman" sorusunun cevabi, mekanigin kendisi degil.
+     * Istemci tarafi hic atlanmiyor — paket gercek yoldan gidiyor, satiri istemci kendi
+     * dilinde cozuyor ve mektubu gondermeye {@code MektupGonder} kendi config kapilariyla
+     * karar veriyor. Yani config bos ise bu komut da hicbir ag istegi dogurmaz.</p>
+     */
+    private static int mektup(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("oyuncu gerekli")); return 0; }
+
+        String dunya = src.getServer().getWorldData().getLevelSettings().levelName();
+        if (dunya == null) dunya = "";
+        try {
+            SunucuAg.send(p, new BildirimPayload("candy.tanidik.dunya", dunya));
+        } catch (Throwable t) {
+            src.sendFailure(Component.literal("payload yollanamadi: " + t.getMessage()));
+            return 0;
+        }
+        yaz(src, "BildirimPayload yollandi: candy.tanidik.dunya arg=\"" + dunya + "\"",
+            ChatFormatting.GREEN);
+        yaz(src, "Karar istemcide: mektup + mektupEposta + mektupUc ucu de dolu degilse "
+            + "TEK ag istegi bile cikmaz.", ChatFormatting.GRAY);
+        return 1;
+    }
+
+    // ─── v9.1.0 saat: join paketi geldi mi, diyalog dogru dakikayi mi veriyor ───
+    private static int saat(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("oyuncu gerekli")); return 0; }
+
+        int dk = SaatBilgisi.dakika(p);
+        String metin = SaatBilgisi.metin(p);
+        yaz(src, "SaatBilgisi: dakika=" + dk + " metin=" + metin
+            + " dilim=" + SaatBilgisi.dilim(p)
+            + (dk < 0 ? "   <- istemci BILDIRMEDI" : ""),
+            dk < 0 ? ChatFormatting.YELLOW : ChatFormatting.WHITE);
+
+        boolean steve = HayaletOyuncular.devSaatMesaji(src.getServer(), "Steve");
+        boolean alex = HayaletOyuncular.devSaatMesaji(src.getServer(), "Alex");
+        yaz(src, "saat diyalogu: Steve=" + (steve ? "GONDERILDI" : "atlandi->eski yol")
+            + "  Alex=" + (alex ? "GONDERILDI" : "atlandi->eski yol"),
+            (steve && alex) ? ChatFormatting.GREEN : ChatFormatting.YELLOW);
+        return 1;
+    }
+
+    /** {@code /candy saat sil} — istemci saati hic bildirmemis gibi yapar (geri dusme testi). */
+    private static int saatSil(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("oyuncu gerekli")); return 0; }
+        SaatBilgisi.devSil(p);
+        yaz(src, "saat kaydi silindi — bundan sonra eski yola dusulmeli",
+            ChatFormatting.GREEN);
+        return 1;
     }
 
     private static int arkadas(CommandSourceStack src) {

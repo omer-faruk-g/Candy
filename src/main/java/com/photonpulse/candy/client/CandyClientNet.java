@@ -157,6 +157,15 @@ public class CandyClientNet {
         IstemciAg.registerGlobalReceiver(
             BildirimPayload.ID,
             (payload, context) -> {
+                // Paketi HERHANGİ bir sunucu yollayabilir: anahtar ve argüman güvenilmez.
+                // Denetimsiz hâliyle bilinmeyen bir anahtar kendisi olarak çözülüyordu,
+                // yani sunucu oyuncunun gerçek gelen kutusuna "Candy" adıyla istediği
+                // metni (ör. oltalama linki) düşürebiliyordu.
+                if (!MektupGonder.bildirimGuvenli(payload.anahtar(), payload.arg())) {
+                    Candy.LOG.warn("[Candy] Dış kanal paketi reddedildi (anahtar: {})",
+                        payload.anahtar());
+                    return;
+                }
                 String satir = payload.arg() == null || payload.arg().isEmpty()
                     ? net.minecraft.network.chat.Component.translatable(payload.anahtar()).getString()
                     : net.minecraft.network.chat.Component.translatable(payload.anahtar(), payload.arg()).getString();

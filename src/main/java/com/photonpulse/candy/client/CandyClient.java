@@ -39,11 +39,13 @@ public class CandyClient {
 
     public static void onInitializeClient() {
         // v0.7: CandyDoppelEntity için renderer
-        VarlikRenderKayit.register(CandyEntities.DOPPEL, CandyDoppelRenderer::new);
+        // NOT: tip DEĞER değil SUPPLIER olarak geçiliyor — NeoForge'da entity
+        // tipleri bu çağrıdan sonra kayıt oluyor (bkz. VarlikRenderKayit).
+        VarlikRenderKayit.register(() -> CandyEntities.DOPPEL, CandyDoppelRenderer::new);
         // v3.1: boss renderer
-        VarlikRenderKayit.register(CandyEntities.TRUE_REAL_CANDY, TrueRealCandyRenderer::new);
+        VarlikRenderKayit.register(() -> CandyEntities.TRUE_REAL_CANDY, TrueRealCandyRenderer::new);
         // v8.3: Arkadaş — oyuncu modeli, tamamen siyah doku
-        VarlikRenderKayit.register(CandyEntities.ARKADAS, ArkadasRenderer::new);
+        VarlikRenderKayit.register(() -> CandyEntities.ARKADAS, ArkadasRenderer::new);
 
         // ME dünyası: her blok oyuncunun yüzü olur (skin okunamazsa gemideki yüz dokusu kalır)
         IstemciTick.END_CLIENT_TICK.register(MeYuz::istemciTick);
@@ -67,6 +69,9 @@ public class CandyClient {
         SaatGonder.register();
         // v9.1.0: F12 → o anki kare haritaya basılır. Config'den SONRA: tuş adı oradan.
         EkranGonder.register();
+        // Yalnızca test: -Dcandy.debug=true -Dcandy.ototest=true ile F12 yolunu
+        // klavye olmadan koşturur. Normal oyunda hiç kayıt olmuyor.
+        CandyOtoTest.register();
         // v8.1: temiz çıkışta da geri al — disk yedeği zaten güvence, bu hızlandırıyor.
         // v8.2: pencere başlığı ve altyazı da aynı anda temizlenir. Başlık diske
         // yazılmıyor (oyun her açılışta kendisi kuruyor), o yüzden disk yedeği gereksiz;

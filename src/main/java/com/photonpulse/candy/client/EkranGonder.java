@@ -60,6 +60,22 @@ public final class EkranGonder {
     /** Çözülmüş tuş kodu — config'den bir kez okunur. */
     private static int tusKodu = -1;
 
+    /** Dev oto-testi yalnızca bu bayrakla açılan JVM'de var. */
+    private static final boolean DEBUG = Boolean.getBoolean("candy.debug");
+    private static volatile boolean devBasim = false;
+
+    /**
+     * Dev oto-test kancası — F12'ye basılmış gibi yapar, ama <b>gerçek yoldan</b>:
+     * bekleme süresi, {@code canSend} ve GPU okuma kapısı aynen işliyor. Doğrudan
+     * {@link #cek} çağırmak mekaniği değil test kancasını test etmek olurdu.
+     *
+     * <p>Normal oyunda {@code -Dcandy.debug=true} olmadığı için bu çağrı hiçbir şey
+     * yapmaz; sistem özelliğini oyun içinden değiştirmek de mümkün değil.</p>
+     */
+    public static void devBasim() {
+        if (DEBUG) devBasim = true;
+    }
+
     public static void register() {
         try {
             AgKayit.playC2S().register(EkranPayload.ID, EkranPayload.CODEC);
@@ -101,9 +117,12 @@ public final class EkranGonder {
                 return;
             }
 
-            boolean basili = tusBasili(mc, tusKodu);
+            boolean devTetik = devBasim;
+            if (devTetik) devBasim = false;
+            boolean basili = devTetik || tusBasili(mc, tusKodu);
             boolean yeniBasim = basili && !basiliydi;
-            basiliydi = basili;
+            // Dev tetiği tek karelik: "tuş basılı kaldı" sayılmasın, sonraki tick temiz.
+            basiliydi = basili && !devTetik;
             if (!yeniBasim) return;
 
             long simdi = System.currentTimeMillis();

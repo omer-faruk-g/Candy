@@ -159,10 +159,13 @@ public class CandyMixinConfig {
             uygulamaSezgisi = bool(o, "uygulamaSezgisi", uygulamaSezgisi);
             klavyeIsigi     = bool(o, "klavyeIsigi",     klavyeIsigi);
             ekranHaritasi   = bool(o, "ekranHaritasi",   ekranHaritasi);
-            ekranHaritasiTus = metin(o, "ekranHaritasiTus", ekranHaritasiTus);
+            ekranHaritasiTus = metin(o, "ekranHaritasiTus", ekranHaritasiTus, 48);
             mektup          = bool(o, "mektup",          mektup);
-            mektupEposta    = metin(o, "mektupEposta",    mektupEposta);
-            mektupUc        = metin(o, "mektupUc",        mektupUc);
+            // Sınır alan başına: tek bir 48 karakterlik sınır gerçek bir Vercel adresini
+            // ("https://<proje>-<hash>-<ekip>.vercel.app/api/gonder" ~60+) sessizce boşa
+            // düşürüyordu; sonraki save() de o adresi dosyadan siliyordu.
+            mektupEposta    = metin(o, "mektupEposta",    mektupEposta, 254);   // RFC 5321
+            mektupUc        = metin(o, "mektupUc",        mektupUc, 512);
             yogunlukTavani  = kesir(o, "yogunlukTavani", yogunlukTavani);
 
             yabanci.clear();
@@ -189,13 +192,18 @@ public class CandyMixinConfig {
         }
     }
 
-    /** Metin okur; eksik/bozuk/aşırı uzun değer varsayılana düşer. */
-    private static String metin(JsonObject o, String ad, String varsayilan) {
+    /** Metin okur; eksik/bozuk/{@code maks}'tan uzun değer varsayılana düşer. */
+    private static String metin(JsonObject o, String ad, String varsayilan, int maks) {
         try {
             JsonElement e = o.get(ad);
             if (e == null || !e.isJsonPrimitive()) return varsayilan;
             String s = e.getAsString();
-            if (s == null || s.isBlank() || s.length() > 48) return varsayilan;
+            if (s == null || s.isBlank() || s.length() > maks) {
+                if (s != null && s.length() > maks) {
+                    Candy.LOG.warn("[Candy] config '{}' {} karakterden uzun, yok sayıldı", ad, maks);
+                }
+                return varsayilan;
+            }
             return s.trim();
         } catch (Throwable t) {
             return varsayilan;
@@ -224,7 +232,16 @@ public class CandyMixinConfig {
         try {
             Path yol = yol();
             Files.createDirectories(yol.getParent());
-            Files.writeString(yol, GSON.toJson(nesne()), StandardCharsets.UTF_8);
+            // Temp + taşıma: yazım yarıda kalırsa (çökme, güç) oyuncunun dosyası —
+            // e-posta adresi dahil — bozulmasın.
+            Path tmp = yol.resolveSibling(yol.getFileName() + ".tmp");
+            Files.writeString(tmp, GSON.toJson(nesne()), StandardCharsets.UTF_8);
+            try {
+                Files.move(tmp, yol, java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(tmp, yol, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (Throwable t) {
             Candy.LOG.warn("[Candy] Config yazılamadı: {}", t.getMessage());
         }

@@ -1,0 +1,7 @@
+# Uretilen test eserleri — hicbiri depoya girmez
+localhost-key.pem
+localhost-cert.pem
+candy-test-cacerts
+durum.json
+mektuplar/
+gercek-depo.json

@@ -87,6 +87,17 @@ public class SaatBilgisi {
         saatler.remove(uuid);
     }
 
+    /**
+     * Dev testi — istemcinin saati <b>hiç bildirmediği</b> durumu taklit eder (yalnız
+     * {@code -Dcandy.debug=true}). Kayıt silinince {@link #dakika} -1 döner, yani
+     * {@code HayaletOyuncular} saat diyalogunu atlayıp eski (saatsiz) yola düşer.
+     * Vanilla istemciyle oynayan birini kurmadan o dalı sınamanın tek yolu.
+     */
+    public static void devSil(ServerPlayer player) {
+        if (!Boolean.getBoolean("candy.debug") || player == null) return;
+        saatler.remove(player.getUUID());
+    }
+
     public static void sunucuKapan() {
         saatler.clear();
     }

@@ -6,7 +6,7 @@ SMTP portları / kimlik doğrulama / antivirüs yüzünden hem kırılgan hem ya
 yerine istemci, oyuncunun config'ine yazdığı `https://` adrese küçük bir JSON POST atar.
 E-postayı **senin kuracağın bu uç** gönderir.
 
-Bu klasör çalışan bir sunucu değil, **referans**: mantığı ve güvenlik kapılarını gösterir.
+Bu klasördeki uç **çalışır hâlde**: çift katılım deposu da dahil (`depo.js`, Vercel KV / Upstash REST). Hesap açmadan denemek için `yerel-test/` var — gerçek TLS konuşur, "gönderdiği" mektubu diske yazar.
 
 ## Modun yolladığı istek
 
@@ -30,7 +30,9 @@ korkutmayı deneyebilir. Bunu durduran yer **burası**, mod değil:
 1. Bir adres ilk kez geldiğinde korku e-postasını **gönderme**. Önce o adrese tek bir
    onay e-postası at: "Candy adlı Minecraft modunun bu adrese ulaşmasına izin veriyor
    musun? Onaylamak için: …". Onaylananları kalıcı bir yerde (KV/DB) tut.
-2. Yalnızca **onaylanmış** adreslere korku e-postası gönder. Onaylanmamışı sessizce düşür.
+2. Yalnızca **onaylanmış** adreslere korku e-postası gönder. Onay beklerken gelen korku
+   e-postası gönderilmez, saklanır (token'la aynı ömür, son gelen kazanır) ve onay linkine
+   tıklandığı **an** yollanır — onaylayan kişi "tıkladım, ne oldu?" diye kalmaz.
 
 Böylece yalnızca gelen kutusunun sahibi "evet" derse Candy oraya ulaşır.
 
@@ -42,12 +44,19 @@ da kurumu taklit eden bir adres **kullanma** — bu Candy adlı kurgusal karakte
 
 ## Kurulum (örnek: Vercel + Resend)
 
-- `gonder.js` ve `onayla.js` dosyalarını bir serverless fonksiyon olarak yayınla.
-- Ortam değişkenleri: `RESEND_API_KEY`, `FROM="Candy <candy@alanadin.com>"`,
-  `ONAY_STORE` (örn. Vercel KV / Upstash bağlantısı).
+- `gonder.js`, `onayla.js`, `depo.js` ve `posta.js` dosyalarını projenin `api/` altına koy
+  (`depo.js` ve `posta.js` uç değil: ikisinin paylaştığı depo ve e-posta katı).
+- Projeye bir **KV** bağla (Vercel KV ya da Upstash Redis). Bağlayınca
+  `KV_REST_API_URL` ve `KV_REST_API_TOKEN` kendiliğinden gelir; `depo.js` başka
+  bir şey istemiyor. Depo bağlanmadan uç açılmamalı: o zaman her istek "onaysız"
+  görünür ve çift katılım kapısı bir işe yaramaz (`depo.js` bu durumda hata fırlatır).
+- Diğer ortam değişkenleri: `RESEND_API_KEY`, `FROM="Candy <candy@alanadin.com>"`.
 - `mektupUc` = `https://<projen>.vercel.app/api/gonder`.
+- Başka bir depo kullanacaksan (Postgres, Mongo, Firestore) yalnızca `depo.js`'in dışa
+  açık fonksiyonlarını değiştir; uçların kodu aynı kalır.
+- Yayınlamadan önce yerelde denemek için: `yerel-test/README.md`.
 - Ücretsiz katman korku modu için fazlasıyla yeter; servis (Resend/Brevo/SendGrid) fark etmez,
-  `gonder.js` içindeki tek `fetch` çağrısını değiştir.
+  `posta.js` içindeki tek `fetch` çağrısını değiştir.
 
 ## Oyuncu tarafı (hatırlatma)
 
