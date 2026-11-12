@@ -95,6 +95,7 @@ public class MirrorGirisi {
                 BlockPos donus = BlockPos.of(tp.sonMirrorGiris);
                 int x = donus.getX();
                 int z = donus.getZ();
+                overworld.getChunk((x) >> 4, (z) >> 4); // chunk yüklü değilse getHeight minY döndürür (oyuncu -64'e ışınlanır)
                 int y = overworld.getHeight(
                     net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
                 newPlayer.teleportTo(overworld, x + 0.5, y, z + 0.5,

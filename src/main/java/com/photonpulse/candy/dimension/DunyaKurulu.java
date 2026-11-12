@@ -77,6 +77,14 @@ public final class DunyaKurulu {
 
                 // 1) Bir kurul dünyasındaysa: süre dolduysa geri dön
                 if (tp.kurulDunyaId != null && !tp.kurulDunyaId.isEmpty()) {
+                    // Oyuncu kurul dünyasından başka yolla çıktıysa (ölüm → Mirror, portal…)
+                    // onu oradan çekme; yalnız kaydı kapat.
+                    if (KurulDunya.bul(player.level().dimension()) == null) {
+                        tp.kurulDunyaId = null;
+                        tp.kurulDunyaGirisTick = 0L;
+                        tp.kurulSonKarar = simdi;
+                        continue;
+                    }
                     if (simdi - tp.kurulDunyaGirisTick >= DUNYA_SURE) {
                         DunyaGecisi.don(server, player, tp);
                         tp.kurulSonKarar = simdi;   // dönüşte sayaç sıfırlanır
@@ -84,7 +92,8 @@ public final class DunyaKurulu {
                     continue;   // dünyadayken yeni karar yok
                 }
 
-                // 2) Overworld'de: 5 dk geçtiyse kurul kararı ver
+                // 2) Overworld'de: 5 dk geçtiyse kurul kararı ver (Mirror/boss/Nether'dayken asla)
+                if (!player.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) continue;
                 if (simdi - tp.kurulSonKarar < KARAR_ARALIGI) continue;
                 if (tp.bossOldurulmeTick > 0) continue;   // WIN sessizliği
                 tp.kurulSonKarar = simdi;

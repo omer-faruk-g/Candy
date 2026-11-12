@@ -87,7 +87,7 @@ public final class IkilikFisilti {
             tp.metaFarkindalik = Math.min(100.0, tp.metaFarkindalik + 1.0);
             tp.paranoyaSkoru = Math.min(100.0, tp.paranoyaSkoru + 1.5);
         }
-        Candy.LOG.debug("[Candy] ikilik fısıltı [{}]: \"{}\"", kanal, duz);
+        Candy.LOG.info("[Candy] ikilik fısıltı [{}]: \"{}\"", kanal, duz);
         return duz;
     }
 }

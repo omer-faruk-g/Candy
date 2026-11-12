@@ -211,6 +211,7 @@ public class AynaSistemi {
         ServerLevel ow = server.overworld();
         BlockPos donus = BlockPos.of(tp.aynaDonusPoz);
         int x = donus.getX(), z = donus.getZ();
+        ow.getChunk((x) >> 4, (z) >> 4); // chunk yüklü değilse getHeight minY döndürür (oyuncu -64'e ışınlanır)
         int y = ow.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         player.teleportTo(ow, x + 0.5, y, z + 0.5, Collections.emptySet(),
             player.getYRot(), player.getXRot(), false);

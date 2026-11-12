@@ -831,44 +831,34 @@ public class HayaletOyuncular {
         String isim = RNG.nextBoolean() ? "Steve" : "Alex";
         if (!hayaletAktifMi(isim, world.getGameTime())) return;
 
-        // 1) Yakında bell ara (köy merkezi) — 30 random sample
-        BlockPos bell = null;
+        // 1) Köy merkezi çanı — POI indeksinden (v10.0.2). Eskiden 400x400 alanda 30
+        // rastgele sütun deneniyordu: gerçek köyde isabet ~1e-6, mekanik fiilen ölüydü.
         BlockPos base = player.blockPosition();
-        for (int i = 0; i < 30; i++) {
-            int mx = base.getX() + RNG.nextInt(400) - 200;
-            int mz = base.getZ() + RNG.nextInt(400) - 200;
-            if (!world.hasChunk(mx >> 4, mz >> 4)) continue;
-            int my = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, mx, mz);
-            for (int dy = -12; dy <= 4; dy++) {
-                BlockPos p = new BlockPos(mx, my + dy, mz);
-                if (world.getBlockState(p).getBlock() == Blocks.BELL) {
-                    bell = p;
-                    break;
-                }
-            }
-            if (bell != null) break;
-        }
+        BlockPos bell = world.getPoiManager().findClosest(
+            h -> h.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.MEETING),
+            p -> !hijackedBellPozisyonlari.contains(p.asLong())   // aynı köy tekrar hijack olmasın
+                && world.hasChunk(p.getX() >> 4, p.getZ() >> 4),
+            base, 96,
+            net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY).orElse(null);
         if (bell == null) return;
+        if (world.getBlockState(bell).getBlock() != Blocks.BELL) return;
 
-        // Aynı köy tekrar hijack olmasın
-        if (hijackedBellPozisyonlari.contains(bell.asLong())) return;
-
-        // 2) Kapı ara — 40 blok radius'ta 400 sample
+        // 2) Kapı ara — çan çevresinde 40 blok, yüklü chunk'larda deterministik tarama
+        // (eskiden 137781 hücrelik hacimde 400 rastgele örnek: kapı bulma ihtimali ~%0).
         java.util.List<BlockPos> kapilar = new java.util.ArrayList<>();
-        for (int i = 0; i < 400; i++) {
-            int dx = RNG.nextInt(81) - 40;
-            int dy = RNG.nextInt(21) - 10;
-            int dz = RNG.nextInt(81) - 40;
-            BlockPos p = bell.offset(dx, dy, dz);
-            var st = world.getBlockState(p);
-            var b = st.getBlock();
-            if (b == Blocks.OAK_DOOR || b == Blocks.SPRUCE_DOOR
-                || b == Blocks.BIRCH_DOOR || b == Blocks.ACACIA_DOOR
-                || b == Blocks.DARK_OAK_DOOR || b == Blocks.JUNGLE_DOOR
-                || b == Blocks.MANGROVE_DOOR || b == Blocks.CHERRY_DOOR) {
-                // Sadece alt yarısı (double-tall block) — deduplicate
-                if (!kapilar.contains(p) && !kapilar.contains(p.above()) && !kapilar.contains(p.below())) {
-                    kapilar.add(p);
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+        for (int dx = -40; dx <= 40; dx++) {
+            for (int dz = -40; dz <= 40; dz++) {
+                int x = bell.getX() + dx, z = bell.getZ() + dz;
+                if (!world.hasChunk(x >> 4, z >> 4)) continue;
+                for (int dy = -10; dy <= 10; dy++) {
+                    mp.set(x, bell.getY() + dy, z);
+                    var st = world.getBlockState(mp);
+                    if (!st.is(BlockTags.WOODEN_DOORS)) continue;
+                    // Sadece alt yarı (kapı iki blok) — çift sayma
+                    if (st.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+                        != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) continue;
+                    kapilar.add(mp.immutable());
                 }
             }
         }
@@ -1029,52 +1019,57 @@ public class HayaletOyuncular {
             Set<Long> cevaplanan = cevaplananTabelalar.computeIfAbsent(
                 player.getUUID(), k -> new HashSet<>());
 
-            for (int dx = -16; dx <= 16; dx += 4) {
-                for (int dz = -16; dz <= 16; dz += 4) {
-                    for (int dy = -8; dy <= 8; dy += 4) {
-                        BlockPos p = merkez.offset(dx, dy, dz);
-                        BlockEntity be = world.getBlockEntity(p);
-                        if (!(be instanceof SignBlockEntity sign)) continue;
+            // v10.0.2: tabelalar chunk'ların block-entity haritasından toplanır. Eskiden
+            // 4'er blok adımlı ızgara taranıyordu: tabela 64 konumdan yalnız 1'inde görülüyordu.
+            java.util.List<SignBlockEntity> tabelalar = new java.util.ArrayList<>();
+            final int R = 16, RY = 8;
+            for (int cx = (merkez.getX() - R) >> 4; cx <= (merkez.getX() + R) >> 4; cx++) {
+                for (int cz = (merkez.getZ() - R) >> 4; cz <= (merkez.getZ() + R) >> 4; cz++) {
+                    // create=false: tarama chunk üretmeye/yüklemeye zorlamaz
+                    if (!(world.getChunk(cx, cz,
+                            net.minecraft.world.level.chunk.status.ChunkStatus.FULL, false)
+                            instanceof net.minecraft.world.level.chunk.LevelChunk wc)) continue;
+                    for (BlockEntity be : wc.getBlockEntities().values()) {
+                        if (!(be instanceof SignBlockEntity s)) continue;
+                        BlockPos p = be.getBlockPos();
+                        if (Math.abs(p.getX() - merkez.getX()) > R) continue;
+                        if (Math.abs(p.getZ() - merkez.getZ()) > R) continue;
+                        if (Math.abs(p.getY() - merkez.getY()) > RY) continue;
                         if (cevaplanan.contains(p.asLong())) continue;
-
-                        String metin = (metinYuz(sign.getFrontText())
-                            + " " + metinYuz(sign.getBackText())).toLowerCase();
-
-                        if (metin.contains("steve") || metin.contains("alex")) {
-                            // v1.7.3: Candy chat'ten konuşmaz. Cevabı TABELA'nın arka yüzüne yaz.
-                            // Boş bir yüz varsa oraya yaz, yoksa tabelayı değiştirme.
-                            SignText onYuz = sign.getFrontText();
-                            SignText arkaYuz = sign.getBackText();
-                            boolean arkaBos = arkaYuz.getMessages(false)[0].getString().isEmpty()
-                                && arkaYuz.getMessages(false)[1].getString().isEmpty()
-                                && arkaYuz.getMessages(false)[2].getString().isEmpty()
-                                && arkaYuz.getMessages(false)[3].getString().isEmpty();
-                            boolean onBos = onYuz.getMessages(false)[0].getString().isEmpty()
-                                && onYuz.getMessages(false)[1].getString().isEmpty()
-                                && onYuz.getMessages(false)[2].getString().isEmpty()
-                                && onYuz.getMessages(false)[3].getString().isEmpty();
-
-                            SignText yeni = new SignText();
-                            yeni = yeni.setMessage(0, Component.translatable("candy.hayalet.gaslight.0"));
-                            yeni = yeni.setMessage(1, Component.translatable("candy.hayalet.gaslight.1"));
-                            yeni = yeni.setMessage(2, Component.translatable("candy.hayalet.gaslight.2"));
-                            yeni = yeni.setMessage(3, Component.translatable("candy.hayalet.gaslight.3"));
-
-                            if (arkaBos) {
-                                sign.setText(yeni, false); // arka yüz
-                                sign.setChanged();
-                            } else if (onBos) {
-                                sign.setText(yeni, true); // ön yüz
-                                sign.setChanged();
-                            }
-                            // İki yüz de doluysa — dokunma, sadece kaydet
-                            cevaplanan.add(p.asLong());
-                            Candy.LOG.info("[Candy] Sign gaslighting → tabela cevap yazıldı ({})",
-                                player.getName().getString());
-                            return;
-                        }
+                        tabelalar.add(s);
                     }
                 }
+            }
+
+            for (SignBlockEntity sign : tabelalar) {
+                BlockPos p = sign.getBlockPos();
+                String metin = (metinYuz(sign.getFrontText())
+                    + " " + metinYuz(sign.getBackText())).toLowerCase();
+                if (!metin.contains("steve") && !metin.contains("alex")) continue;
+
+                // v1.7.3: Candy chat'ten konuşmaz. Cevabı TABELA'nın arka yüzüne yaz.
+                // Boş bir yüz varsa oraya yaz, yoksa tabelayı değiştirme.
+                boolean arkaBos = metinYuz(sign.getBackText()).isBlank();
+                boolean onBos = metinYuz(sign.getFrontText()).isBlank();
+
+                SignText yeni = new SignText();
+                yeni = yeni.setMessage(0, Component.translatable("candy.hayalet.gaslight.0"));
+                yeni = yeni.setMessage(1, Component.translatable("candy.hayalet.gaslight.1"));
+                yeni = yeni.setMessage(2, Component.translatable("candy.hayalet.gaslight.2"));
+                yeni = yeni.setMessage(3, Component.translatable("candy.hayalet.gaslight.3"));
+
+                if (arkaBos) {
+                    sign.setText(yeni, false); // arka yüz
+                    sign.setChanged();
+                } else if (onBos) {
+                    sign.setText(yeni, true); // ön yüz
+                    sign.setChanged();
+                }
+                // İki yüz de doluysa — dokunma, sadece kaydet
+                cevaplanan.add(p.asLong());
+                Candy.LOG.info("[Candy] Sign gaslighting → tabela cevap yazıldı ({})",
+                    player.getName().getString());
+                return;
             }
         }
     }

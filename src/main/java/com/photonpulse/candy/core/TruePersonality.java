@@ -292,6 +292,8 @@ public class TruePersonality {
     public long mirrorToplamSureTick = 0L;
     // Aktif boss fight var mı — duplicate spawn engeli
     public boolean bossSavastaMi = false;
+    // Bu oyuncunun geçerli boss'u — ölüm/rejoin sonrası yüklenen eski boss'lar kendini siler
+    public String aktifBossUuid = "";
     // WIN sonrası bu tick'ten 30 dk (aynı world'de) çoğu mekanik sessizleşir
     public long bossOldurulmeTick = 0L;
     // Faz 8 countdown kaybedildi — kalıcı 2x hız cezası, boss tekrar yenilene dek sürer

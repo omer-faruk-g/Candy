@@ -128,6 +128,12 @@ public class SignSystem {
     // orjinal silindikten sonra 30 sn sonra tekrar cevap sanılıp analiz ediliyordu.
     private static final Map<UUID, Set<TabelaAnahtar>> analizEdilen = new HashMap<>();
 
+    /**
+     * Kurulum sorusu konduğu anda yakında zaten duran yabancı tabelalar (anahtar → o anki metin).
+     * Bunlar soruya cevap sayılmaz; metni sonradan değişirse sayılır.
+     */
+    private static final Map<TabelaAnahtar, String> soruOncesiTabelalar = new HashMap<>();
+
     public static void register() {
         SunucuTick.END_SERVER_TICK.register(SignSystem::onTick);
         Candy.LOG.info("[Candy] SignSystem aktif");
@@ -157,7 +163,92 @@ public class SignSystem {
      * dünya A → dünya B geçişinde eski koordinatlar yeni dünyada false-positive yaratıyordu:
      * dünya B'de aynı koordinattaki oyuncu tabelası "Candy'nin" sanılıp cevap analiz edilmiyordu.
      */
+    /** Sicil dosyası: <world>/candy/tabelalar.tsv — sicil yalnız bellekte kalırsa yeniden açılışta
+     *  Candy tabelaları ömrü bitince kaybolmaz ve "serbest cevap" sanılıp tepki zinciri doğurur. */
+    private static java.nio.file.Path sicilDosyasi = null;
+
+    public static void sunucuBaslat(MinecraftServer server) {
+        candyTabelalari.clear();
+        sicilDosyasi = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+            .resolve("candy").resolve("tabelalar.tsv");
+        if (!java.nio.file.Files.exists(sicilDosyasi)) return;
+        try {
+            for (String satir : java.nio.file.Files.readAllLines(sicilDosyasi)) {
+                String[] p = satir.split("\t", 7);
+                if (p.length < 7) continue;
+                var dunya = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION,
+                    net.minecraft.resources.ResourceLocation.parse(p[0]));
+                TabelaKaydi k = new TabelaKaydi(UUID.fromString(p[2]), p[6], Long.parseLong(p[3]));
+                k.sonGorulduTick = Long.parseLong(p[4]);
+                k.ihmalSayildi = "1".equals(p[5]);
+                candyTabelalari.put(new TabelaAnahtar(dunya, BlockPos.of(Long.parseLong(p[1]))), k);
+            }
+            Candy.LOG.info("[Candy] tabela sicili yüklendi: {}", candyTabelalari.size());
+        } catch (Exception e) {
+            Candy.LOG.warn("[Candy] tabela sicili okunamadı: {}", e.getMessage());
+        }
+    }
+
+    private static void sicilYaz() {
+        if (sicilDosyasi == null) return;
+        StringBuilder sb = new StringBuilder();
+        for (var e : candyTabelalari.entrySet()) {
+            TabelaKaydi k = e.getValue();
+            var key = e.getKey().dunya();
+            sb.append(key.location()).append('\t')
+              .append(e.getKey().poz().asLong()).append('\t')
+              .append(k.sahip).append('\t').append(k.konulduTick).append('\t')
+              .append(k.sonGorulduTick).append('\t').append(k.ihmalSayildi ? '1' : '0').append('\t')
+              .append(k.metin.replace('\t', ' ').replace('\n', ' ')).append('\n');
+        }
+        try {
+            java.nio.file.Files.createDirectories(sicilDosyasi.getParent());
+            java.nio.file.Files.writeString(sicilDosyasi, sb.toString());
+        } catch (Exception e) {
+            Candy.LOG.warn("[Candy] tabela sicili yazılamadı: {}", e.getMessage());
+        }
+    }
+
+    /** Candy'nin kendi cümleleri (her iki dil) — sicili kaybolmuş eski tabelaları tanımak için. */
+    private static Set<String> candyCumleleri = null;
+
+    private static String normalize(String s) {
+        return s.replace('|', ' ').replaceAll("\\s+", " ").trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static boolean candyCumlesiMi(String metin) {
+        if (candyCumleleri == null) {
+            candyCumleleri = new HashSet<>();
+            for (String dil : new String[]{"en_us", "tr_tr"}) {
+                try (var in = SignSystem.class.getResourceAsStream("/assets/candy/lang/" + dil + ".json")) {
+                    if (in == null) continue;
+                    var obj = com.google.gson.JsonParser.parseReader(
+                        new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                    for (var e : obj.entrySet()) {
+                        String k = e.getKey();
+                        if (k.startsWith("candy.reaction.") || k.startsWith("candy.setup.")
+                            || k.startsWith("candy.observation.") || k.startsWith("candy.rutin.")
+                            || k.startsWith("candy.attribution.")) {
+                            String v = normalize(e.getValue().getAsString());
+                            if (!v.isEmpty() && !v.contains("%")) candyCumleleri.add(v);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        String m = normalize(metin);
+        if (m.isEmpty()) return false;
+        for (String c : candyCumleleri) {
+            if (m.equals(c)) return true;
+            // Kurulum sorusu + ipucu satırı / 15x3 kırpılmış uzun cümle
+            if (c.length() >= 12 && (m.startsWith(c) || (m.length() >= 12 && c.startsWith(m)))) return true;
+        }
+        return false;
+    }
+
     public static void sunucuKapan() {
+        sicilYaz();
+        sicilDosyasi = null;
         candyTabelalari.clear();
         okunmusTabelalar.clear();
         analizEdilen.clear();
@@ -382,6 +473,21 @@ public class SignSystem {
             // KURULUM sırasında: Candy tabelasına YAKIN (≤5 blok) ise o soruya cevap say.
             // Böylece oyuncu yanına yeni bir tabela koyup cevaplayabilir.
             if (!tp.kurulumTamam) {
+                // Sicili kaybolmuş eski Candy tabelası oyuncunun cevabı DEĞİLDİR (canlı testte
+                // "I took a note." tabelası 1. soruyu, eski soru tabelası 2. soruyu "cevapladı").
+                if (candyCumlesiMi(metin)) {
+                    yokEt(world, p);
+                    analiz.add(anahtar);
+                    okunmus.put(anahtar, now);
+                    Candy.LOG.info("[Candy] yetim Candy tabelası kaldırıldı: {}", metin);
+                    return;
+                }
+                // Soru konduğunda zaten orada duran ve metni değişmemiş tabela da cevap değildir
+                // (sandık etiketi vb.) — oyuncu yeni tabela koymalı ya da metni değiştirmeli.
+                if (metin.equals(soruOncesiTabelalar.get(anahtar))) {
+                    okunmus.put(anahtar, now);
+                    return;
+                }
                 TabelaAnahtar yakinCandy = null;
                 for (TabelaAnahtar ca : candyTabelalari.keySet()) {
                     // Dünya kontrolü ŞART: başka dünyadaki aynı koordinat "yakın" değildir.
@@ -405,6 +511,15 @@ public class SignSystem {
                 }
                 // Yakında Candy tabelası yok — kullanıcının dekoratif tabelası, sayma
                 okunmus.put(anahtar, now);
+                return;
+            }
+            // Sicili kaybolmuş eski Candy tabelası (v10.0.1 öncesi): cevap değil — kaybolsun,
+            // yoksa her açılışta tepki tabelası doğurup çoğalıyordu.
+            if (candyCumlesiMi(metin)) {
+                yokEt(world, p);
+                analiz.add(anahtar);
+                okunmus.put(anahtar, now);
+                Candy.LOG.info("[Candy] yetim Candy tabelası kaldırıldı: {}", metin);
                 return;
             }
             // Kurulum sonrası her tabela cevap materyali olabilir (bir kez)
@@ -437,6 +552,22 @@ public class SignSystem {
         reaksiyonYerlestir(player, tp, metin);
     }
 
+    /** Soru konduğu an yakındaki yabancı tabelaların metnini kaydeder (cevap sayılmasınlar). */
+    private static void soruOncesiniKaydet(ServerLevel world, BlockPos soru) {
+        if (soruOncesiTabelalar.size() > 2048) soruOncesiTabelalar.clear();
+        topla(world, soru);
+        for (int i = 0; i < adaylar.size(); i++) {
+            BlockPos p = adaylar.get(i);
+            if (p.equals(soru)) continue;
+            TabelaAnahtar a = new TabelaAnahtar(world.dimension(), p);
+            if (candyTabelalari.containsKey(a)) continue;
+            if (world.getBlockEntity(p) instanceof SignBlockEntity s) {
+                soruOncesiTabelalar.put(a, tabelaMetni(s));
+            }
+        }
+        adaylar.clear();
+    }
+
     /**
      * Rastgele bir olasılıkla, oyuncunun görmediği bir yere tabela yerleştir.
      * Candy sabırlı — sık yerleştirmiyor.
@@ -460,8 +591,12 @@ public class SignSystem {
                 Component[] soruSatir = wrapText(Component.translatable(soru), 15, 3);
                 yerlestir((ServerLevel) player.level(), hedef, player, new Component[]{
                     soruSatir[0], soruSatir[1], soruSatir[2],
-                    Component.translatable(SignTemplates.CEVAPLA_HINT)
+                    // DÜZ METİN şart: vanilla, çevrilebilir (translatable) satır içeren tabelada
+                    // düzenleme ekranını açmaz (SignBlock.hasEditableText) — oyuncu sağ tıklayıp
+                    // soruyu cevaplayamıyordu (canlı testte 6/6 sağ tık ekransız kaldı).
+                    Component.literal(Component.translatable(SignTemplates.CEVAPLA_HINT).getString())
                 }, true);
+                soruOncesiniKaydet((ServerLevel) player.level(), hedef);
                 tp.sonMudahaleTick = player.level().getGameTime();
                 Candy.LOG.info("[Candy] kurulum sorusu yerleştirildi: {}", soru);
             }

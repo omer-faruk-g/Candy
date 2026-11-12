@@ -100,9 +100,23 @@ public class BossManager {
             pos.getX(), pos.getZ());
         pos = new BlockPos(pos.getX(), Math.max(world.getMinY() + 2, y), pos.getZ());
 
+        // Ölüm/rejoin sonrası: boyutta yüklü kalmış kendi boss'u varsa (64 blok dışı) yenisini doğurma,
+        // en ileri fazdakini sürdür, kalanını sil — tek boss kuralı
+        var eskiler = world.getEntities(CandyEntities.TRUE_REAL_CANDY,
+            e -> e.getOwnerUuid().map(player.getUUID()::equals).orElse(false));
+        if (!eskiler.isEmpty()) {
+            TrueRealCandyEntity devam = java.util.Collections.max(eskiler,
+                java.util.Comparator.comparingInt(TrueRealCandyEntity::getFaz));
+            eskiler.stream().filter(b -> b != devam).forEach(net.minecraft.world.entity.Entity::discard);
+            tp.aktifBossUuid = devam.getUUID().toString();
+            tp.bossSavastaMi = true;
+            return;
+        }
+
         var spawned = CandyEntities.TRUE_REAL_CANDY.spawn(world, pos, EntitySpawnReason.EVENT);
         if (spawned instanceof TrueRealCandyEntity boss) {
             boss.setOwnerUuid(player.getUUID());
+            tp.aktifBossUuid = boss.getUUID().toString();
             tp.bossSavastaMi = true;
             player.displayClientMessage(Component.translatable("candy.boss.geldi")
                 .withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), false);
@@ -116,6 +130,7 @@ public class BossManager {
         MinecraftServer srv = player.level().getServer();
         long simdi = (srv != null) ? srv.overworld().getGameTime() : player.level().getGameTime();
         tp.bossSavastaMi = false;
+        tp.aktifBossUuid = "";
         tp.badEndingAktif = false;
         tp.bossOldurulmeTick = simdi; // overworld saati — BossManager ticker ile tutarlı
         tp.mirrorToplamSureTick = 0L; // sıfırla — hemen yeni boss spawn olmasın
@@ -129,6 +144,7 @@ public class BossManager {
         if (server != null) {
             ServerLevel overworld = server.overworld();
             BlockPos donus = BlockPos.of(tp.sonMirrorGiris);
+            overworld.getChunk((donus.getX()) >> 4, (donus.getZ()) >> 4); // chunk yüklü değilse getHeight minY döndürür (oyuncu -64'e ışınlanır)
             int y = overworld.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
                 donus.getX(), donus.getZ());
             player.teleportTo(overworld, donus.getX() + 0.5, y, donus.getZ() + 0.5,
@@ -146,6 +162,7 @@ public class BossManager {
     public static void badEnding(ServerPlayer player) {
         TruePersonality tp = PersonalityManager.get(player);
         tp.bossSavastaMi = false;
+        tp.aktifBossUuid = "";
         tp.badEndingAktif = true;
         tp.badEndingBaslangicTick = player.level().getGameTime();
         tp.mirrorToplamSureTick = 0L; // sıfırla — hemen yeni boss spawn olmasın

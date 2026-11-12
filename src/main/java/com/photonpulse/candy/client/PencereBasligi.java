@@ -68,7 +68,7 @@ public final class PencereBasligi {
             if (ozgun == null) ozgun = baslikTahmin(mc);
 
             mc.getWindow().setTitle(BASLIKLAR[indeks]);
-            Candy.LOG.debug("[Candy] Pencere başlığı değişti (idx {})", indeks);
+            Candy.LOG.info("[Candy] Pencere başlığı değişti (idx {})", indeks);
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Başlık uygulanamadı: {}", t.getMessage());
         }
@@ -82,7 +82,7 @@ public final class PencereBasligi {
             if (mc == null || mc.getWindow() == null) return;
             mc.getWindow().setTitle(g);
             ozgun = null;
-            Candy.LOG.debug("[Candy] Pencere başlığı geri alındı");
+            Candy.LOG.info("[Candy] Pencere başlığı geri alındı");
         } catch (Throwable t) {
             Candy.LOG.debug("[Candy] Başlık geri alınamadı: {}", t.getMessage());
         }

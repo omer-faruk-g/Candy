@@ -63,6 +63,7 @@ public class TrueRealCandyEntity extends Monster {
     private int countdownTick = 0;               // Faz 8: 300 sn = 6000 tick
     private UUID elitKlonId = null;              // Faz 3 elit klon
     private boolean bossOldu = false;            // WIN işaretlendi mi
+    private boolean winVerildi = false;          // BossManager.win bir kez çağrılsın
 
     private static final int COUNTDOWN_BASLANGIC = 6000; // 300 sn
     private static final String KLON_ETIKETI = "candy_clone";
@@ -162,6 +163,17 @@ public class TrueRealCandyEntity extends Monster {
         if (getOwnerUuid().isEmpty()) {
             var yakin = world.getNearestPlayer(this, 48.0);
             if (yakin instanceof ServerPlayer sp) setOwnerUuid(sp.getUUID());
+        }
+
+        // Eski dövüşten kalmış boss (chunk sonradan yüklendi) — sahibinin geçerli boss'u değilse sil
+        ServerPlayer sahip = owner(world);
+        if (sahip != null) {
+            String aktif = com.photonpulse.candy.core.PersonalityManager.get(sahip).aktifBossUuid;
+            if (aktif != null && !aktif.isEmpty() && !aktif.equals(this.getUUID().toString())) {
+                Candy.LOG.info("[Candy] eski boss silindi (faz {})", getFaz());
+                this.discard();
+                return;
+            }
         }
 
         // BossBar güncelle
@@ -326,8 +338,16 @@ public class TrueRealCandyEntity extends Monster {
         bossOldu = true;
         ServerLevel world = (ServerLevel) this.level();
         BossCountdown.gonder(player, -1); // temizle
-        this.setHealth(0f);
+        // setHealth(0) YOK: önce can sıfırlanırsa LivingEntity.hurtServer "zaten ölü" deyip
+        // kill()'i reddeder, die() hiç çalışmaz ve WIN verilmez.
         this.kill(world);
+        if (!winVerildi) {            // hasar yolu yine de reddettiyse (başka mod, dokunulmazlık…)
+            winVerildi = true;
+            bossBar.removeAllPlayers();
+            klonlariTemizle(world);
+            BossManager.win(player);
+            this.discard();
+        }
         return true;
     }
 
@@ -345,7 +365,8 @@ public class TrueRealCandyEntity extends Monster {
     public boolean hurtServer(ServerLevel world, net.minecraft.world.damagesource.DamageSource source, float amount) {
         int faz = getFaz();
         // Faz 3, 4, 8 invulnerable (klon/kitap ile ilerlenir)
-        if (faz == 3 || faz == 4 || faz == 8) return false;
+        // bossOldu: Gizemli Kitap kill()'i hasar yoluyla gelir — reddedilirse die()/WIN hiç çalışmaz
+        if ((faz == 3 || faz == 4 || faz == 8) && !bossOldu) return false;
         return super.hurtServer(world, source, amount);
     }
 
@@ -355,7 +376,8 @@ public class TrueRealCandyEntity extends Monster {
         bossBar.removeAllPlayers();
         if (this.level() instanceof ServerLevel world) {
             klonlariTemizle(world);
-            if (bossOldu) {
+            if (bossOldu && !winVerildi) {
+                winVerildi = true;
                 ServerPlayer p = owner(world);
                 if (p != null) BossManager.win(p);
             }

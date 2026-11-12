@@ -100,6 +100,7 @@ public class Candy {
             TreeGrowth.sunucuBaslat(server);
             SimulationManager.sunucuBaslat(server);
             ShadowTreeManager.sunucuBaslat(server);
+            SignSystem.sunucuBaslat(server);
         });
         SunucuYasamDongusu.SERVER_STOPPING.register(server -> {
             PersonalityManager.sunucuKapan();

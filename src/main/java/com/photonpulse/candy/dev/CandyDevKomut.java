@@ -77,6 +77,15 @@ public final class CandyDevKomut {
                             DoubleArgumentType.doubleArg(0.0, 1.0))
                         .executes(c -> ofke(c.getSource(),
                             DoubleArgumentType.getDouble(c, "deger")))))
+                // Test iskelesi: uzun birikim isteyen ön koşulları (korku, baskı, klon sayısı…)
+                // doğrudan kur; tetikleyici ve etki yolu mekaniğin KENDİ kodu olarak kalır.
+                .then(Commands.literal("alan")
+                    .then(Commands.argument("ad",
+                            com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .then(Commands.argument("deger", DoubleArgumentType.doubleArg())
+                            .executes(c -> alan(c.getSource(),
+                                com.mojang.brigadier.arguments.StringArgumentType.getString(c, "ad"),
+                                DoubleArgumentType.getDouble(c, "deger"))))))
                 .then(Commands.literal("tuzak")
                     .executes(c -> tuzak(c.getSource())))
                 .then(Commands.literal("ikilik")
@@ -87,6 +96,11 @@ public final class CandyDevKomut {
                     .executes(c -> arkadas(c.getSource())))
                 .then(Commands.literal("mektup")
                     .executes(c -> mektup(c.getSource())))
+                // Boss'u Gizemli Kitap'la yenmenin sonucu (sağ tık etkileşimi komutla
+                // taklit edilemiyor). Kötü son komutsuz: geri sayımı /tick sprint bitirir.
+                .then(Commands.literal("son")
+                    .then(Commands.literal("kazan")
+                        .executes(c -> sonKazan(c.getSource()))))
                 .then(Commands.literal("saat")
                     .executes(c -> saat(c.getSource()))
                     .then(Commands.literal("sil")
@@ -172,6 +186,28 @@ public final class CandyDevKomut {
         return 1;
     }
 
+    private static int alan(CommandSourceStack src, String ad, double deger) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) return 0;
+        TruePersonality tp = PersonalityManager.get(p);
+        if (tp == null) return 0;
+        try {
+            java.lang.reflect.Field f = TruePersonality.class.getField(ad);
+            Class<?> t = f.getType();
+            if (t == double.class) f.setDouble(tp, deger);
+            else if (t == float.class) f.setFloat(tp, (float) deger);
+            else if (t == int.class) f.setInt(tp, (int) deger);
+            else if (t == long.class) f.setLong(tp, (long) deger);
+            else if (t == boolean.class) f.setBoolean(tp, deger != 0);
+            else { yaz(src, "alan tipi desteklenmiyor: " + t.getSimpleName(), ChatFormatting.RED); return 0; }
+            yaz(src, "alan " + ad + " -> " + f.get(tp), ChatFormatting.GREEN);
+            return 1;
+        } catch (ReflectiveOperationException e) {
+            yaz(src, "alan yok: " + ad, ChatFormatting.RED);
+            return 0;
+        }
+    }
+
     // ─── mekanikleri kendi yolundan tetikle ───
     private static int tuzak(CommandSourceStack src) {
         boolean ok = TuzakYayini.yayinla(src.getServer());
@@ -236,6 +272,26 @@ public final class CandyDevKomut {
             ChatFormatting.GREEN);
         yaz(src, "Karar istemcide: mektup + mektupEposta + mektupUc ucu de dolu degilse "
             + "TEK ag istegi bile cikmaz.", ChatFormatting.GRAY);
+        return 1;
+    }
+
+    // ─── son kazan: Gizemli Kitap'la boss'u yenmenin sonucu ───
+    private static int sonKazan(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("oyuncu gerekli")); return 0; }
+        // Yakındaki boss varsa kitabın sağ tıkta çağırdığı yolun aynısı: faz 8 değilse reddeder,
+        // faz 8'de boss ölür ve die() -> BossManager.win zinciri işler.
+        var yakin = p.level().getEntitiesOfClass(com.photonpulse.candy.boss.TrueRealCandyEntity.class,
+            p.getBoundingBox().inflate(128), e -> true);
+        if (!yakin.isEmpty()) {
+            // Faz 8'deki boss öncelikli (birden fazla varsa yanlışını seçmesin)
+            var boss = yakin.stream().filter(b -> b.getFaz() == 8).findFirst().orElse(yakin.get(0));
+            boolean oldu = boss.gizemliKitapKullanildi(p);
+            Candy.LOG.info("[Candy][dev] son: kitap faz {} -> {}", boss.getFaz(), oldu ? "WIN" : "reddedildi");
+            return oldu ? 1 : 0;
+        }
+        com.photonpulse.candy.boss.BossManager.win(p);
+        Candy.LOG.info("[Candy][dev] son: boss yok, dogrudan kazan -> {}", p.level().dimension().location());
         return 1;
     }
 

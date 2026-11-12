@@ -69,6 +69,7 @@ public final class DunyaGecisi {
         ServerLevel ow = server.overworld();
         BlockPos d = BlockPos.of(tp.kurulDonusPoz);
         int x = d.getX(), z = d.getZ();
+        ow.getChunk((x) >> 4, (z) >> 4); // chunk yüklü değilse getHeight minY döndürür (oyuncu -64'e ışınlanır)
         int y = ow.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         player.teleportTo(ow, x + 0.5, y, z + 0.5, Collections.emptySet(),
             player.getYRot(), player.getXRot(), false);

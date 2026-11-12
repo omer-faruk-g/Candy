@@ -91,6 +91,12 @@ public class CommandManagerMixin {
                 player.getName().getString(), command, tp.kurulumTamam, cheatKomutu);
 
             if (!cheatKomutu) return; // Zararsız komut, dokunma
+            // Klavyesiz test koşumu (-Dcandy.ototest=true) boss/boyut sırasını komutla sürüyor;
+            // kilit orada sırayı kesiyordu. Normal oyunda bu bayrak yok, kilit aynen çalışır.
+            if (Boolean.getBoolean("candy.ototest")) {
+                Candy.LOG.info("[Candy] CmdLock: ototest -> gecti");
+                return;
+            }
 
             // Cheat komutu — engelle
             String key = MESAJLAR[CANDY_RNG.nextInt(MESAJLAR.length)];
