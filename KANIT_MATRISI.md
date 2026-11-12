@@ -1,4 +1,6 @@
-# Candy v10.0.1 — Canlı Kanıt Matrisi (12 Kasım 2026)
+# Candy v10.1.0 — Canlı Kanıt Matrisi (12 Kasım 2026)
+
+> Canlı turlar v10.1.0 koduyla yapıldı (sürüm numarası değişmeden önce jar adı 10.0.1'di; kod aynı). Dört düğüm v10.1.0 jar adıyla yeniden koşturuldu.
 
 **Yöntem:** Oyun gerçekten açıldı (Minecraft 1.21.7 Fabric, prod jar). İstemci tarafındaki `CandyOtoTest` betiği komut verdi, tıkladı, slot seçti, ekran görüntüsü aldı. Kanıt = oyun logundaki satır + ekran görüntüsü. Ek olarak 4 sürüm düğümü (1.21.7 / 1.21.11 × Fabric / NeoForge) güncel kodla koşturuldu.
 
@@ -36,14 +38,14 @@
 | Beyin / ZihinselProva / Kurul | ✅ GEÇTİ | `ZihinselProva … eylem=…` (10 eylem türünün hepsi seçildi: YAKIN_KLON 111, RUTIN 87, KARANLIK 87, KLON_ARKA 60, IKILIK 58, SORU 57, SES 47, SESSIZLIK 46, ALTYAZI 44, BASLIK 39), `kurul: 11/11 üye` | — |
 | Meşale kırıcı (mağara) | ✅ GEÇTİ | Mağara turu (y=41, üstü kapalı, meşaleli): `MesaleKirici aktif — mağara meşale patlaması` → `MesaleKirici: Dev çevresinde 12 meşale patladı` | c7-* |
 
-## 2. Sürüm düğümleri (güncel kodla, 12 Kas 20:27–20:32)
+## 2. Sürüm düğümleri (v10.1.0, 12 Kas 21:49–21:54)
 
 | Düğüm | Sonuç | `[Candy]` satırı | ERROR/Exception — nedeni |
 |---|---|---|---|
-| 1.21.7 Fabric | ✅ BİTTİ (105 sn) | 277 | 2 — Mojang oturum sunucusu 429 (çevrimdışı test hesabı) |
-| 1.21.7 NeoForge | ✅ BİTTİ (84 sn) | 190 | 1 — `mektup yollanamadı: ConnectException` (test ortamında posta sunucusu yok) |
-| 1.21.11 Fabric | ✅ BİTTİ (84 sn) | 190 | 8 — Mojang 401 + Realms yetki hatası (çevrimdışı hesap), mektup ConnectException |
-| 1.21.11 NeoForge | ✅ BİTTİ (78 sn) | 197 | 3 — eski dünyadan `minecraft:chain` tarifi, mektup ConnectException |
+| 1.21.7 Fabric | ✅ BİTTİ (93 sn) | 187 | 0 |
+| 1.21.7 NeoForge | ✅ BİTTİ (84 sn) | 175 | 1 — `mektup yollanamadı: ConnectException` (test ortamında posta sunucusu yok) |
+| 1.21.11 Fabric | ✅ BİTTİ (84 sn) | 191 | 10 — hepsi Mojang oturum sunucusu 401 / kullanıcı özellikleri (çevrimdışı test hesabı) |
+| 1.21.11 NeoForge | ✅ BİTTİ (80 sn) | 184 | 3 — eski dünyadan `minecraft:chain` tarifi, mektup ConnectException |
 
 **Moddan kaynaklanan hata: 0.**
 
