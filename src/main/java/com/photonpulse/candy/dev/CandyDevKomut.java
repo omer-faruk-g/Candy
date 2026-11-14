@@ -59,6 +59,13 @@ public final class CandyDevKomut {
 
     private static final boolean DEBUG = Boolean.getBoolean("candy.debug");
 
+    private static int lanDogrulamaKapat(CommandSourceStack src) {
+        src.getServer().setUsesAuthentication(false);
+        Candy.LOG.info("[Candy][dev] LAN: oturum doğrulaması kapatıldı (çevrimdışı test hesabı)");
+        src.sendSuccess(() -> Component.literal("[dev] LAN doğrulaması kapalı"), false);
+        return 1;
+    }
+
     public static void register() {
         if (!DEBUG) return;   // normal oyunda komut HİÇ kaydedilmiyor
 
@@ -67,6 +74,9 @@ public final class CandyDevKomut {
                 .executes(c -> durum(c.getSource()))
                 .then(Commands.literal("durum")
                     .executes(c -> durum(c.getSource())))
+                // LAN testi: çevrimdışı test hesabı (Dev2) Mojang doğrulamasına takılmasın.
+                .then(Commands.literal("lan")
+                    .executes(c -> lanDogrulamaKapat(c.getSource())))
                 .then(Commands.literal("perde")
                     .then(Commands.argument("kademe",
                             IntegerArgumentType.integer(0, Perde.MAKS_KADEME))

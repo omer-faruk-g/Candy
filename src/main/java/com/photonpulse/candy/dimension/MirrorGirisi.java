@@ -144,8 +144,11 @@ public class MirrorGirisi {
         // Overworld koordinatlarını kullan (X, Z aynı, Y yüzey — overworld gen ile hep katı zemin)
         int x = player.getBlockX();
         int z = player.getBlockZ();
+        mirror.getChunk(x >> 4, z >> 4); // chunk yüklü değilse getHeight minY döndürür -> y=96 fallback blok içine düşüp boğuyordu
         int y = mirror.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
-        if (y <= mirror.getMinY() + 1) y = 96; // chunk daha üretilmediyse güvenli fallback
+        if (y <= mirror.getMinY() + 1) y = 96;
+        mirror.setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 3);
+        mirror.setBlock(new BlockPos(x, y + 1, z), Blocks.AIR.defaultBlockState(), 3);
         player.teleportTo(mirror, x + 0.5, y, z + 0.5,
             Collections.emptySet(), player.getYRot(), 0f, false);
         player.setHealth(player.getMaxHealth());
@@ -159,11 +162,16 @@ public class MirrorGirisi {
         int y = 128; // Anti-Mirror sabit yükseklik
 
         // Anti-Mirror end-gen'de arbitrer koordinatlar boşluk (void) olabilir.
-        // Player'ın altına güvenli platform kur — void'e düşmesin, lottery ile ölsün.
+        // Player'ın altına güvenli platform + 2 blok duvar kur — kenardan düşüp ölmesin, lottery ile ölsün.
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 antiMirror.setBlock(new BlockPos(x + dx, y - 1, z + dz),
                     Blocks.BLACKSTONE.defaultBlockState(), 3);
+                boolean kenar = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+                for (int dy = 0; dy <= 1; dy++) {
+                    antiMirror.setBlock(new BlockPos(x + dx, y + dy, z + dz),
+                        (kenar ? Blocks.BLACKSTONE : Blocks.AIR).defaultBlockState(), 3);
+                }
             }
         }
 

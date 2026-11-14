@@ -93,7 +93,7 @@ public final class ArkadasFisilti {
         tp.metaFarkindalik = Math.min(100.0, tp.metaFarkindalik + 1.0);
         sonFisilti = tickSayaci;
 
-        Candy.LOG.debug("[Candy] Arkadaş fısıltısı: {} -> {} hakkında (idx {})",
+        Candy.LOG.info("[Candy] Arkadaş fısıltısı: {} -> {} hakkında (idx {})",
             alici.getGameProfile().getName(), hakkinda.getGameProfile().getName(), indeks);
         return true;
     }

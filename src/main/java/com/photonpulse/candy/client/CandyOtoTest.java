@@ -74,6 +74,10 @@ public final class CandyOtoTest {
      * Satır biçimi {@code <tick> <adım>}; adım bir komut ya da {@code #ekran <ad>},
      * {@code #log <metin>}, {@code #bitti}. Boş satır ve {@code //} yorum atlanır.
      */
+    /** {@code -Dcandy.ototest.temel=false}: temel sıra (60–560) atlanır, ek sıra her tick'i kullanabilir
+     *  (ikinci istemci / bot oyuncu: masaüstü şifresi, LED, mektup tekrar koşmasın). */
+    private static final boolean TEMEL = !"false".equals(System.getProperty("candy.ototest.temel"));
+
     private static final java.util.TreeMap<Integer, java.util.List<String>> EK = ekOku();
     private static final int SON_TICK = EK.isEmpty() ? 560 : Math.max(560, EK.lastKey());
 
@@ -88,7 +92,7 @@ public final class CandyOtoTest {
                 int b = s.indexOf(' ');
                 if (b < 0) continue;
                 int t = Integer.parseInt(s.substring(0, b));
-                if (t <= 560) continue;   // temel sıranın tick'leri ona ait
+                if (TEMEL && t <= 560) continue;   // temel sıranın tick'leri ona ait
                 m.computeIfAbsent(t, k -> new java.util.ArrayList<>()).add(s.substring(b + 1).strip());
             }
             Candy.LOG.warn("[Candy][ototest] ek sira: {} tick, son tick {}", m.size(),
@@ -117,9 +121,21 @@ public final class CandyOtoTest {
             } catch (Throwable t) {
                 Candy.LOG.warn("[Candy][ototest] ekran alinamadi: {}", t.toString());
             }
+        } else if (a.startsWith("#oyna")) {
+            // #oyna <tick> — bot oyuncu (OtoOyuncu) o kadar tick normal oyuncu gibi oynar; #oyna dur
+            String q = a.substring(5).strip();
+            if (q.equals("dur")) OtoOyuncu.durdur(mc, "komut");
+            else OtoOyuncu.baslat(mc, Integer.parseInt(q));
         } else if (a.startsWith("#log")) {
             Candy.LOG.warn("[Candy][ototest] ADIM {}", a.substring(4).strip());
+        } else if (a.startsWith("#bekle ")) {
+            // #bekle <id> <maxTick> <regex> — bundan sonra gelen ilk eşleşen log satırını bekler
+            String[] p = a.substring(7).strip().split(" ", 3);
+            if (p.length == 3) Senaryo.bekle(p[0], Integer.parseInt(p[1]), p[2], tick);
+        } else if (a.equals("#ozet")) {
+            Senaryo.ozet();
         } else if (a.equals("#bitti")) {
+            Senaryo.ozet();
             Candy.LOG.warn("[Candy][ototest] SIRA BITTI (ek sira dahil)");
         } else if (a.startsWith("#sohbet ")) {
             // CANLI ETKİLEŞİM: gerçek sohbet paketi (komut değil) — CandyChatOkur/şifre/tuzak yolu
@@ -235,8 +251,9 @@ public final class CandyOtoTest {
                 try { n = Integer.parseInt(q); } catch (NumberFormatException e) { n = -1; }
             }
             if (n >= 1 && n <= 9) {
-                net.minecraft.client.KeyMapping.click(
-                    com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(48 + n));
+                // KeyMapping.click kuyrugu odaksiz pencerede tuketilmiyordu (#slot 1 -> slot 6 / elde kilic kaldi);
+                // hotbar tusunun yaptigini dogrudan yap (sunucuya paket sonraki tick gider).
+                if (mc.player != null) mc.player.getInventory().setSelectedSlot(n - 1);
                 Candy.LOG.info("[Candy][ototest] slot -> {} ({})", n, q);
             } else {
                 Candy.LOG.warn("[Candy][ototest] slot: bulunamadi ({})", q);
@@ -352,6 +369,13 @@ public final class CandyOtoTest {
         tick++;
         duraklatmaSur(mc);
         yuruyusSur(mc);
+        OtoOyuncu.sur(mc);
+        Senaryo.sur(tick);
+        if (!TEMEL) {
+            java.util.List<String> ek = EK.get(tick);
+            if (ek != null) for (String a : ek) ekAdim(mc, a);
+            return;
+        }
 
         switch (tick) {
             case 60 -> Candy.LOG.info(

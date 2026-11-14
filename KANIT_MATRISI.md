@@ -37,6 +37,7 @@
 | Şifre #0-2, tuzak, dil modeli, modsuz oynama tespiti | ✅ GEÇTİ | 2. koşu logu | — |
 | Beyin / ZihinselProva / Kurul | ✅ GEÇTİ | `ZihinselProva … eylem=…` (10 eylem türünün hepsi seçildi: YAKIN_KLON 111, RUTIN 87, KARANLIK 87, KLON_ARKA 60, IKILIK 58, SORU 57, SES 47, SESSIZLIK 46, ALTYAZI 44, BASLIK 39), `kurul: 11/11 üye` | — |
 | Meşale kırıcı (mağara) | ✅ GEÇTİ | Mağara turu (y=41, üstü kapalı, meşaleli): `MesaleKirici aktif — mağara meşale patlaması` → `MesaleKirici: Dev çevresinde 12 meşale patladı` | c7-* |
+| Arkadaş fısıltısı (2 gerçek istemci, LAN) | ✅ GEÇTİ | İki ayrı oyun açıldı: Dev dünyayı `publish` ile 25599'da açtı, Dev2 `--quickPlayMultiplayer` ile girdi (`Dev2 joined the game`, `There are 2 of a max of 8 players online: Dev, Dev2`). Sunucu: `Arkadaş fısıltısı: Dev -> Dev2 hakkında` + `Dev2 -> Dev hakkında` ×2. **Gizlilik kanıtı:** Dev'in logunda yalnız `Dev2 is not the one who stayed longest.`, Dev2'nin logunda yalnız `Dev is not the one who stayed longest.` + `do you know where Dev goes.` — mesaj yalnız alıcıya gitti. Dev2 hatası 0 (kapanıştaki `Connection reset` = host kapandı). | lan-iki-oyuncu, lan-fisilti-1/2 |
 
 ## 2. Sürüm düğümleri (v10.1.0, 12 Kas 21:49–21:54)
 
@@ -53,7 +54,6 @@
 
 | Kalem | Neden |
 |---|---|
-| Arkadaş fısıltısı | En az **2 oyuncu** ister (`oyuncular.size() < 2 → return`). Tek oyunculu testte tetiklenemez. |
 | Beyin göçü (`BeyinGocu`), beyin "topolojisi değişti" | Yalnız **eski sürümden kaydedilmiş beyin** yüklenirken çalışır (sürüm yükseltme yolu). |
 | Beyin lobu körelmesi (`Enerji`) | Çok uzun süre (binlerce süpürme) kullanılmayan lob ister; test süresine sığmaz. |
 | ME yüz boyama (`MeYuz`) | Ortama bağlı; 1.21.9+ sürümlerinde bilinçli olarak kapalı. |
@@ -65,6 +65,8 @@
 | Logsuz 82 sınıf | Kendi log satırı yok (veri sınıfları, paketler, mixin'ler); dolaylı olarak üstteki mekaniklerin içinde çalıştılar. |
 
 ## 4. Bu çalışmada yapılan kod değişiklikleri (commit EDİLMEDİ)
+
+- `candy lan` dev komutu (yalnız `-Dcandy.debug` JVM'inde): çevrimdışı test hesabı LAN'a girebilsin diye oturum doğrulamasını kapatır. `ArkadasFisilti` logu `debug` → `info`.
 
 - **Hata düzeltmesi:** Yüklü olmayan chunk'ta `getHeight` en alt Y'yi döndürüyor, oyuncu y=-64'e ışınlanıyordu. Dönüşten önce chunk zorla yükleniyor: `AynaSistemi`, `MirrorGirisi`, `BossManager`, `DunyaGecisi`. Canlı doğrulandı.
 - **Hayalet düzeltmeleri #1 (köy hijack) ve #2 (tabela).** Canlı doğrulandı.
@@ -295,3 +297,56 @@
 | `yuz/EkranHaritasi` | KISMİ | 2/3 | [Candy] EkranHaritasi harita ver hata: {} |
 | `yuz/HaritaPaleti` | LOGSUZ | - |  |
 | `yuz/YuzHaritasi` | KISMİ | 2/3 | [Candy] YuzHaritasi harita ver hata: {} |
+
+## 6. İki bot oyuncu, ortak LAN dünyası (14 Kas 20:20–20:39)
+
+**Kurulum:** `client/OtoOyuncu` (yeni): gerçek istemci girdileriyle (`MultiPlayerGameMode` kazma/koyma/vurma/yeme, yürüme, kip seçimi) oynayan basit bot. Host Dev + LAN istemcisi Dev2 (`--quickPlayMultiplayer`), betik `uret15.py` (6 evre, 38 kontrol). Botlar kendi kendine oynadı; Candy mekanikleri doğal akışta tetiklendi.
+
+**Bot gerçekten oynadı mı:** evet. Dev: 91 kip değişimi, 1042 blok yol, 875 vuruş, 13 blok koydu. Dev2: 39 kip, 615 blok yol, 25 blok kırdı, 41 vuruş, 3 sohbet. (Uyku/yeme sayaçları 0 — oyun bu evrelere gelmeden bitti.)
+
+### 6.1 Bulunan ve DÜZELTİLEN mod hataları
+| # | Hata | Kanıt (koşu 1) | Düzeltme | Doğrulama (koşu 2) |
+|---|---|---|---|---|
+| 1 | Mirror'a girişte boğulma: chunk yüklü değilken `getHeight` minY döner → y=96 sabitine ışınlanıp blok içinde kalıyordu | `Mirror teleport: Dev → (8, 96, 4)`, 12 sn sonra `Dev suffocated in a wall` | `MirrorGirisi.mirrorTasi`: önce `getChunk`, sonra yükseklik + baş hizası 2 blok hava (diğer 3 ışınlamada zaten vardı, bu yol kaçmıştı) | `Mirror teleport: Dev2 → (9, 141, 7)` gerçek zemin; 52 sn hayatta, boğulma yok ✅ |
+| 2 | Anti-Mirror platformu açık: oyuncu kenardan yürüyüp düşerek ölüyor → piyango beklenmeden kick | `Anti-Mirror teleport ... + platform`, 3 sn sonra `fell from a high place` → kick | `antiMirrorTasi`: 5×5 zemin + 2 blok yüksek blackstone duvar (piyango 1/100 her 5 sn → kilitlenme yok) | Dev2 60 sn hücrede kaldı; sonra **kazarak** çıkıp düştü (oyuncu tercihi, kabul) ✅ |
+
+### 6.2 Sonuç: 18 GEÇTİ / 9 KALDI (koşu 2) — KALDI'ların hiçbiri mod hatası değil
+| Kontrol | Neden |
+|---|---|
+| OY02 | Dev2'nin bot satırı yalnız Dev2 istemci logunda (orada var: `Dev2 OZET ara ... kirilan 25`) — betik yanlış loga baktı |
+| E107/E108 Arkadaş fısıltısı | Bot `ArkadasEntity`'yi (Monster; tasarımda "bir kez yaralanabilir") öldürdü → `Arkadaş öldürüldü — bir daha gelmeyecek`, kalıcı ölüm doğru çalıştı. Fısıltı daha sonra doğal geldi: `Arkadaş fısıltısı: Dev -> Dev2 hakkında` (20:33:39) |
+| E217/E219/E220/E221 (BlackoutGlitch, Kehanet, fake join, diyalog reaksiyonu) | Olasılıklı, 2,5 dk pencerede gelmedi; Kehanet ve `fake leave` hemen sonra doğal geldi (20:38) |
+| MG25 MeşaleKırıcı | Dev2 o sırada Anti-Mirror kick'iyle dünyadaydı değil |
+| KR30 Kuran | Test aracı: `#slot` tuş kuyruğu tüketilmedi (elde kılıç kaldı) — eski "#slot 1 → slot 6" gizeminin nedeni. `CandyOtoTest #slot` artık `setSelectedSlot` kullanıyor — §7 yeniden koşusunda Kuran ×5 GEÇTİ |
+
+**Doğal akışta görülen zincirler (zorlama yok):** doppel öldürme → %25 Mirror → Mirror'da doppel ölümü → Anti-Mirror → kick → yeniden girişte `Anti-Mirror → gerçek dünya dönüş: Dev2` ✅; Hayalet Alex sohbeti; Kuran ayetleri; ZihinselProva/Kehanet; SesTaklit; CAMSCREEN; Teşhis raporu; `Dev2 artık Candy` sonu (özgüven 100) + KAHKAHA; ardından Gerçek Candy Dev'i attı.
+
+### 6.3 Tasarım bulgusu (DÜZELTİLMEDİ — karar gerekir)
+- **LAN'da host atılırsa dünya herkes için kapanır.** Entegre sunucuda host'u atan her mekanik (Gerçek Candy, Anti-Mirror kick, boss bad ending, TotemIptali) diğer oyuncuların oturumunu da bitiriyor. Koşu 2 bu yüzden 20:38:46'da erken bitti (`Gerçek Candy göründü: Dev atılıyor` → `Stopping server`). Öneri: host + başka oyuncu varsa kick yerine tam ekran CAMSCREEN/karartma.
+- **Hız:** iki oyunculu dünyada (korku 60–70'e zorlanmış) `Dev2 artık Candy` sonu ~9 dk'da geldi (anksiyete olayı başına özgüven +15).
+
+## 7. Senaryo-100 (12 Kas 22:12) + kalan 21'in yeniden koşusu (14 Kas 20:49–20:52)
+
+**İlk koşu:** `uret100.py` → 100 senaryo, **79 GEÇTİ / 21 KALDI**. 21'in üçü de test betiği hatasıydı, mod hatası değil:
+
+| Kalem | Neden kaldı | Betik düzeltmesi |
+|---|---|---|
+| SA48–57 saat (×10) | Saat paketi tasarım gereği yalnız JOIN'de tek sefer gidiyor (`SaatGonder`). Betik her `candy saat`'te yeni `Saat alindi` bekledi; üstelik temel sıra 460. tick'te `candy saat sil` yapıyordu → `dakika=-1` | `CANDY_TEMEL=false`; join satırı bir kez doğrulanır, 10 senaryo sunucu deposunu okur: `SaatBilgisi: dakika=\d+ metin=HH:MM` (-1 kabul edilmez) |
+| KC/KI 68–77 Kuran (×10) | `#slot 1` tuş kuyruğu odaksız pencerede tüketilmedi, elde Kuran yoktu | `CandyOtoTest #slot` → `setSelectedSlot` (14 Kas jar'ı); betik `#slot bul kuran` + `#envanter` ile eldeki eşyayı loglar |
+| PR87 Kalp krizi | Koşul korku ≥85 + 7 dk panik. Betik korkuyu 70'te tuttu → panik hiç başlamadı | Korku 90 → panik; `hastalikBaslangicTick 0` ("panik çok önce başladı") → sonraki 5 sn'lik kontrolde kriz |
+
+**Yeniden koşu:** `uret21.py` → `ek-21.txt`, jar `candy-10.1.0+1.21.7.jar` (14 Kas 20:42). Sonuç: **23 GEÇTİ / 0 KALDI** (21 + panik başlangıcı + ölüm sonrası sıfırlama).
+
+| Senaryo | Sonuç | Kanıt |
+|---|---|---|
+| Join saat paketi | ✅ | `Saat alindi [Dev]` (20:49:40) |
+| SA01–10 | ✅ ×10 | `SaatBilgisi: dakika=1249 metin=20:49 dilim=Europe/Istanbul` — gerçek duvar saatiyle aynı |
+| KC11/13/15/17/19 | ✅ ×5 | `envanter: 1=Book … elde: Book` → `Kuran sol-tık[Dev] → çile başladı` |
+| KI12/14/16/18/20 | ✅ ×5 | `İmanın Gücü verildi: Dev` (çileden ~5,1 sn sonra = CILE_TICK 100) |
+| PN21 | ✅ | `Dev → panik hastalık` |
+| KK22 | ✅ | `Dev's heart couldn't handle the adrenaline.` + `Kalp krizi → Dev` — gerçek ölüm, özel ölüm mesajı |
+| RS23 | ✅ | `Ölüm sonrası hastalik reset → Dev` (sonsuz ölüm döngüsü koruması) |
+
+**Toplam senaryo-100:** 79 + 21 = **100 / 100 GEÇTİ** (21'i düzeltilmiş betikle, ayrı koşuda).
+**Sınır:** Kalp krizinin 7 dk'lık zamanlaması gerçek zamanda beklenmedi; başlangıç tick'i geriye çekildi. Kanıtlanan: panik → kriz → ölüm → sıfırlama zinciri ve eşik karşılaştırması.
+**Log / ekran:** `…/858ec240-…/scratchpad/kosu-21.log`, `…/5b0e50cb-…/scratchpad/prod-canli/screenshots/ototest-s21-*.png` (6 adet).
